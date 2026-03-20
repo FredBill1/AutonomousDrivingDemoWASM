@@ -1,0 +1,15 @@
+[package]
+name = "wasm-core"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+clarabel = "0.11.1"
+console_error_panic_hook = "0.1.7"
+wasm-bindgen = "0.2.105"
+
+[dev-dependencies]
+approx = "0.5.1"
