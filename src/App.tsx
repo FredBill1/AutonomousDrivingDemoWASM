@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { HistoryChart } from './components/HistoryChart'
 import { MapViewport } from './components/MapViewport'
@@ -78,6 +78,8 @@ type MapServerSnapshot = {
   unknownObstacles: Obstacle[]
 }
 
+type DashboardLayout = 'split' | 'stacked'
+
 const FALLBACK_MAP_BOUNDING_BOX: MapBoundingBox = {
   minX: 0,
   minY: 0,
@@ -142,6 +144,85 @@ function toHybridAStarStartSeed(points: LocalPlannerReferencePoint[]): HybridASt
   }))
 }
 
+type AutoShrinkHeadingProps = {
+  text: string
+}
+
+const AUTO_HEADING_MAX_FONT_SIZE_PX = 28
+const AUTO_HEADING_MIN_FONT_SIZE_PX = 11
+const STACKED_LAYOUT_MAX_WIDTH_PX = 560
+const STACKED_LAYOUT_MIN_MAP_HEIGHT_PX = 220
+const STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX = 110
+const STACKED_LAYOUT_GAP_PX = 8
+
+function clamp(value: number, minValue: number, maxValue: number) {
+  return Math.min(maxValue, Math.max(minValue, value))
+}
+
+function AutoShrinkHeading({ text }: AutoShrinkHeadingProps) {
+  const headingRef = useRef<HTMLHeadingElement | null>(null)
+  const textRef = useRef<HTMLSpanElement | null>(null)
+
+  useLayoutEffect(() => {
+    const heading = headingRef.current
+    const label = textRef.current
+    if (!heading || !label) {
+      return
+    }
+
+    let frame = 0
+
+    const updateFontSize = () => {
+      frame = 0
+
+      const availableWidth = heading.clientWidth
+      if (availableWidth <= 0) {
+        return
+      }
+
+      label.style.fontSize = `${AUTO_HEADING_MAX_FONT_SIZE_PX}px`
+      const naturalWidth = label.scrollWidth
+      if (naturalWidth <= 0) {
+        return
+      }
+
+      const fittedSize = clamp(
+        (AUTO_HEADING_MAX_FONT_SIZE_PX * availableWidth) / naturalWidth,
+        AUTO_HEADING_MIN_FONT_SIZE_PX,
+        AUTO_HEADING_MAX_FONT_SIZE_PX,
+      )
+      label.style.fontSize = `${fittedSize}px`
+    }
+
+    const scheduleUpdate = () => {
+      if (frame !== 0) {
+        return
+      }
+      frame = window.requestAnimationFrame(updateFontSize)
+    }
+
+    updateFontSize()
+
+    const resizeObserver = new ResizeObserver(scheduleUpdate)
+    resizeObserver.observe(heading)
+
+    return () => {
+      resizeObserver.disconnect()
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame)
+      }
+    }
+  }, [text])
+
+  return (
+    <h2 ref={headingRef} className="auto-shrink-heading">
+      <span ref={textRef} className="auto-shrink-heading__text">
+        {text}
+      </span>
+    </h2>
+  )
+}
+
 function App() {
   const [mode, setMode] = useState<Mode>('goal')
   const [timestamp, setTimestamp] = useState(0)
@@ -162,6 +243,7 @@ function App() {
   const [globalPlannerSegments, setGlobalPlannerSegments] = useState<HybridAStarProgress['segments'][]>([])
   const [velocityHistory, setVelocityHistory] = useState([{ t: 0, value: 0 }])
   const [steerHistory, setSteerHistory] = useState([{ t: 0, value: 0 }])
+  const [dashboardLayout, setDashboardLayout] = useState<DashboardLayout>('split')
 
   const mapServerNodeRef = useRef<MapServerNode | null>(null)
   const carRef = useRef(car)
@@ -174,6 +256,7 @@ function App() {
   const planningRequestRef = useRef(0)
   const dragStartRef = useRef<DragStartState | null>(null)
   const trajectoryCollisionCheckingNodeRef = useRef<TrajectoryCollisionCheckingNode | null>(null)
+  const dashboardGridRef = useRef<HTMLElement | null>(null)
 
   if (trajectoryCollisionCheckingNodeRef.current === null) {
     trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision)
@@ -205,6 +288,32 @@ function App() {
   useEffect(() => {
     globalTrajectoryRef.current = globalTrajectory
   }, [globalTrajectory])
+
+  useLayoutEffect(() => {
+    const host = dashboardGridRef.current
+    if (!host) {
+      return
+    }
+
+    const updateLayout = () => {
+      const width = host.clientWidth
+      const height = host.clientHeight
+      const canStack =
+        width <= STACKED_LAYOUT_MAX_WIDTH_PX &&
+        height >= STACKED_LAYOUT_MIN_MAP_HEIGHT_PX + STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX + STACKED_LAYOUT_GAP_PX
+
+      setDashboardLayout(canStack ? 'stacked' : 'split')
+    }
+
+    updateLayout()
+
+    const resizeObserver = new ResizeObserver(updateLayout)
+    resizeObserver.observe(host)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -635,7 +744,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <main className="dashboard-grid">
+      <main ref={dashboardGridRef} className={`dashboard-grid dashboard-grid--${dashboardLayout}`}>
         <section className="panel panel-map">
           <div className="panel-heading">
             <h2>Visualization</h2>
@@ -664,10 +773,10 @@ function App() {
           />
         </section>
 
-        <div className="side-stack">
+        <div className={`side-stack side-stack--${dashboardLayout}`}>
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <h2>Velocity: {(car.velocity * 3.6).toFixed(1)}km/h</h2>
+              <AutoShrinkHeading text={`Velocity: ${(car.velocity * 3.6).toFixed(1)}km/h`} />
             </div>
             <HistoryChart
               points={velocityHistory}
@@ -679,7 +788,7 @@ function App() {
 
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <h2>{`Steer: ${((car.steer * 180) / Math.PI).toFixed(1)}deg`}</h2>
+              <AutoShrinkHeading text={`Steer: ${((car.steer * 180) / Math.PI).toFixed(1)}deg`} />
             </div>
             <HistoryChart
               points={steerHistory}

@@ -66,6 +66,11 @@ const GRID_SPACING = 5
 const MIN_ZOOM = 0.05
 const MAX_ZOOM = 100
 
+function syncCanvasElementSize(canvas: HTMLCanvasElement, width: number, height: number) {
+  canvas.style.width = `${width}px`
+  canvas.style.height = `${height}px`
+}
+
 function worldWidth(bounds: MapBoundingBox) {
   return bounds.maxX - bounds.minX
 }
@@ -238,6 +243,7 @@ export function MapViewport({
     let disposed = false
     let handlePointerUp: ((event: PointerEvent) => void) | null = null
     let handlePointerCancel: ((event: PointerEvent) => void) | null = null
+    let initialResizeFrame = 0
     const host = hostRef.current
     if (!host) {
       return
@@ -421,6 +427,32 @@ export function MapViewport({
       event.preventDefault()
     }
 
+    const syncViewportSize = () => {
+      const currentApp = appRef.current
+      const viewport = viewportRef.current
+      const currentHost = hostRef.current
+      if (!currentApp || !viewport || !currentHost) {
+        return
+      }
+
+      const nextWidth = Math.max(1, currentHost.clientWidth)
+      const nextHeight = Math.max(1, currentHost.clientHeight)
+      const currentBounds = boundsRef.current
+      currentApp.renderer.resize(nextWidth, nextHeight)
+      syncCanvasElementSize(currentApp.canvas, nextWidth, nextHeight)
+      viewport.resize(nextWidth, nextHeight, worldWidth(currentBounds), worldHeight(currentBounds))
+
+      if (fittedBoundsKeyRef.current === null) {
+        const scale = Math.min(nextWidth / Math.max(worldWidth(currentBounds), 1), nextHeight / Math.max(worldHeight(currentBounds), 1))
+        fitScaleRef.current = scale
+        viewport.setZoom(scale)
+        viewport.position.set((nextWidth - worldWidth(currentBounds) * scale) / 2, (nextHeight - worldHeight(currentBounds) * scale) / 2)
+        fittedBoundsKeyRef.current = `${currentBounds.minX}:${currentBounds.minY}:${currentBounds.maxX}:${currentBounds.maxY}`
+      }
+
+      drawRef.current()
+    }
+
     void app.init({
       width,
       height,
@@ -436,6 +468,7 @@ export function MapViewport({
       }
 
       app.canvas.classList.add('pixi-surface')
+      syncCanvasElementSize(app.canvas, width, height)
       host.appendChild(app.canvas)
 
       const viewport = new Viewport({
@@ -507,36 +540,25 @@ export function MapViewport({
       app.canvas.addEventListener('wheel', handleWheel, { passive: false })
       app.canvas.addEventListener('contextmenu', handleContextMenu)
 
-      drawRef.current()
+      syncViewportSize()
+      initialResizeFrame = window.requestAnimationFrame(() => {
+        syncViewportSize()
+      })
     })
 
-    const resizeObserver = new ResizeObserver(() => {
-      const currentApp = appRef.current
-      const viewport = viewportRef.current
-      const currentHost = hostRef.current
-      if (!currentApp || !viewport || !currentHost) {
-        return
-      }
-
-      const nextWidth = Math.max(1, currentHost.clientWidth)
-      const nextHeight = Math.max(1, currentHost.clientHeight)
-      const currentBounds = boundsRef.current
-      currentApp.renderer.resize(nextWidth, nextHeight)
-      viewport.resize(nextWidth, nextHeight, worldWidth(currentBounds), worldHeight(currentBounds))
-
-      if (fittedBoundsKeyRef.current === null) {
-        const scale = Math.min(nextWidth / Math.max(worldWidth(currentBounds), 1), nextHeight / Math.max(worldHeight(currentBounds), 1))
-        fitScaleRef.current = scale
-        viewport.setZoom(scale)
-        viewport.position.set((nextWidth - worldWidth(currentBounds) * scale) / 2, (nextHeight - worldHeight(currentBounds) * scale) / 2)
-        fittedBoundsKeyRef.current = `${currentBounds.minX}:${currentBounds.minY}:${currentBounds.maxX}:${currentBounds.maxY}`
-      }
-    })
+    const resizeObserver = new ResizeObserver(syncViewportSize)
     resizeObserver.observe(host)
+    window.addEventListener('resize', syncViewportSize)
+    window.visualViewport?.addEventListener('resize', syncViewportSize)
 
     return () => {
       disposed = true
       resizeObserver.disconnect()
+      window.removeEventListener('resize', syncViewportSize)
+      window.visualViewport?.removeEventListener('resize', syncViewportSize)
+      if (initialResizeFrame !== 0) {
+        window.cancelAnimationFrame(initialResizeFrame)
+      }
       app.canvas.removeEventListener('pointerdown', handlePointerDown)
       app.canvas.removeEventListener('pointermove', handlePointerMove)
       if (handlePointerUp) {

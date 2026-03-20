@@ -19,6 +19,11 @@ const MARGIN_RIGHT = 10
 const MARGIN_TOP = 10
 const MARGIN_BOTTOM = 16
 
+function syncCanvasElementSize(canvas: HTMLCanvasElement, width: number, height: number) {
+  canvas.style.width = `${width}px`
+  canvas.style.height = `${height}px`
+}
+
 function clampRange(value: number) {
   return Math.max(value, 0.001)
 }
@@ -32,6 +37,7 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
 
   useEffect(() => {
     let disposed = false
+    let initialResizeFrame = 0
     const host = hostRef.current
     if (!host) {
       return
@@ -40,6 +46,20 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
     const width = Math.max(1, host.clientWidth)
     const height = Math.max(1, host.clientHeight)
     const app = new Application()
+
+    const syncChartSize = () => {
+      const currentApp = appRef.current
+      const currentHost = hostRef.current
+      if (!currentApp || !currentHost) {
+        return
+      }
+
+      const nextWidth = Math.max(1, currentHost.clientWidth)
+      const nextHeight = Math.max(1, currentHost.clientHeight)
+      currentApp.renderer.resize(nextWidth, nextHeight)
+      syncCanvasElementSize(currentApp.canvas, nextWidth, nextHeight)
+      drawRef.current()
+    }
 
     void app.init({
       width,
@@ -56,6 +76,7 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
       }
 
       app.canvas.classList.add('pixi-surface')
+      syncCanvasElementSize(app.canvas, width, height)
       host.appendChild(app.canvas)
 
       const frame = new Graphics()
@@ -66,24 +87,25 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
       appRef.current = app
       frameRef.current = frame
       lineRef.current = line
-      drawRef.current()
+      syncChartSize()
+      initialResizeFrame = window.requestAnimationFrame(() => {
+        syncChartSize()
+      })
     })
 
-    const resizeObserver = new ResizeObserver(() => {
-      const currentApp = appRef.current
-      const currentHost = hostRef.current
-      if (!currentApp || !currentHost) {
-        return
-      }
-
-      currentApp.renderer.resize(Math.max(1, currentHost.clientWidth), Math.max(1, currentHost.clientHeight))
-      drawRef.current()
-    })
+    const resizeObserver = new ResizeObserver(syncChartSize)
     resizeObserver.observe(host)
+    window.addEventListener('resize', syncChartSize)
+    window.visualViewport?.addEventListener('resize', syncChartSize)
 
     return () => {
       disposed = true
       resizeObserver.disconnect()
+      window.removeEventListener('resize', syncChartSize)
+      window.visualViewport?.removeEventListener('resize', syncChartSize)
+      if (initialResizeFrame !== 0) {
+        window.cancelAnimationFrame(initialResizeFrame)
+      }
       lineRef.current = null
       frameRef.current = null
       appRef.current?.destroy(true, { children: true })

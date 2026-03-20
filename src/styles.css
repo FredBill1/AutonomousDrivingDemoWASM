@@ -75,9 +75,15 @@ button {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 0.95fr);
+  grid-template-columns: minmax(320px, 2.1fr) minmax(220px, 0.95fr);
   gap: 18px;
   min-height: 0;
+}
+
+.dashboard-grid.dashboard-grid--stacked {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(220px, 1fr) minmax(110px, 0.44fr);
+  gap: 8px;
 }
 
 .side-stack {
@@ -85,6 +91,13 @@ button {
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 18px;
   min-height: 0;
+  min-width: 0;
+}
+
+.side-stack.side-stack--stacked {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  gap: 8px;
 }
 
 .panel {
@@ -100,12 +113,23 @@ button {
   flex-direction: column;
 }
 
+.panel-map {
+  min-width: 0;
+  min-height: clamp(180px, 40vh, 100%);
+}
+
+.chart-panel {
+  min-width: 0;
+  min-height: 0;
+}
+
 .panel-heading {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .panel-status {
@@ -115,6 +139,21 @@ button {
 
 .panel-heading.compact {
   margin-bottom: 14px;
+}
+
+.panel-heading.compact h2 {
+  flex: 1;
+  min-width: 0;
+}
+
+.auto-shrink-heading {
+  min-width: 0;
+}
+
+.auto-shrink-heading__text {
+  display: block;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .map-view,
@@ -196,13 +235,11 @@ button {
 
 @media (max-width: 1080px) {
   .dashboard-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(180px, 0.42fr);
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
   }
 
   .side-stack {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: 1fr;
+    gap: 12px;
   }
 }
 
@@ -227,6 +264,11 @@ button {
     margin-bottom: 10px;
   }
 
+  .panel-heading.compact {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .control-ribbon {
     justify-content: stretch;
     padding: 10px;
@@ -244,7 +286,7 @@ button {
 
   .dashboard-grid {
     gap: 8px;
-    grid-template-rows: minmax(0, 1fr) minmax(140px, 0.34fr);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr);
   }
 
   .side-stack {
