@@ -20,7 +20,7 @@ type MapViewportProps = {
   motionLimits: MotionLimits
   knownObstacles: Obstacle[]
   unknownObstacles: Obstacle[]
-  car: CarState
+  car: CarState | null
   goal: CarState | null
   pressedPose: CarState | null
   goalUnreachable: GoalUnreachableState
@@ -662,20 +662,24 @@ export function MapViewport({
       layers.referencePoints.stroke({ width: 0.25, color: 0xff7a7a, alpha: 0.94 })
 
       layers.scanRing.clear()
-      const scanCenter = toViewportPoint(
-        {
-          x: car.x + carShape.backToCenter * Math.cos(car.yaw),
-          y: car.y + carShape.backToCenter * Math.sin(car.yaw),
-        },
-        bounds,
-      )
-      layers.scanRing
-        .circle(scanCenter.x, scanCenter.y, motionLimits.scanRadius)
-        .fill({ color: 0x57d8ff, alpha: 0.05 })
-        .stroke({ width: 0.24, color: 0x57d8ff, alpha: 0.32 })
+      if (car) {
+        const scanCenter = toViewportPoint(
+          {
+            x: car.x + carShape.backToCenter * Math.cos(car.yaw),
+            y: car.y + carShape.backToCenter * Math.sin(car.yaw),
+          },
+          bounds,
+        )
+        layers.scanRing
+          .circle(scanCenter.x, scanCenter.y, motionLimits.scanRadius)
+          .fill({ color: 0x57d8ff, alpha: 0.05 })
+          .stroke({ width: 0.24, color: 0x57d8ff, alpha: 0.32 })
+      }
 
       layers.cars.clear()
-      drawCar(layers.cars, car, bounds, carShape, 0xffffff)
+      if (car) {
+        drawCar(layers.cars, car, bounds, carShape, 0xffffff)
+      }
       if (goal) {
         drawCar(layers.cars, goal, bounds, carShape, 0x9fe870)
       }

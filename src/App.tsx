@@ -234,7 +234,7 @@ function App() {
   })
   const [carShape, setCarShape] = useState<CarShape>(DEFAULT_CAR_SHAPE)
   const [motionLimits, setMotionLimits] = useState<MotionLimits>(DEFAULT_MOTION_LIMITS)
-  const [car, setCar] = useState<CarState>({ x: 0, y: 0, yaw: 0, velocity: 0, steer: 0 })
+  const [car, setCar] = useState<CarState | null>(null)
   const [goal, setGoal] = useState<CarState | null>(null)
   const [pressedPose, setPressedPose] = useState<CarState | null>(null)
   const [goalUnreachable, setGoalUnreachable] = useState<GoalUnreachableState>({ visible: false, x: 0, y: 0 })
@@ -247,7 +247,7 @@ function App() {
   const [dashboardLayout, setDashboardLayout] = useState<DashboardLayout>('split')
 
   const mapServerNodeRef = useRef<MapServerNode | null>(null)
-  const carRef = useRef(car)
+  const carRef = useRef<CarState | null>(car)
   const timestampRef = useRef(timestamp)
   const goalRef = useRef<CarState | null>(goal)
   const mapSnapshotRef = useRef(mapSnapshot)
@@ -406,6 +406,11 @@ function App() {
           return
         }
 
+        carRef.current = initialCar
+        timestampRef.current = 0
+        setCar(initialCar)
+        setTimestamp(0)
+
         await initSimulation(initialCar, 0)
       } catch (error) {
         console.error('Failed to initialize app state', error)
@@ -422,6 +427,10 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!car) {
+      return
+    }
+
     const mapUpdate = mapServerNodeRef.current?.update(car)
     if (!mapUpdate || mapUpdate.newObstacles.length === 0) {
       return
@@ -444,12 +453,16 @@ function App() {
   }, [car])
 
   useEffect(() => {
+    if (!car) {
+      return
+    }
+
     setVelocityHistory((history) => [...history.slice(-HISTORY_LIMIT + 1), { t: timestamp, value: car.velocity * 3.6 }])
     setSteerHistory((history) => [
       ...history.slice(-HISTORY_LIMIT + 1),
       { t: timestamp, value: (car.steer * 180) / Math.PI },
     ])
-  }, [car.steer, car.velocity, timestamp])
+  }, [car, timestamp])
 
   const clearGlobalPlannerDisplaySegments = useCallback(() => {
     setGlobalPlannerSegments([])
@@ -626,6 +639,8 @@ function App() {
       setMapSnapshot(nextSnapshot)
 
       const nextCar = await mapServerNode.generateRandomInitialState()
+      carRef.current = nextCar
+      setCar(nextCar)
       await setSimulationState(nextCar)
     } catch (error) {
       console.error('Failed to restart simulation state', error)
@@ -782,7 +797,7 @@ function App() {
         <div className={`side-stack side-stack--${dashboardLayout}`}>
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <AutoShrinkHeading text={`Velocity: ${(car.velocity * 3.6).toFixed(1)}km/h`} />
+              <AutoShrinkHeading text={`Velocity: ${((car?.velocity ?? 0) * 3.6).toFixed(1)}km/h`} />
             </div>
             <HistoryChart
               points={velocityHistory}
@@ -794,7 +809,7 @@ function App() {
 
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <AutoShrinkHeading text={`Steer: ${((car.steer * 180) / Math.PI).toFixed(1)}deg`} />
+              <AutoShrinkHeading text={`Steer: ${(((car?.steer ?? 0) * 180) / Math.PI).toFixed(1)}deg`} />
             </div>
             <HistoryChart
               points={steerHistory}
