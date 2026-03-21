@@ -42,6 +42,7 @@ import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionChecki
 const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100
 const LOCAL_PLANNER_DT = 0.07
 const REPLAN_MAX_SPEED = 5 / 3.6
+const MAX_GLOBAL_PLANNER_DISPLAY_BATCHES = 32
 
 export type CarShape = {
   wheelBase: number
@@ -348,7 +349,12 @@ function App() {
       if (progress.token !== planningRequestRef.current) {
         return
       }
-      setGlobalPlannerSegments((segments) => [...segments, progress.segments])
+      setGlobalPlannerSegments((segments) => {
+        const nextSegments = [...segments, progress.segments]
+        return nextSegments.length > MAX_GLOBAL_PLANNER_DISPLAY_BATCHES
+          ? nextSegments.slice(-MAX_GLOBAL_PLANNER_DISPLAY_BATCHES)
+          : nextSegments
+      })
     })
     return () => setHybridAStarProgressListener(null)
   }, [])
@@ -410,7 +416,7 @@ function App() {
       active = false
       setLocalPlannerUpdateListener(null)
       setSimulationStateListener(null)
-      void stopSimulation().catch(() => {})
+      void stopSimulation().catch(() => { })
       resetComputeWorker('App unmounted')
     }
   }, [])
@@ -587,7 +593,7 @@ function App() {
     }
 
     node.setCollidedListener(() => {
-      void brakeLocalPlanner().catch(() => {})
+      void brakeLocalPlanner().catch(() => { })
       void handleTrajectoryCollided().catch((error) => {
         console.error('Failed to handle trajectory collision', error)
       })
