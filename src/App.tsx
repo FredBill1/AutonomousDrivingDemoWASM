@@ -160,6 +160,11 @@ function clamp(value: number, minValue: number, maxValue: number) {
   return Math.min(maxValue, Math.max(minValue, value))
 }
 
+function formatFixedWithoutNegativeZero(value: number, digits: number) {
+  const roundedValue = Number(value.toFixed(digits))
+  return (Object.is(roundedValue, -0) ? 0 : roundedValue).toFixed(digits)
+}
+
 function AutoShrinkHeading({ text }: AutoShrinkHeadingProps) {
   const headingRef = useRef<HTMLHeadingElement | null>(null)
   const textRef = useRef<HTMLSpanElement | null>(null)
@@ -797,7 +802,7 @@ function App() {
         <div className={`side-stack side-stack--${dashboardLayout}`}>
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <AutoShrinkHeading text={`Velocity: ${((car?.velocity ?? 0) * 3.6).toFixed(1)}km/h`} />
+              <AutoShrinkHeading text={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`} />
             </div>
             <HistoryChart
               points={velocityHistory}
@@ -809,7 +814,9 @@ function App() {
 
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <AutoShrinkHeading text={`Steer: ${(((car?.steer ?? 0) * 180) / Math.PI).toFixed(1)}deg`} />
+              <AutoShrinkHeading
+                text={`Steer: ${formatFixedWithoutNegativeZero(((car?.steer ?? 0) * 180) / Math.PI, 1)}°`}
+              />
             </div>
             <HistoryChart
               points={steerHistory}
