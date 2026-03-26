@@ -48,7 +48,7 @@ button {
 }
 
 .app-shell {
-  width: min(1400px, calc(100vw - 24px));
+  width: calc(100vw - 24px);
   height: 100vh;
   height: 100dvh;
   max-height: 100vh;
@@ -245,7 +245,7 @@ button {
 
 @media (max-width: 720px) {
   .app-shell {
-    width: min(100vw - 16px, 1400px);
+    width: 100vw - 16px;
     padding: 8px 0;
     gap: 8px;
   }
