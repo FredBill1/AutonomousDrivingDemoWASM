@@ -17,9 +17,9 @@ fn helper_functions_match_python_reference_behavior() {
     assert_relative_eq!(steering[0], 3.0 * (0.4_f64.cos() - 1.0), epsilon = 1e-12);
     assert_relative_eq!(steering[1], 3.0 * (0.4_f64.cos() + 1.0), epsilon = 1e-12);
 
-    let polar = rs_polar(3.0, 4.0);
-    assert_relative_eq!(polar[0], 5.0, epsilon = 1e-12);
-    assert_relative_eq!(polar[1], 4.0_f64.atan2(3.0), epsilon = 1e-12);
+    let (r, theta) = rs_polar(3.0, 4.0);
+    assert_relative_eq!(r, 5.0, epsilon = 1e-12);
+    assert_relative_eq!(theta, 4.0_f64.atan2(3.0), epsilon = 1e-12);
 }
 
 #[test]

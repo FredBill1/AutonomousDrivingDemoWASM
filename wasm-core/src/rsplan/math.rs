@@ -69,9 +69,8 @@ pub fn rs_steering_angles(phi: f64, turn_radius: f64) -> Vec<f64> {
     vec![turn_radius * (phi.cos() - 1.0), turn_radius * (phi.cos() + 1.0)]
 }
 
-#[wasm_bindgen]
-pub fn rs_polar(x: f64, y: f64) -> Vec<f64> {
-    vec![x.hypot(y), y.atan2(x)]
+pub fn rs_polar(x: f64, y: f64) -> (f64, f64) {
+    (x.hypot(y), y.atan2(x))
 }
 
 #[wasm_bindgen]
