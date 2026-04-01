@@ -1,10 +1,10 @@
+mod collision;
 mod config;
 mod state;
-mod collision;
 
+pub use collision::{path_check_collision, trajectory_check_collision};
 pub use config::CarConfig;
 pub use state::{CarState, CarUpdateResult};
-pub use collision::{path_check_collision, trajectory_check_collision};
 
 #[cfg(test)]
 mod tests {

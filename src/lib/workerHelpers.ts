@@ -71,7 +71,11 @@ export function assertValidControlSequence(
 
   for (let index = 0; index < controlSequence.length; index += 1) {
     const point = controlSequence[index]
-    if (!Number.isFinite(point.timestamp) || !Number.isFinite(point.targetVelocity) || !Number.isFinite(point.targetSteer)) {
+    if (
+      !Number.isFinite(point.timestamp) ||
+      !Number.isFinite(point.targetVelocity) ||
+      !Number.isFinite(point.targetSteer)
+    ) {
       throw new Error('Control sequence contains non-finite values')
     }
     if (index > 0 && !(controlSequence[index - 1].timestamp < point.timestamp)) {
@@ -146,7 +150,12 @@ export function clearSimulationTimers() {
   }
 }
 
-export async function computeStepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
+export async function computeStepCarState(
+  current: WasmCarState,
+  targetVelocity: number,
+  targetSteer: number,
+  dt: number,
+) {
   const config = await ensureWasmCore()
   const state = new CarState(current.x, current.y, current.yaw, current.velocity, current.steer)
   try {
@@ -176,12 +185,25 @@ export async function advanceSimulation(session: SimulationSession) {
   if (!sampledControl) {
     return computeOpenLoopStepCarState(session.state, session.simDeltaTime)
   }
-  return computeStepCarState(session.state, sampledControl.targetVelocity, sampledControl.targetSteer, session.simDeltaTime)
+  return computeStepCarState(
+    session.state,
+    sampledControl.targetVelocity,
+    sampledControl.targetSteer,
+    session.simDeltaTime,
+  )
 }
 
-export function scheduleSimulationTick(session: SimulationSession, simulationIntervalMs: number, loopToken: number) {
+export function scheduleSimulationTick(
+  session: SimulationSession,
+  simulationIntervalMs: number,
+  loopToken: number,
+) {
   session.simulationTimerId = setTimeout(() => {
-    if (!workerState.simulationSession || workerState.simulationSession !== session || session.loopToken !== loopToken) {
+    if (
+      !workerState.simulationSession ||
+      workerState.simulationSession !== session ||
+      session.loopToken !== loopToken
+    ) {
       return
     }
 
@@ -204,7 +226,11 @@ export function scheduleSimulationTick(session: SimulationSession, simulationInt
         console.error('Failed to advance simulation', error)
       })
       .finally(() => {
-        if (!workerState.simulationSession || workerState.simulationSession !== session || session.loopToken !== loopToken) {
+        if (
+          !workerState.simulationSession ||
+          workerState.simulationSession !== session ||
+          session.loopToken !== loopToken
+        ) {
           return
         }
         scheduleSimulationTick(session, simulationIntervalMs, loopToken)
@@ -251,14 +277,26 @@ export function ensureLocalPlannerSession() {
 
       const activeSession = workerState.localPlannerSession
       activeSession.updateInFlight = true
-      void runLocalPlannerUpdate(tracker, latestState.state, latestState.timestamp, activeSession.simDeltaTime)
+      void runLocalPlannerUpdate(
+        tracker,
+        latestState.state,
+        latestState.timestamp,
+        activeSession.simDeltaTime,
+      )
         .then((result) => {
-          if (!result || !workerState.localPlannerSession || workerState.localPlannerSession !== activeSession) {
+          if (
+            !result ||
+            !workerState.localPlannerSession ||
+            workerState.localPlannerSession !== activeSession
+          ) {
             return
           }
 
           if (workerState.simulationSession) {
-            setSimulationControlSequenceInternal(workerState.simulationSession, result.controlSequence)
+            setSimulationControlSequenceInternal(
+              workerState.simulationSession,
+              result.controlSequence,
+            )
           }
           postEvent('localPlannerUpdate', result)
         })

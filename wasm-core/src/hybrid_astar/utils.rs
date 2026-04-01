@@ -16,12 +16,7 @@ pub(crate) fn steer_commands(max_steer: f64) -> Vec<f64> {
     commands
 }
 
-pub(crate) fn calc_ijk(
-    x: f64,
-    y: f64,
-    yaw: f64,
-    heuristic: &HeuristicGrid,
-) -> (i32, i32, i32) {
+pub(crate) fn calc_ijk(x: f64, y: f64, yaw: f64, heuristic: &HeuristicGrid) -> (i32, i32, i32) {
     let (i, j) = heuristic.calc_index(x, y);
     let yaw_bins = (2.0 * std::f64::consts::PI / YAW_GRID_RESOLUTION).round() as i32;
     let wrapped = wrap_zero_to_two_pi(yaw);
@@ -58,7 +53,9 @@ pub(crate) fn python_sign(value: f64) -> i8 {
     }
 }
 
-pub(crate) fn decode_start_seed(flat: &[f64]) -> Result<Vec<StartSeedPoint>, wasm_bindgen::JsValue> {
+pub(crate) fn decode_start_seed(
+    flat: &[f64],
+) -> Result<Vec<StartSeedPoint>, wasm_bindgen::JsValue> {
     if !flat.len().is_multiple_of(4) {
         return Err(wasm_bindgen::JsValue::from_str(
             "Start trajectory seed must be flat [x, y, yaw, velocity] data",

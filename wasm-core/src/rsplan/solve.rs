@@ -1,9 +1,9 @@
 use wasm_bindgen::prelude::*;
 
-use super::math::{rs_change_base, rs_steering_angles};
+use super::math::rs_change_base;
 use super::path::ReedsSheppPath;
 use super::path_generators::{ccc, cccc, ccsc, ccscc, csc, cscc};
-use super::segment::{round_segment_length, ReedsSheppSegment};
+use super::segment::{ReedsSheppSegment, round_segment_length};
 use super::types::{Pose, SegmentKind};
 
 #[wasm_bindgen]
@@ -101,10 +101,42 @@ fn solve_paths(
     let mut paths = Vec::new();
     paths.extend(csc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
     paths.extend(ccc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
-    paths.extend(cccc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
-    paths.extend(ccsc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
-    paths.extend(cscc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
-    paths.extend(ccscc(start_pose, end_pose, step_size, x, y, phi, turn_radius));
+    paths.extend(cccc(
+        start_pose,
+        end_pose,
+        step_size,
+        x,
+        y,
+        phi,
+        turn_radius,
+    ));
+    paths.extend(ccsc(
+        start_pose,
+        end_pose,
+        step_size,
+        x,
+        y,
+        phi,
+        turn_radius,
+    ));
+    paths.extend(cscc(
+        start_pose,
+        end_pose,
+        step_size,
+        x,
+        y,
+        phi,
+        turn_radius,
+    ));
+    paths.extend(ccscc(
+        start_pose,
+        end_pose,
+        step_size,
+        x,
+        y,
+        phi,
+        turn_radius,
+    ));
     paths
 }
 
@@ -114,8 +146,7 @@ fn get_optimal_path(
 ) -> Option<ReedsSheppPath> {
     paths.sort_by(|left, right| left.total_length().total_cmp(&right.total_length()));
 
-    let roughly_equivalent =
-        (paths[1].total_length() - paths[0].total_length()) < length_tolerance;
+    let roughly_equivalent = (paths[1].total_length() - paths[0].total_length()) < length_tolerance;
     let fewer_segments = paths[1].segment_count() < paths[0].segment_count();
 
     if roughly_equivalent && fewer_segments {

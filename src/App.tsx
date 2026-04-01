@@ -3,11 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AutoShrinkHeading } from './components/AutoShrinkHeading'
 import { HistoryChart } from './components/HistoryChart'
 import { MapViewport } from './components/MapViewport'
-import {
-  HISTORY_LIMIT,
-  type CarState,
-  type Mode,
-} from './lib/appModel'
+import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel'
 import { MapServerNode, flattenObstacleCoordinates } from './lib/mapServerNode'
 import {
   checkCollision,
@@ -65,11 +61,19 @@ function App() {
   const [car, setCar] = useState<CarState | null>(null)
   const [goal, setGoal] = useState<CarState | null>(null)
   const [pressedPose, setPressedPose] = useState<CarState | null>(null)
-  const [goalUnreachable, setGoalUnreachable] = useState<GoalUnreachableState>({ visible: false, x: 0, y: 0 })
-  const [globalTrajectory, setGlobalTrajectory] = useState<LocalPlannerTrajectoryPoint[] | null>(null)
+  const [goalUnreachable, setGoalUnreachable] = useState<GoalUnreachableState>({
+    visible: false,
+    x: 0,
+    y: 0,
+  })
+  const [globalTrajectory, setGlobalTrajectory] = useState<LocalPlannerTrajectoryPoint[] | null>(
+    null,
+  )
   const [localTrajectory, setLocalTrajectory] = useState<LocalPlannerPathPoint[]>([])
   const [referencePoints, setReferencePoints] = useState<LocalPlannerReferencePoint[]>([])
-  const [globalPlannerSegments, setGlobalPlannerSegments] = useState<HybridAStarProgress['segments'][]>([])
+  const [globalPlannerSegments, setGlobalPlannerSegments] = useState<
+    HybridAStarProgress['segments'][]
+  >([])
   const [velocityHistory, setVelocityHistory] = useState([{ t: 0, value: 0 }])
   const [steerHistory, setSteerHistory] = useState([{ t: 0, value: 0 }])
   const [dashboardLayout, setDashboardLayout] = useState<DashboardLayout>('split')
@@ -88,7 +92,9 @@ function App() {
   const dashboardGridRef = useRef<HTMLElement | null>(null)
 
   if (trajectoryCollisionCheckingNodeRef.current === null) {
-    trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision)
+    trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(
+      checkTrajectoryCollision,
+    )
   }
 
   if (mapServerNodeRef.current === null) {
@@ -129,7 +135,10 @@ function App() {
       const height = host.clientHeight
       const canStack =
         width <= STACKED_LAYOUT_MAX_WIDTH_PX &&
-        height >= STACKED_LAYOUT_MIN_MAP_HEIGHT_PX + STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX + STACKED_LAYOUT_GAP_PX
+        height >=
+          STACKED_LAYOUT_MIN_MAP_HEIGHT_PX +
+            STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX +
+            STACKED_LAYOUT_GAP_PX
 
       setDashboardLayout(canStack ? 'stacked' : 'split')
     }
@@ -202,7 +211,9 @@ function App() {
     }
 
     mapSnapshotRef.current = mapUpdate
-    trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(mapUpdate.knownObstacles))
+    trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
+      flattenObstacleCoordinates(mapUpdate.knownObstacles),
+    )
     setMapSnapshot(mapUpdate)
 
     void trajectoryCollisionCheckingNodeRef.current
@@ -222,7 +233,10 @@ function App() {
       return
     }
 
-    setVelocityHistory((history) => [...history.slice(-HISTORY_LIMIT + 1), { t: timestamp, value: car.velocity * 3.6 }])
+    setVelocityHistory((history) => [
+      ...history.slice(-HISTORY_LIMIT + 1),
+      { t: timestamp, value: car.velocity * 3.6 },
+    ])
     setSteerHistory((history) => [
       ...history.slice(-HISTORY_LIMIT + 1),
       { t: timestamp, value: (car.steer * 180) / Math.PI },
@@ -332,7 +346,9 @@ function App() {
         <div className={`side-stack side-stack--${dashboardLayout}`}>
           <section className="panel chart-panel">
             <div className="panel-heading compact">
-              <AutoShrinkHeading text={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`} />
+              <AutoShrinkHeading
+                text={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`}
+              />
             </div>
             <HistoryChart
               points={velocityHistory}
@@ -380,5 +396,4 @@ function App() {
     </div>
   )
 }
-
 export default App

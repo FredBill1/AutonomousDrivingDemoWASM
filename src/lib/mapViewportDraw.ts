@@ -4,7 +4,11 @@ import type React from 'react'
 
 import type { CarState, Mode, Obstacle } from './appModel'
 import type { MapBoundingBox } from './mapServerNode'
-import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from './wasmCore'
+import type {
+  HybridAStarProgress,
+  LocalPlannerPathPoint,
+  LocalPlannerReferencePoint,
+} from './wasmCore'
 import type { CarShape, GoalUnreachableState, MotionLimits } from './appTypes'
 
 export type PathPoint = {
@@ -77,7 +81,14 @@ export function toViewportPoint(point: { x: number; y: number }, bounds: MapBoun
   }
 }
 
-export function drawPolyline(graphics: Graphics, points: PathPoint[], bounds: MapBoundingBox, width: number, color: number, alpha: number) {
+export function drawPolyline(
+  graphics: Graphics,
+  points: PathPoint[],
+  bounds: MapBoundingBox,
+  width: number,
+  color: number,
+  alpha: number,
+) {
   if (points.length < 2) {
     return
   }
@@ -93,7 +104,11 @@ export function drawPolyline(graphics: Graphics, points: PathPoint[], bounds: Ma
   graphics.stroke({ width, color, alpha, cap: 'round', join: 'round' })
 }
 
-export function transformCarPoint(car: Pick<CarState, 'x' | 'y' | 'yaw'>, localX: number, localY: number) {
+export function transformCarPoint(
+  car: Pick<CarState, 'x' | 'y' | 'yaw'>,
+  localX: number,
+  localY: number,
+) {
   return {
     x: car.x + localX * Math.cos(car.yaw) - localY * Math.sin(car.yaw),
     y: car.y + localX * Math.sin(car.yaw) + localY * Math.cos(car.yaw),
@@ -114,7 +129,10 @@ export function buildCarPolygon(car: Pick<CarState, 'x' | 'y' | 'yaw'>, shape: C
   })
 }
 
-export function buildWheelPolygons(car: Pick<CarState, 'x' | 'y' | 'yaw' | 'steer'>, shape: CarShape) {
+export function buildWheelPolygons(
+  car: Pick<CarState, 'x' | 'y' | 'yaw' | 'steer'>,
+  shape: CarShape,
+) {
   const halfWheelLength = shape.wheelLength / 2
   const halfWheelWidth = shape.wheelWidth / 2
   const wheelBox = [
@@ -125,11 +143,20 @@ export function buildWheelPolygons(car: Pick<CarState, 'x' | 'y' | 'yaw' | 'stee
   ]
   const cosSteer = Math.cos(car.steer)
   const sinSteer = Math.sin(car.steer)
-  const rotateFrontWheelPoint = ([x, y]: number[]) => [x * cosSteer - y * sinSteer, x * sinSteer + y * cosSteer]
+  const rotateFrontWheelPoint = ([x, y]: number[]) => [
+    x * cosSteer - y * sinSteer,
+    x * sinSteer + y * cosSteer,
+  ]
 
   const frontWheel = wheelBox.map(rotateFrontWheelPoint)
-  const frontLeftWheel = frontWheel.map(([x, y]) => [x + shape.wheelBase, y + shape.wheelSpacing / 2])
-  const frontRightWheel = frontWheel.map(([x, y]) => [x + shape.wheelBase, y - shape.wheelSpacing / 2])
+  const frontLeftWheel = frontWheel.map(([x, y]) => [
+    x + shape.wheelBase,
+    y + shape.wheelSpacing / 2,
+  ])
+  const frontRightWheel = frontWheel.map(([x, y]) => [
+    x + shape.wheelBase,
+    y - shape.wheelSpacing / 2,
+  ])
   const rearLeftWheel = wheelBox.map(([x, y]) => [x, y + shape.wheelSpacing / 2])
   const rearRightWheel = wheelBox.map(([x, y]) => [x, y - shape.wheelSpacing / 2])
 
@@ -149,27 +176,64 @@ export function drawCar(
   strokeColor: number,
 ) {
   const bodyPolygon = buildCarPolygon(car, shape)
-  const bodyPoints = bodyPolygon.flatMap((value, index) => (index % 2 === 0 ? [toViewportX(value, bounds)] : [toViewportY(value, bounds)]))
-  graphics.poly(bodyPoints, true).fill({ color: 0xffffff, alpha: 0.08 }).stroke({ width: 0.2, color: strokeColor, alpha: 1 })
+  const bodyPoints = bodyPolygon.flatMap((value, index) =>
+    index % 2 === 0 ? [toViewportX(value, bounds)] : [toViewportY(value, bounds)],
+  )
+  graphics
+    .poly(bodyPoints, true)
+    .fill({ color: 0xffffff, alpha: 0.08 })
+    .stroke({ width: 0.2, color: strokeColor, alpha: 1 })
 
   const wheelPolygons = buildWheelPolygons(car, shape)
   wheelPolygons.forEach((wheelPolygon) => {
-    const points = wheelPolygon.flatMap((value, index) => (index % 2 === 0 ? [toViewportX(value, bounds)] : [toViewportY(value, bounds)]))
+    const points = wheelPolygon.flatMap((value, index) =>
+      index % 2 === 0 ? [toViewportX(value, bounds)] : [toViewportY(value, bounds)],
+    )
     graphics.poly(points, true).stroke({ width: 0.15, color: strokeColor, alpha: 1 })
   })
 
   const rearAxle = toViewportPoint({ x: car.x, y: car.y }, bounds)
-  graphics.circle(rearAxle.x, rearAxle.y, 0.12).fill({ color: strokeColor, alpha: 1 }).stroke({ width: 0.25, color: strokeColor, alpha: 1 })
+  graphics
+    .circle(rearAxle.x, rearAxle.y, 0.12)
+    .fill({ color: strokeColor, alpha: 1 })
+    .stroke({ width: 0.25, color: strokeColor, alpha: 1 })
 }
 
-export function setViewportTransform(viewport: Viewport, screenX: number, screenY: number, scale: number, worldPoint: { x: number; y: number }) {
+export function setViewportTransform(
+  viewport: Viewport,
+  screenX: number,
+  screenY: number,
+  scale: number,
+  worldPoint: { x: number; y: number },
+) {
   viewport.setZoom(scale)
-  viewport.position.set(screenX - worldPoint.x * viewport.scale.x, screenY - worldPoint.y * viewport.scale.y)
+  viewport.position.set(
+    screenX - worldPoint.x * viewport.scale.x,
+    screenY - worldPoint.y * viewport.scale.y,
+  )
 }
 
-export function performDraw(layers: DrawLayers, viewportRef: React.RefObject<Viewport | null>, params: DrawParams) {
-  const { bounds, globalPlannerSegments, unknownObstacles, knownObstacles, globalTrajectory, localTrajectory,
-    referencePoints, car, carShape, goal, motionLimits, pressedPose, mode, goalUnreachable } = params
+export function performDraw(
+  layers: DrawLayers,
+  viewportRef: React.RefObject<Viewport | null>,
+  params: DrawParams,
+) {
+  const {
+    bounds,
+    globalPlannerSegments,
+    unknownObstacles,
+    knownObstacles,
+    globalTrajectory,
+    localTrajectory,
+    referencePoints,
+    car,
+    carShape,
+    goal,
+    motionLimits,
+    pressedPose,
+    mode,
+    goalUnreachable,
+  } = params
 
   layers.grid.clear()
   const width = worldWidth(bounds)

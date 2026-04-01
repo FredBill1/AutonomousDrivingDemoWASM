@@ -145,10 +145,7 @@ impl ReedsSheppSegment {
     }
 }
 
-pub(crate) fn round_segment_length(
-    start_pose: (f64, f64, f64),
-    end_pose: (f64, f64, f64),
-) -> f64 {
+pub(crate) fn round_segment_length(start_pose: (f64, f64, f64), end_pose: (f64, f64, f64)) -> f64 {
     py_round_to(
         crate::geometry::distance(start_pose.0, start_pose.1, end_pose.0, end_pose.1),
         3,

@@ -5,7 +5,11 @@ import { Viewport } from 'pixi-viewport'
 
 import type { CarState, Mode, Obstacle } from '../lib/appModel'
 import type { MapBoundingBox } from '../lib/mapServerNode'
-import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from '../lib/wasmCore'
+import type {
+  HybridAStarProgress,
+  LocalPlannerPathPoint,
+  LocalPlannerReferencePoint,
+} from '../lib/wasmCore'
 import type { CarShape, GoalUnreachableState, MotionLimits } from '../lib/appTypes'
 import {
   type DrawLayers,
@@ -14,7 +18,6 @@ import {
   worldWidth,
   worldHeight,
   syncCanvasElementSize,
-  setViewportTransform,
 } from '../lib/mapViewportDraw'
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction'
 
@@ -74,7 +77,7 @@ export function MapViewport({
   const touchStateRef = useRef<TouchState>({ points: new Map(), gesture: null })
   const fittedBoundsKeyRef = useRef<string | null>(null)
   const fitScaleRef = useRef(1)
-  const drawRef = useRef<() => void>(() => { })
+  const drawRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     boundsRef.current = bounds
@@ -133,109 +136,117 @@ export function MapViewport({
       viewport.resize(nextWidth, nextHeight, worldWidth(currentBounds), worldHeight(currentBounds))
 
       if (fittedBoundsKeyRef.current === null) {
-        const scale = Math.min(nextWidth / Math.max(worldWidth(currentBounds), 1), nextHeight / Math.max(worldHeight(currentBounds), 1))
+        const scale = Math.min(
+          nextWidth / Math.max(worldWidth(currentBounds), 1),
+          nextHeight / Math.max(worldHeight(currentBounds), 1),
+        )
         fitScaleRef.current = scale
         viewport.setZoom(scale)
-        viewport.position.set((nextWidth - worldWidth(currentBounds) * scale) / 2, (nextHeight - worldHeight(currentBounds) * scale) / 2)
+        viewport.position.set(
+          (nextWidth - worldWidth(currentBounds) * scale) / 2,
+          (nextHeight - worldHeight(currentBounds) * scale) / 2,
+        )
         fittedBoundsKeyRef.current = `${currentBounds.minX}:${currentBounds.minY}:${currentBounds.maxX}:${currentBounds.maxY}`
       }
 
       drawRef.current()
     }
 
-    void app.init({
-      width,
-      height,
-      antialias: true,
-      autoDensity: true,
-      backgroundAlpha: 0,
-      preference: 'webgl',
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-    }).then(() => {
-      if (disposed) {
-        app.destroy(true, { children: true })
-        return
-      }
-
-      app.canvas.classList.add('pixi-surface')
-      syncCanvasElementSize(app.canvas, width, height)
-      host.appendChild(app.canvas)
-      canvasRef.current = app.canvas
-
-      const viewport = new Viewport({
-        screenWidth: width,
-        screenHeight: height,
-        worldWidth: worldWidth(boundsRef.current),
-        worldHeight: worldHeight(boundsRef.current),
-        events: app.renderer.events,
+    void app
+      .init({
+        width,
+        height,
+        antialias: true,
+        autoDensity: true,
+        backgroundAlpha: 0,
+        preference: 'webgl',
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
       })
-      app.stage.addChild(viewport)
+      .then(() => {
+        if (disposed) {
+          app.destroy(true, { children: true })
+          return
+        }
 
-      const grid = new Graphics()
-      const boundary = new Graphics()
-      const segments = new Graphics()
-      const unknownObstaclesLayer = new Graphics()
-      const knownObstaclesLayer = new Graphics()
-      const globalTrajectoryLayer = new Graphics()
-      const localTrajectoryLayer = new Graphics()
-      const referencePointsLayer = new Graphics()
-      const scanRingLayer = new Graphics()
-      const carsLayer = new Graphics()
-      const label = new Text({
-        text: 'Goal is unreachable',
-        style: {
-          fill: 0xff7b7b,
-          fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
-          fontSize: 18,
-          fontWeight: '700',
-          align: 'center',
-        },
-      })
-      label.anchor.set(0.5)
+        app.canvas.classList.add('pixi-surface')
+        syncCanvasElementSize(app.canvas, width, height)
+        host.appendChild(app.canvas)
+        canvasRef.current = app.canvas
 
-      viewport.addChild(grid)
-      viewport.addChild(boundary)
-      viewport.addChild(segments)
-      viewport.addChild(unknownObstaclesLayer)
-      viewport.addChild(knownObstaclesLayer)
-      viewport.addChild(globalTrajectoryLayer)
-      viewport.addChild(localTrajectoryLayer)
-      viewport.addChild(referencePointsLayer)
-      viewport.addChild(scanRingLayer)
-      viewport.addChild(carsLayer)
-      app.stage.addChild(label)
+        const viewport = new Viewport({
+          screenWidth: width,
+          screenHeight: height,
+          worldWidth: worldWidth(boundsRef.current),
+          worldHeight: worldHeight(boundsRef.current),
+          events: app.renderer.events,
+        })
+        app.stage.addChild(viewport)
 
-      appRef.current = app
-      viewportRef.current = viewport
-      layersRef.current = {
-        grid,
-        boundary,
-        segments,
-        unknownObstacles: unknownObstaclesLayer,
-        knownObstacles: knownObstaclesLayer,
-        globalTrajectory: globalTrajectoryLayer,
-        localTrajectory: localTrajectoryLayer,
-        referencePoints: referencePointsLayer,
-        scanRing: scanRingLayer,
-        cars: carsLayer,
-        label,
-      }
+        const grid = new Graphics()
+        const boundary = new Graphics()
+        const segments = new Graphics()
+        const unknownObstaclesLayer = new Graphics()
+        const knownObstaclesLayer = new Graphics()
+        const globalTrajectoryLayer = new Graphics()
+        const localTrajectoryLayer = new Graphics()
+        const referencePointsLayer = new Graphics()
+        const scanRingLayer = new Graphics()
+        const carsLayer = new Graphics()
+        const label = new Text({
+          text: 'Goal is unreachable',
+          style: {
+            fill: 0xff7b7b,
+            fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
+            fontSize: 18,
+            fontWeight: '700',
+            align: 'center',
+          },
+        })
+        label.anchor.set(0.5)
 
-      handlePointerUp = (event: PointerEvent) => finishPointer(event, false)
-      handlePointerCancel = (event: PointerEvent) => finishPointer(event, true)
+        viewport.addChild(grid)
+        viewport.addChild(boundary)
+        viewport.addChild(segments)
+        viewport.addChild(unknownObstaclesLayer)
+        viewport.addChild(knownObstaclesLayer)
+        viewport.addChild(globalTrajectoryLayer)
+        viewport.addChild(localTrajectoryLayer)
+        viewport.addChild(referencePointsLayer)
+        viewport.addChild(scanRingLayer)
+        viewport.addChild(carsLayer)
+        app.stage.addChild(label)
 
-      app.canvas.addEventListener('pointerdown', handlePointerDown)
-      app.canvas.addEventListener('pointermove', handlePointerMove)
-      app.canvas.addEventListener('pointerup', handlePointerUp)
-      app.canvas.addEventListener('pointercancel', handlePointerCancel)
-      app.canvas.addEventListener('wheel', handleWheel, { passive: false })
-      app.canvas.addEventListener('contextmenu', handleContextMenu)
+        appRef.current = app
+        viewportRef.current = viewport
+        layersRef.current = {
+          grid,
+          boundary,
+          segments,
+          unknownObstacles: unknownObstaclesLayer,
+          knownObstacles: knownObstaclesLayer,
+          globalTrajectory: globalTrajectoryLayer,
+          localTrajectory: localTrajectoryLayer,
+          referencePoints: referencePointsLayer,
+          scanRing: scanRingLayer,
+          cars: carsLayer,
+          label,
+        }
 
-      syncViewportSize()
-      initialResizeFrame = window.requestAnimationFrame(() => {
+        handlePointerUp = (event: PointerEvent) => finishPointer(event, false)
+        handlePointerCancel = (event: PointerEvent) => finishPointer(event, true)
+
+        app.canvas.addEventListener('pointerdown', handlePointerDown)
+        app.canvas.addEventListener('pointermove', handlePointerMove)
+        app.canvas.addEventListener('pointerup', handlePointerUp)
+        app.canvas.addEventListener('pointercancel', handlePointerCancel)
+        app.canvas.addEventListener('wheel', handleWheel, { passive: false })
+        app.canvas.addEventListener('contextmenu', handleContextMenu)
+
         syncViewportSize()
+        initialResizeFrame = window.requestAnimationFrame(() => {
+          syncViewportSize()
+        })
       })
-    })
 
     const resizeObserver = new ResizeObserver(syncViewportSize)
     resizeObserver.observe(host)
@@ -283,10 +294,16 @@ export function MapViewport({
     const height = worldHeight(bounds)
     viewport.resize(viewport.screenWidth, viewport.screenHeight, width, height)
     if (fittedBoundsKeyRef.current !== key) {
-      const scale = Math.min(viewport.screenWidth / Math.max(width, 1), viewport.screenHeight / Math.max(height, 1))
+      const scale = Math.min(
+        viewport.screenWidth / Math.max(width, 1),
+        viewport.screenHeight / Math.max(height, 1),
+      )
       fitScaleRef.current = scale
       viewport.setZoom(scale)
-      viewport.position.set((viewport.screenWidth - width * scale) / 2, (viewport.screenHeight - height * scale) / 2)
+      viewport.position.set(
+        (viewport.screenWidth - width * scale) / 2,
+        (viewport.screenHeight - height * scale) / 2,
+      )
       fittedBoundsKeyRef.current = key
     }
   }, [bounds])
@@ -298,9 +315,20 @@ export function MapViewport({
         return
       }
       performDraw(layers, viewportRef, {
-        bounds, globalPlannerSegments, unknownObstacles, knownObstacles,
-        globalTrajectory, localTrajectory, referencePoints, car, carShape,
-        goal, motionLimits, pressedPose, mode, goalUnreachable,
+        bounds,
+        globalPlannerSegments,
+        unknownObstacles,
+        knownObstacles,
+        globalTrajectory,
+        localTrajectory,
+        referencePoints,
+        car,
+        carShape,
+        goal,
+        motionLimits,
+        pressedPose,
+        mode,
+        goalUnreachable,
       })
     }
 
@@ -324,4 +352,3 @@ export function MapViewport({
 
   return <div ref={hostRef} className="map-view" />
 }
-

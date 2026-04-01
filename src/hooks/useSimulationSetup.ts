@@ -88,7 +88,12 @@ export function useSimulationSetup({
         return
       }
 
-      void setLocalPlannerState(event.state, event.timestamp, localPlannerDt, localPlannerUpdateIntervalMs).catch((error) => {
+      void setLocalPlannerState(
+        event.state,
+        event.timestamp,
+        localPlannerDt,
+        localPlannerUpdateIntervalMs,
+      ).catch((error) => {
         console.error('Failed to update local planner state', error)
       })
 
@@ -109,7 +114,9 @@ export function useSimulationSetup({
         if (!active) {
           return
         }
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(snapshot.knownObstacles))
+        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
+          flattenObstacleCoordinates(snapshot.knownObstacles),
+        )
         setMapSnapshot(snapshot)
 
         const initialCar = await mapServerNode.generateRandomInitialState()
@@ -132,7 +139,7 @@ export function useSimulationSetup({
       active = false
       setLocalPlannerUpdateListener(null)
       setSimulationStateListener(null)
-      void stopSimulation().catch(() => { })
+      void stopSimulation().catch(() => {})
       resetComputeWorker('App unmounted')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

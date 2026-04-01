@@ -89,7 +89,8 @@ impl CarState {
     pub fn update(&mut self, config: &CarConfig, dt: f64) {
         self.x += self.velocity * self.yaw.cos() * dt;
         self.y += self.velocity * self.yaw.sin() * dt;
-        self.yaw = wrap_angle(self.yaw + self.velocity / config.wheel_base() * self.steer.tan() * dt);
+        self.yaw =
+            wrap_angle(self.yaw + self.velocity / config.wheel_base() * self.steer.tan() * dt);
     }
 
     pub fn update_with_control(

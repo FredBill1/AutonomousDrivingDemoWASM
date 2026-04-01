@@ -4,7 +4,9 @@ use crate::car::CarState;
 use super::heuristic::HeuristicGrid;
 use super::search::{generate_neighbour, generate_rspath, push_explored_segment, traceback_path};
 use super::types::{QueueEntry, SearchNode, StartSeedPoint};
-use super::utils::{build_point_start_node, build_seed_start_node, decode_start_seed, steer_commands};
+use super::utils::{
+    build_point_start_node, build_seed_start_node, decode_start_seed, steer_commands,
+};
 use super::{H_DIST_COST, REEDS_SHEPP_MAX_DISTANCE};
 
 use std::collections::{BinaryHeap, HashMap};
@@ -107,18 +109,18 @@ impl HybridAStarPlanner {
             ]);
 
             let tail_dist = (tail[0] - self.goal[0]).hypot(tail[1] - self.goal[1]);
-            if tail_dist <= REEDS_SHEPP_MAX_DISTANCE {
-                if let Some(goal_node) = generate_rspath(
+            if tail_dist <= REEDS_SHEPP_MAX_DISTANCE
+                && let Some(goal_node) = generate_rspath(
                     &current,
                     &self.goal,
                     &self.config,
                     &self.obstacle_coordinates,
-                ) {
-                    self.analytic_expansions += 1;
-                    self.solved_result = Some(traceback_path(goal_node));
-                    self.finished = true;
-                    return Ok(true);
-                }
+                )
+            {
+                self.analytic_expansions += 1;
+                self.solved_result = Some(traceback_path(goal_node));
+                self.finished = true;
+                return Ok(true);
             }
 
             for &direction in &[1_i8, -1_i8] {
@@ -190,12 +192,8 @@ impl HybridAStarPlanner {
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
         let config = CarConfig::new();
-        let heuristic = HeuristicGrid::from_obstacles(
-            &obstacle_coordinates,
-            goal_x,
-            goal_y,
-            &config,
-        )?;
+        let heuristic =
+            HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &config)?;
         let start_state = [start_x, start_y, start_yaw];
 
         if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0)
@@ -234,12 +232,8 @@ impl HybridAStarPlanner {
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
         let config = CarConfig::new();
-        let heuristic = HeuristicGrid::from_obstacles(
-            &obstacle_coordinates,
-            goal_x,
-            goal_y,
-            &config,
-        )?;
+        let heuristic =
+            HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &config)?;
 
         if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0)
             .check_collision(&config, obstacle_coordinates.clone())

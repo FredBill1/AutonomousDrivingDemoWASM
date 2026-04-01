@@ -1,7 +1,7 @@
 use std::f64::consts::{FRAC_PI_2, PI};
 
 use super::math::rs_polar;
-use super::types::{CurveFormula, NEAR_ZERO_TOL};
+use super::types::NEAR_ZERO_TOL;
 
 pub(super) fn csca(
     x: f64,
@@ -137,9 +137,8 @@ pub(super) fn cc_c(
     let r = polar[0];
     let theta = polar[1];
     if r <= turn_radius_x4 {
-        let u = ((8.0 * turn_radius * turn_radius - r * r)
-            / (8.0 * turn_radius * turn_radius))
-            .acos();
+        let u =
+            ((8.0 * turn_radius * turn_radius - r * r) / (8.0 * turn_radius * turn_radius)).acos();
         let mut sin_u = u.sin();
         const SIN_NEAR_ZERO: f64 = 0.001;
         if sin_u.abs() < SIN_NEAR_ZERO {
@@ -226,8 +225,7 @@ pub(super) fn c_cucu_c(
         return None;
     }
 
-    let va = (5.0 * turn_radius * turn_radius - r * r / 4.0)
-        / (turn_radius_x2 * turn_radius_x2);
+    let va = (5.0 * turn_radius * turn_radius - r * r / 4.0) / (turn_radius_x2 * turn_radius_x2);
     if !(0.0..=1.0).contains(&va) {
         return None;
     }

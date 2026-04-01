@@ -1,10 +1,8 @@
 import { useCallback, useEffect } from 'react'
-import type React from 'react'
 
-import type { CarState, Mode } from '../lib/appModel'
-import { flattenObstacleCoordinates, type MapServerNode } from '../lib/mapServerNode'
-import type { MapServerSnapshot, DragStartState, GoalUnreachableState } from '../lib/appTypes'
-import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode'
+import type { CarState } from '../lib/appModel'
+import { flattenObstacleCoordinates } from '../lib/mapServerNode'
+import type { UsePlanningCallbacksParams } from './planningHelpers'
 import {
   brakeLocalPlanner,
   cancelHybridAStar,
@@ -14,37 +12,7 @@ import {
   setSimulationState,
   solveHybridAStar,
   stopSimulationMotion,
-  type HybridAStarProgress,
-  type HybridAStarStartSeedPoint,
-  type LocalPlannerPathPoint,
-  type LocalPlannerReferencePoint,
-  type LocalPlannerTrajectoryPoint,
 } from '../lib/wasmCore'
-
-type UsePlanningCallbacksParams = {
-  mode: Mode
-  carRef: React.MutableRefObject<CarState | null>
-  goalRef: React.MutableRefObject<CarState | null>
-  mapSnapshotRef: React.MutableRefObject<MapServerSnapshot>
-  globalTrajectoryRef: React.MutableRefObject<LocalPlannerTrajectoryPoint[] | null>
-  brakeTrajectoryRef: React.MutableRefObject<LocalPlannerReferencePoint[] | null>
-  dragStartRef: React.MutableRefObject<DragStartState | null>
-  planningRequestRef: React.MutableRefObject<number>
-  localPlanningRef: React.MutableRefObject<boolean>
-  trajectoryCollisionCheckingNodeRef: React.MutableRefObject<TrajectoryCollisionCheckingNode | null>
-  mapServerNodeRef: React.RefObject<MapServerNode | null>
-  setCar: React.Dispatch<React.SetStateAction<CarState | null>>
-  setGoal: React.Dispatch<React.SetStateAction<CarState | null>>
-  setPressedPose: React.Dispatch<React.SetStateAction<CarState | null>>
-  setGoalUnreachable: React.Dispatch<React.SetStateAction<GoalUnreachableState>>
-  setGlobalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerTrajectoryPoint[] | null>>
-  setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>
-  setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>
-  setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>
-  setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>
-  replanMaxSpeed: number
-  toHybridAStarStartSeed: (points: LocalPlannerReferencePoint[]) => HybridAStarStartSeedPoint[]
-}
 
 export function usePlanningCallbacks({
   mode,
@@ -90,7 +58,18 @@ export function usePlanningCallbacks({
     } catch (error) {
       console.error('Failed to cancel current execution', error)
     }
-  }, [clearGlobalPlannerDisplaySegments, planningRequestRef, dragStartRef, setPressedPose, setGoalUnreachable, setLocalTrajectory, setReferencePoints, localPlanningRef, brakeTrajectoryRef, trajectoryCollisionCheckingNodeRef])
+  }, [
+    clearGlobalPlannerDisplaySegments,
+    planningRequestRef,
+    dragStartRef,
+    setPressedPose,
+    setGoalUnreachable,
+    setLocalTrajectory,
+    setReferencePoints,
+    localPlanningRef,
+    brakeTrajectoryRef,
+    trajectoryCollisionCheckingNodeRef,
+  ])
 
   const handleBrake = useCallback(async () => {
     planningRequestRef.current += 1
@@ -102,7 +81,12 @@ export function usePlanningCallbacks({
     } catch (error) {
       console.error('Failed to brake current execution', error)
     }
-  }, [clearGlobalPlannerDisplaySegments, planningRequestRef, setGoalUnreachable, trajectoryCollisionCheckingNodeRef])
+  }, [
+    clearGlobalPlannerDisplaySegments,
+    planningRequestRef,
+    setGoalUnreachable,
+    trajectoryCollisionCheckingNodeRef,
+  ])
 
   const runGlobalPlan = useCallback(async () => {
     const measuredState = carRef.current
@@ -197,7 +181,21 @@ export function usePlanningCallbacks({
       setGoalUnreachable((current) => ({ ...current, visible: true }))
       console.error('Failed to compute global plan', error)
     }
-  }, [clearGlobalPlannerDisplaySegments, carRef, goalRef, brakeTrajectoryRef, planningRequestRef, replanMaxSpeed, toHybridAStarStartSeed, mapSnapshotRef, setGlobalTrajectory, globalTrajectoryRef, localPlanningRef, trajectoryCollisionCheckingNodeRef, setGoalUnreachable])
+  }, [
+    clearGlobalPlannerDisplaySegments,
+    carRef,
+    goalRef,
+    brakeTrajectoryRef,
+    planningRequestRef,
+    replanMaxSpeed,
+    toHybridAStarStartSeed,
+    mapSnapshotRef,
+    setGlobalTrajectory,
+    globalTrajectoryRef,
+    localPlanningRef,
+    trajectoryCollisionCheckingNodeRef,
+    setGoalUnreachable,
+  ])
 
   const handleTrajectoryCollided = useCallback(async () => {
     setGlobalTrajectory(null)
@@ -212,7 +210,7 @@ export function usePlanningCallbacks({
     }
 
     node.setCollidedListener(() => {
-      void brakeLocalPlanner().catch(() => { })
+      void brakeLocalPlanner().catch(() => {})
       void handleTrajectoryCollided().catch((error) => {
         console.error('Failed to handle trajectory collision', error)
       })
@@ -241,7 +239,9 @@ export function usePlanningCallbacks({
 
       const nextSnapshot = mapServerNode.init()
       mapSnapshotRef.current = nextSnapshot
-      trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(nextSnapshot.knownObstacles))
+      trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
+        flattenObstacleCoordinates(nextSnapshot.knownObstacles),
+      )
       setMapSnapshot(nextSnapshot)
 
       const nextCar = await mapServerNode.generateRandomInitialState()
@@ -251,7 +251,22 @@ export function usePlanningCallbacks({
     } catch (error) {
       console.error('Failed to restart simulation state', error)
     }
-  }, [handleCancel, goalRef, globalTrajectoryRef, brakeTrajectoryRef, setGoal, setPressedPose, setGoalUnreachable, setGlobalTrajectory, mapServerNodeRef, mapSnapshotRef, trajectoryCollisionCheckingNodeRef, setMapSnapshot, carRef, setCar])
+  }, [
+    handleCancel,
+    goalRef,
+    globalTrajectoryRef,
+    brakeTrajectoryRef,
+    setGoal,
+    setPressedPose,
+    setGoalUnreachable,
+    setGlobalTrajectory,
+    mapServerNodeRef,
+    mapSnapshotRef,
+    trajectoryCollisionCheckingNodeRef,
+    setMapSnapshot,
+    carRef,
+    setCar,
+  ])
 
   const commitDrag = useCallback(
     async (finalX: number, finalY: number, startX: number, startY: number) => {
@@ -285,35 +300,57 @@ export function usePlanningCallbacks({
       await handleBrake()
       await runGlobalPlan()
     },
-    [handleBrake, handleCancel, mode, runGlobalPlan, setPressedPose, setGlobalTrajectory, globalTrajectoryRef, setGoal, goalRef, setGoalUnreachable],
+    [
+      handleBrake,
+      handleCancel,
+      mode,
+      runGlobalPlan,
+      setPressedPose,
+      setGlobalTrajectory,
+      globalTrajectoryRef,
+      setGoal,
+      goalRef,
+      setGoalUnreachable,
+    ],
   )
 
-  const handleMapPrimaryDragStart = useCallback((world: { x: number; y: number }) => {
-    const bounds = mapSnapshotRef.current.boundingBox
-    if (world.x < bounds.minX || world.x > bounds.maxX || world.y < bounds.minY || world.y > bounds.maxY) {
-      return false
-    }
+  const handleMapPrimaryDragStart = useCallback(
+    (world: { x: number; y: number }) => {
+      const bounds = mapSnapshotRef.current.boundingBox
+      if (
+        world.x < bounds.minX ||
+        world.x > bounds.maxX ||
+        world.y < bounds.minY ||
+        world.y > bounds.maxY
+      ) {
+        return false
+      }
 
-    setGoalUnreachable((current) => ({ ...current, visible: false }))
-    dragStartRef.current = { startX: world.x, startY: world.y }
-    setPressedPose({ x: world.x, y: world.y, yaw: 0, velocity: 0, steer: 0 })
-    return true
-  }, [mapSnapshotRef, setGoalUnreachable, dragStartRef, setPressedPose])
+      setGoalUnreachable((current) => ({ ...current, visible: false }))
+      dragStartRef.current = { startX: world.x, startY: world.y }
+      setPressedPose({ x: world.x, y: world.y, yaw: 0, velocity: 0, steer: 0 })
+      return true
+    },
+    [mapSnapshotRef, setGoalUnreachable, dragStartRef, setPressedPose],
+  )
 
-  const handleMapPrimaryDragMove = useCallback((world: { x: number; y: number }) => {
-    const start = dragStartRef.current
-    if (!start) {
-      return
-    }
+  const handleMapPrimaryDragMove = useCallback(
+    (world: { x: number; y: number }) => {
+      const start = dragStartRef.current
+      if (!start) {
+        return
+      }
 
-    setPressedPose({
-      x: start.startX,
-      y: start.startY,
-      yaw: Math.atan2(world.y - start.startY, world.x - start.startX),
-      velocity: 0,
-      steer: 0,
-    })
-  }, [dragStartRef, setPressedPose])
+      setPressedPose({
+        x: start.startX,
+        y: start.startY,
+        yaw: Math.atan2(world.y - start.startY, world.x - start.startX),
+        velocity: 0,
+        steer: 0,
+      })
+    },
+    [dragStartRef, setPressedPose],
+  )
 
   const handleMapPrimaryDragEnd = useCallback(
     (world: { x: number; y: number }) => {

@@ -1,6 +1,5 @@
 import {
   CarState,
-  HybridAStarPlanner,
   MpcReferenceTracker,
   path_check_collision,
   rs_solve_path,
@@ -8,11 +7,8 @@ import {
 
 import {
   checkTrajectoryCollision,
-  decodeExploredSegments,
   decodeFlatCoordinates,
-  flattenHybridSeedPoints,
   flattenTrajectoryPoints,
-  snapshotHybridResult,
 } from './workerCodecs'
 import {
   applySimulationStop,
@@ -21,7 +17,6 @@ import {
   computeStepCarState,
   ensureLocalPlannerSession,
   ensureWasmCore,
-  postEvent,
   setSimulationControlSequenceInternal,
   startSimulationLoop,
   workerState,
@@ -29,14 +24,8 @@ import {
   DEFAULT_SIM_INTERVAL_MS,
   DEFAULT_PUBLISH_INTERVAL_MS,
 } from './workerHelpers'
-import {
-  HYBRID_SEGMENT_BATCH_SIZE,
-  HYBRID_STEP_BUDGET,
-  type HybridSeedPoint,
-  type WasmCarState,
-  type WorkerRequest,
-  type WorkerResponse,
-} from './workerTypes'
+import { type WasmCarState, type WorkerRequest, type WorkerResponse } from './workerTypes'
+import { solveHybridAStar } from './workerHandlers'
 
 const handlers = {
   async getCarConfigSnapshot() {
@@ -66,7 +55,12 @@ const handlers = {
     }
   },
 
-  async stepCarState(payload: { current: WasmCarState; targetVelocity: number; targetSteer: number; dt: number }) {
+  async stepCarState(payload: {
+    current: WasmCarState
+    targetVelocity: number
+    targetSteer: number
+    dt: number
+  }) {
     const { current, targetVelocity, targetSteer, dt } = payload
     return computeStepCarState(current, targetVelocity, targetSteer, dt)
   },
@@ -90,7 +84,10 @@ const handlers = {
       loopToken: 0,
       stateVersion: 0,
     }
-    await startSimulationLoop(payload.simulationIntervalMs ?? DEFAULT_SIM_INTERVAL_MS, payload.publishIntervalMs ?? DEFAULT_PUBLISH_INTERVAL_MS)
+    await startSimulationLoop(
+      payload.simulationIntervalMs ?? DEFAULT_SIM_INTERVAL_MS,
+      payload.publishIntervalMs ?? DEFAULT_PUBLISH_INTERVAL_MS,
+    )
     return null
   },
 
@@ -150,11 +147,18 @@ const handlers = {
     }
 
     session.tracker?.free()
-    session.tracker = new MpcReferenceTracker(Float64Array.from(flattenTrajectoryPoints(payload.trajectory)))
+    session.tracker = new MpcReferenceTracker(
+      Float64Array.from(flattenTrajectoryPoints(payload.trajectory)),
+    )
     return null
   },
 
-  async setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; dt?: number; updateIntervalMs?: number }) {
+  async setLocalPlannerState(payload: {
+    state: WasmCarState
+    timestamp: number
+    dt?: number
+    updateIntervalMs?: number
+  }) {
     const session = ensureLocalPlannerSession()
     session.latestState = {
       state: payload.state,
@@ -163,7 +167,10 @@ const handlers = {
     if (payload.dt !== undefined) {
       session.simDeltaTime = payload.dt
     }
-    if (payload.updateIntervalMs !== undefined && payload.updateIntervalMs !== session.updateIntervalMs) {
+    if (
+      payload.updateIntervalMs !== undefined &&
+      payload.updateIntervalMs !== session.updateIntervalMs
+    ) {
       session.updateIntervalMs = payload.updateIntervalMs
       clearLocalPlannerTimer()
       ensureLocalPlannerSession()
@@ -204,7 +211,13 @@ const handlers = {
   async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
     const config = await ensureWasmCore()
     const { state: stateLike, obstacleCoordinates } = payload
-    const state = new CarState(stateLike.x, stateLike.y, stateLike.yaw, stateLike.velocity, stateLike.steer)
+    const state = new CarState(
+      stateLike.x,
+      stateLike.y,
+      stateLike.yaw,
+      stateLike.velocity,
+      stateLike.steer,
+    )
     try {
       return state.check_collision(config, Float64Array.from(obstacleCoordinates))
     } finally {
@@ -212,15 +225,29 @@ const handlers = {
     }
   },
 
-  async checkPathCollision(payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] }) {
+  async checkPathCollision(payload: {
+    path: Array<{ x: number; y: number; yaw: number }>
+    obstacleCoordinates: number[]
+  }) {
     const config = await ensureWasmCore()
     const flatPath = payload.path.flatMap((point) => [point.x, point.y, point.yaw])
-    return path_check_collision(config, Float64Array.from(flatPath), Float64Array.from(payload.obstacleCoordinates))
+    return path_check_collision(
+      config,
+      Float64Array.from(flatPath),
+      Float64Array.from(payload.obstacleCoordinates),
+    )
   },
 
-  async checkTrajectoryCollision(payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] }) {
+  async checkTrajectoryCollision(payload: {
+    path: Array<{ x: number; y: number; yaw: number }>
+    obstacleCoordinates: number[]
+  }) {
     const config = await ensureWasmCore()
-    return checkTrajectoryCollision(config, { path: payload.path, directions: [] }, payload.obstacleCoordinates)
+    return checkTrajectoryCollision(
+      config,
+      { path: payload.path, directions: [] },
+      payload.obstacleCoordinates,
+    )
   },
 
   async solveReedsSheppCandidates(payload: {
@@ -284,79 +311,7 @@ const handlers = {
     return solutions
   },
 
-  async solveHybridAStar(payload: {
-    start: WasmCarState | HybridSeedPoint[]
-    startIsTrajectorySeed?: boolean
-    goal: WasmCarState
-    obstacleCoordinates: number[]
-    maxIterations: number
-    requestToken?: number
-  }) {
-    await ensureWasmCore()
-
-    workerState.activePlanner?.planner.free()
-    const planner = payload.startIsTrajectorySeed
-      ? HybridAStarPlanner.from_trajectory_seed(
-          Float64Array.from(flattenHybridSeedPoints(payload.start as HybridSeedPoint[])),
-          payload.goal.x,
-          payload.goal.y,
-          payload.goal.yaw,
-          Float64Array.from(payload.obstacleCoordinates),
-          payload.maxIterations,
-        )
-      : new HybridAStarPlanner(
-          (payload.start as WasmCarState).x,
-          (payload.start as WasmCarState).y,
-          (payload.start as WasmCarState).yaw,
-          payload.goal.x,
-          payload.goal.y,
-          payload.goal.yaw,
-          Float64Array.from(payload.obstacleCoordinates),
-          payload.maxIterations,
-        )
-    workerState.activePlanner = {
-      planner,
-      cancelled: false,
-    }
-
-    const plannerToken = payload.requestToken ?? workerState.nextPlannerToken
-    if (payload.requestToken === undefined) {
-      workerState.nextPlannerToken += 1
-    }
-    const plannerSession = workerState.activePlanner
-
-    while (!plannerSession.cancelled) {
-      const finished = plannerSession.planner.step(HYBRID_STEP_BUDGET)
-      const exploredFlat = plannerSession.planner.take_explored_segments()
-      if (exploredFlat.length > 0) {
-        const decoded = decodeExploredSegments(exploredFlat)
-        for (let index = 0; index < decoded.length; index += HYBRID_SEGMENT_BATCH_SIZE) {
-          postEvent('hybridAStarProgress', {
-            token: plannerToken,
-            segments: decoded.slice(index, index + HYBRID_SEGMENT_BATCH_SIZE),
-            exploredCount: plannerSession.planner.explored_count,
-            analyticExpansions: plannerSession.planner.analytic_expansions,
-          })
-        }
-      }
-
-      if (finished) {
-        const result = plannerSession.planner.take_result()
-        plannerSession.planner.free()
-        workerState.activePlanner = null
-        if (!result) {
-          return null
-        }
-        return snapshotHybridResult(plannerToken, result)
-      }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, 0))
-    }
-
-    plannerSession.planner.free()
-    workerState.activePlanner = null
-    throw new Error('Hybrid A* search cancelled')
-  },
+  solveHybridAStar,
 
   async cancelHybridAStar() {
     if (workerState.activePlanner) {
@@ -368,10 +323,16 @@ const handlers = {
 
 self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   const message = event.data
-  const handler = handlers[message.type as keyof typeof handlers] as ((payload: never) => Promise<unknown>) | undefined
+  const handler = handlers[message.type as keyof typeof handlers] as
+    | ((payload: never) => Promise<unknown>)
+    | undefined
 
   if (!handler) {
-    self.postMessage({ id: message.id, ok: false, error: `Unknown worker request: ${message.type}` } satisfies WorkerResponse)
+    self.postMessage({
+      id: message.id,
+      ok: false,
+      error: `Unknown worker request: ${message.type}`,
+    } satisfies WorkerResponse)
     return
   }
 

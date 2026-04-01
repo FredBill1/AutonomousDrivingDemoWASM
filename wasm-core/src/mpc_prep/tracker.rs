@@ -1,11 +1,11 @@
 use wasm_bindgen::prelude::*;
 
+use super::trajectory::{decode_trajectory, linspace, process_reference_trajectory};
 use super::types::{
-    MpcReferenceResult, PreparedTrajectory, MAX_ACCEL, DESIRED_MAX_ACCEL_RATIO,
-    HORIZON_LENGTH, MIN_HORIZON_DISTANCE, MOTION_RESOLUTION, DIRECTION_CHANGE_DIST,
-    distance, lerp,
+    DESIRED_MAX_ACCEL_RATIO, DIRECTION_CHANGE_DIST, HORIZON_LENGTH, MAX_ACCEL,
+    MIN_HORIZON_DISTANCE, MOTION_RESOLUTION, MpcReferenceResult, PreparedTrajectory, distance,
+    lerp,
 };
-use super::trajectory::{decode_trajectory, process_reference_trajectory, linspace};
 
 #[wasm_bindgen]
 pub struct MpcReferenceTracker {

@@ -1,7 +1,11 @@
 import type { WasmConfigSnapshot } from './wasmCore'
 import type { CarShape, MotionLimits } from './appTypes'
 import type { MapBoundingBox } from './mapServerNode'
-import type { HybridAStarStartSeedPoint, LocalPlannerReferencePoint, LocalPlannerTrajectoryPoint } from './wasmCore'
+import type {
+  HybridAStarStartSeedPoint,
+  LocalPlannerReferencePoint,
+  LocalPlannerTrajectoryPoint,
+} from './wasmCore'
 
 export function createCarShape(snapshot: WasmConfigSnapshot): CarShape {
   return {
@@ -26,14 +30,21 @@ export function createMotionLimits(snapshot: WasmConfigSnapshot): MotionLimits {
 }
 
 export function isPointInBounds(point: { x: number; y: number }, bounds: MapBoundingBox) {
-  return point.x >= bounds.minX && point.x <= bounds.maxX && point.y >= bounds.minY && point.y <= bounds.maxY
+  return (
+    point.x >= bounds.minX &&
+    point.x <= bounds.maxX &&
+    point.y >= bounds.minY &&
+    point.y <= bounds.maxY
+  )
 }
 
 export function toTrajectoryPath(points: LocalPlannerTrajectoryPoint[]) {
   return points.map((point) => ({ x: point.x, y: point.y }))
 }
 
-export function toHybridAStarStartSeed(points: LocalPlannerReferencePoint[]): HybridAStarStartSeedPoint[] {
+export function toHybridAStarStartSeed(
+  points: LocalPlannerReferencePoint[],
+): HybridAStarStartSeedPoint[] {
   return points.map((point) => ({
     x: point.x,
     y: point.y,

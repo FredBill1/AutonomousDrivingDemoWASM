@@ -123,40 +123,42 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
       drawRef.current()
     }
 
-    void app.init({
-      width,
-      height,
-      antialias: true,
-      autoDensity: true,
-      backgroundAlpha: 0,
-      preference: 'webgl',
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-    }).then(() => {
-      if (disposed) {
-        app.destroy(true, { children: true })
-        return
-      }
-
-      app.canvas.classList.add('pixi-surface')
-      syncCanvasElementSize(app.canvas, width, height)
-      host.appendChild(app.canvas)
-
-      const frame = new Graphics()
-      const line = new Graphics()
-      const labels = new Container()
-      app.stage.addChild(frame)
-      app.stage.addChild(line)
-      app.stage.addChild(labels)
-
-      appRef.current = app
-      frameRef.current = frame
-      lineRef.current = line
-      labelsRef.current = labels
-      syncChartSize()
-      initialResizeFrame = window.requestAnimationFrame(() => {
-        syncChartSize()
+    void app
+      .init({
+        width,
+        height,
+        antialias: true,
+        autoDensity: true,
+        backgroundAlpha: 0,
+        preference: 'webgl',
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
       })
-    })
+      .then(() => {
+        if (disposed) {
+          app.destroy(true, { children: true })
+          return
+        }
+
+        app.canvas.classList.add('pixi-surface')
+        syncCanvasElementSize(app.canvas, width, height)
+        host.appendChild(app.canvas)
+
+        const frame = new Graphics()
+        const line = new Graphics()
+        const labels = new Container()
+        app.stage.addChild(frame)
+        app.stage.addChild(line)
+        app.stage.addChild(labels)
+
+        appRef.current = app
+        frameRef.current = frame
+        lineRef.current = line
+        labelsRef.current = labels
+        syncChartSize()
+        initialResizeFrame = window.requestAnimationFrame(() => {
+          syncChartSize()
+        })
+      })
 
     const resizeObserver = new ResizeObserver(syncChartSize)
     resizeObserver.observe(host)

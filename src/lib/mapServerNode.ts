@@ -53,7 +53,12 @@ function buildBoundingBox(obstacles: Obstacle[]): MapBoundingBox {
       maxX: Math.max(bounds.maxX, obstacle.x),
       maxY: Math.max(bounds.maxY, obstacle.y),
     }),
-    { minX: Number.POSITIVE_INFINITY, minY: Number.POSITIVE_INFINITY, maxX: Number.NEGATIVE_INFINITY, maxY: Number.NEGATIVE_INFINITY },
+    {
+      minX: Number.POSITIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    },
   )
 }
 
@@ -89,7 +94,9 @@ export class MapServerNode {
     this.knownObstacles = createKnownObstacleTemplate()
     this.boundingBox = buildBoundingBox(this.knownObstacles)
     this.unknownObstacles = createUnknownObstacles(this.boundingBox)
-    this.undiscoveredUnknownObstacleIds = new Set(this.unknownObstacles.map((obstacle) => obstacle.id))
+    this.undiscoveredUnknownObstacleIds = new Set(
+      this.unknownObstacles.map((obstacle) => obstacle.id),
+    )
     return this.getSnapshot()
   }
 
@@ -102,7 +109,10 @@ export class MapServerNode {
   }
 
   async generateRandomInitialState(): Promise<CarState> {
-    const obstacleCoordinates = flattenObstacleCoordinates([...this.knownObstacles, ...this.unknownObstacles])
+    const obstacleCoordinates = flattenObstacleCoordinates([
+      ...this.knownObstacles,
+      ...this.unknownObstacles,
+    ])
     while (true) {
       const candidate: CarState = {
         x: Math.random() * MAP_WIDTH,

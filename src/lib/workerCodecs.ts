@@ -1,4 +1,9 @@
-import { CarConfig, MpcReferenceTracker, mpc_control_preview, trajectory_check_collision } from '../../wasm-core/pkg/wasm_core'
+import {
+  CarConfig,
+  MpcReferenceTracker,
+  mpc_control_preview,
+  trajectory_check_collision,
+} from '../../wasm-core/pkg/wasm_core'
 
 import type {
   LocalPlannerPathPoint,
@@ -15,7 +20,11 @@ export function buildTrajectoryCollisionInput(plan: TrackingPlan | null) {
   return Float64Array.from(plan.path.flatMap((point) => [point.x, point.y, point.yaw]))
 }
 
-export function checkTrajectoryCollision(config: CarConfig, plan: TrackingPlan | null, obstacleCoordinates: ArrayLike<number>) {
+export function checkTrajectoryCollision(
+  config: CarConfig,
+  plan: TrackingPlan | null,
+  obstacleCoordinates: ArrayLike<number>,
+) {
   const trajectory = buildTrajectoryCollisionInput(plan)
   if (!trajectory || obstacleCoordinates.length < 2) {
     return false
@@ -23,7 +32,9 @@ export function checkTrajectoryCollision(config: CarConfig, plan: TrackingPlan |
   return trajectory_check_collision(config, trajectory, Float64Array.from(obstacleCoordinates))
 }
 
-export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x: number; y: number; yaw: number }> {
+export function decodeFlatCoordinates(
+  flatCoordinates: Float64Array,
+): Array<{ x: number; y: number; yaw: number }> {
   const points = []
   for (let index = 0; index < flatCoordinates.length; index += 3) {
     points.push({
@@ -35,11 +46,15 @@ export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x:
   return points
 }
 
-export function flattenTrajectoryPoints(points: Array<{ x: number; y: number; yaw: number; direction: number }>) {
+export function flattenTrajectoryPoints(
+  points: Array<{ x: number; y: number; yaw: number; direction: number }>,
+) {
   return points.flatMap((point) => [point.x, point.y, point.yaw, point.direction])
 }
 
-export function decodePredictedStateQuads(flatValues: number[] | Float64Array): LocalPlannerPathPoint[] {
+export function decodePredictedStateQuads(
+  flatValues: number[] | Float64Array,
+): LocalPlannerPathPoint[] {
   const points: LocalPlannerPathPoint[] = []
   for (let index = 0; index < flatValues.length; index += 4) {
     points.push({
@@ -51,7 +66,9 @@ export function decodePredictedStateQuads(flatValues: number[] | Float64Array): 
   return points
 }
 
-export function decodePlannerStateQuads(flatValues: number[] | Float64Array): LocalPlannerReferencePoint[] {
+export function decodePlannerStateQuads(
+  flatValues: number[] | Float64Array,
+): LocalPlannerReferencePoint[] {
   const points: LocalPlannerReferencePoint[] = []
   for (let index = 0; index < flatValues.length; index += 4) {
     points.push({
@@ -64,8 +81,14 @@ export function decodePlannerStateQuads(flatValues: number[] | Float64Array): Lo
   return points
 }
 
-export function decodeControlPairs(flatValues: number[] | Float64Array, timestamp: number, dt: number, initialVelocity: number) {
-  const controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }> = []
+export function decodeControlPairs(
+  flatValues: number[] | Float64Array,
+  timestamp: number,
+  dt: number,
+  initialVelocity: number,
+) {
+  const controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }> =
+    []
   let velocity = initialVelocity
   for (let index = 0; index < flatValues.length; index += 2) {
     velocity += flatValues[index] * dt
@@ -186,7 +209,9 @@ export function snapshotHybridResult(
   }
 }
 
-export function flattenHybridSeedPoints(seed: { x: number; y: number; yaw: number; velocity: number }[]) {
+export function flattenHybridSeedPoints(
+  seed: { x: number; y: number; yaw: number; velocity: number }[],
+) {
   return seed.flatMap((point) => [point.x, point.y, point.yaw, point.velocity])
 }
 

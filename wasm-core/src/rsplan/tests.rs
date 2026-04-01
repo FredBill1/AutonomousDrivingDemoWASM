@@ -1,9 +1,10 @@
 use approx::assert_relative_eq;
 
-use super::{
-    ReedsSheppPath, ReedsSheppSegment, SegmentKind,
-    rs_change_base, rs_euclidean_distance, rs_polar, rs_steering_angles, rs_solve_path,
-};
+use super::math::{rs_change_base, rs_euclidean_distance, rs_polar, rs_steering_angles};
+use super::path::ReedsSheppPath;
+use super::segment::ReedsSheppSegment;
+use super::solve::rs_solve_path;
+use super::types::SegmentKind;
 
 #[test]
 fn helper_functions_match_python_reference_behavior() {

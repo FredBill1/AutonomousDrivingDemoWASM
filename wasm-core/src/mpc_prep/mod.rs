@@ -1,6 +1,6 @@
-mod types;
-mod trajectory;
 mod tracker;
+mod trajectory;
+mod types;
 
 pub use tracker::MpcReferenceTracker;
 pub use types::MpcReferenceResult;

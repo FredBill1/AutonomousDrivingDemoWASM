@@ -1,10 +1,12 @@
 // @ts-check
 import eslint from '@eslint/js'
+import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   eslint.configs.recommended,
   tseslint.configs.recommended,
+  reactHooks.configs.flat['recommended-latest'],
   {
     files: ['src/**/*.{ts,tsx}'],
     rules: {
@@ -18,6 +20,8 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'off',
       // Allow namespace imports
       '@typescript-eslint/no-namespace': 'off',
+      // Effects in this codebase intentionally update state in response to external events
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   {

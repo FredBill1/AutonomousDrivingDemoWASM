@@ -1,6 +1,5 @@
 import { CAR_CONSTANTS } from './appModel'
 import type { MapBoundingBox, MapServerSnapshot as _MapServerSnapshot } from './mapServerNode'
-import type { Obstacle } from './appModel'
 
 export type { MapServerSnapshot } from './mapServerNode'
 export type { MapBoundingBox } from './mapServerNode'

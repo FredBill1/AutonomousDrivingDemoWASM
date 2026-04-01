@@ -1,6 +1,6 @@
 use super::types::{
-    PreparedTrajectory, TARGET_SPEED, MAX_SPEED, MIN_SPEED, MAX_ACCEL, MAX_CENTRIPETAL_ACCEL,
-    DESIRED_MAX_ACCEL_RATIO, clamp, wrap_angle, distance, midpoint,
+    DESIRED_MAX_ACCEL_RATIO, MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MIN_SPEED,
+    PreparedTrajectory, TARGET_SPEED, clamp, distance, midpoint, wrap_angle,
 };
 use wasm_bindgen::prelude::*;
 
@@ -168,22 +168,38 @@ fn estimate_curvature(points: &[[f64; 4]], us: &[f64], index: usize) -> f64 {
 
     let target_u = us[index];
     let dx = quadratic_first_derivative(
-        us[start], us[mid], us[end],
-        points[start][0], points[mid][0], points[end][0],
+        us[start],
+        us[mid],
+        us[end],
+        points[start][0],
+        points[mid][0],
+        points[end][0],
         target_u,
     );
     let dy = quadratic_first_derivative(
-        us[start], us[mid], us[end],
-        points[start][1], points[mid][1], points[end][1],
+        us[start],
+        us[mid],
+        us[end],
+        points[start][1],
+        points[mid][1],
+        points[end][1],
         target_u,
     );
     let ddx = quadratic_second_derivative(
-        us[start], us[mid], us[end],
-        points[start][0], points[mid][0], points[end][0],
+        us[start],
+        us[mid],
+        us[end],
+        points[start][0],
+        points[mid][0],
+        points[end][0],
     );
     let ddy = quadratic_second_derivative(
-        us[start], us[mid], us[end],
-        points[start][1], points[mid][1], points[end][1],
+        us[start],
+        us[mid],
+        us[end],
+        points[start][1],
+        points[mid][1],
+        points[end][1],
     );
 
     let denom = (dx * dx + dy * dy).powf(1.5);

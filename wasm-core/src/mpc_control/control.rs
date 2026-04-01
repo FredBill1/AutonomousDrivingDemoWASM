@@ -1,10 +1,9 @@
-use wasm_bindgen::prelude::*;
-use super::types::{
-    ModelState, Control, RollingCarState, MpcControlResult,
-    HORIZON_LENGTH, MAX_ITER, DU_TH, NX,
-    WHEEL_BASE, MAX_STEER, MAX_STEER_SPEED, MAX_SPEED, MIN_SPEED, MAX_ACCEL,
-};
 use super::builder::linear_mpc_control;
+use super::types::{
+    Control, DU_TH, HORIZON_LENGTH, MAX_ACCEL, MAX_ITER, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED,
+    MIN_SPEED, ModelState, MpcControlResult, NX, RollingCarState, WHEEL_BASE,
+};
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn mpc_control_preview(
@@ -54,11 +53,8 @@ pub fn mpc_control_preview(
     }
 
     Ok(MpcControlResult {
-        controls: controls.into_iter().flat_map(|control| control).collect(),
-        predicted_states: predicted_states
-            .into_iter()
-            .flat_map(|state| state)
-            .collect(),
+        controls: controls.into_iter().flatten().collect(),
+        predicted_states: predicted_states.into_iter().flatten().collect(),
         iterations,
     })
 }
@@ -77,7 +73,11 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     Ok(states)
 }
 
-pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], dt: f64) -> Vec<ModelState> {
+pub(crate) fn predict_motion(
+    initial: RollingCarState,
+    controls: &[Control],
+    dt: f64,
+) -> Vec<ModelState> {
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {

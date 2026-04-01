@@ -123,7 +123,12 @@ export async function ensureWasmCore() {
   await computeRpc.call('getCarConfigSnapshot')
 }
 
-export function stepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
+export function stepCarState(
+  current: WasmCarState,
+  targetVelocity: number,
+  targetSteer: number,
+  dt: number,
+) {
   return computeRpc.call<WasmCarState>('stepCarState', { current, targetVelocity, targetSteer, dt })
 }
 
@@ -134,7 +139,13 @@ export function initSimulation(
   simulationIntervalMs = 20,
   publishIntervalMs = 50,
 ) {
-  return computeRpc.call<null>('initSimulation', { state, timestamp, simDeltaTime, simulationIntervalMs, publishIntervalMs })
+  return computeRpc.call<null>('initSimulation', {
+    state,
+    timestamp,
+    simDeltaTime,
+    simulationIntervalMs,
+    publishIntervalMs,
+  })
 }
 
 export function setSimulationState(state: WasmCarState, timestamp?: number) {
@@ -160,15 +171,24 @@ export function stopSimulation() {
 }
 
 export function checkCollision(state: WasmCarState, obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkCollision', { state, obstacleCoordinates: Array.from(obstacleCoordinates) })
+  return computeRpc.call<boolean>('checkCollision', {
+    state,
+    obstacleCoordinates: Array.from(obstacleCoordinates),
+  })
 }
 
 export function checkPathCollision(path: PathPoint[], obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkPathCollision', { path, obstacleCoordinates: Array.from(obstacleCoordinates) })
+  return computeRpc.call<boolean>('checkPathCollision', {
+    path,
+    obstacleCoordinates: Array.from(obstacleCoordinates),
+  })
 }
 
 export function checkTrajectoryCollision(path: PathPoint[], obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkTrajectoryCollision', { path, obstacleCoordinates: Array.from(obstacleCoordinates) })
+  return computeRpc.call<boolean>('checkTrajectoryCollision', {
+    path,
+    obstacleCoordinates: Array.from(obstacleCoordinates),
+  })
 }
 
 export function getCarConfigSnapshot() {
@@ -217,15 +237,21 @@ export function cancelLocalPlanner() {
   return computeRpc.call<null>('cancelLocalPlanner')
 }
 
-export function setLocalPlannerUpdateListener(listener: ((event: LocalPlannerUpdateEvent) => void) | null) {
+export function setLocalPlannerUpdateListener(
+  listener: ((event: LocalPlannerUpdateEvent) => void) | null,
+) {
   localPlannerUpdateListener = listener
 }
 
-export function setHybridAStarProgressListener(listener: ((progress: HybridAStarProgress) => void) | null) {
+export function setHybridAStarProgressListener(
+  listener: ((progress: HybridAStarProgress) => void) | null,
+) {
   progressListener = listener
 }
 
-export function setSimulationStateListener(listener: ((event: SimulationStateEvent) => void) | null) {
+export function setSimulationStateListener(
+  listener: ((event: SimulationStateEvent) => void) | null,
+) {
   simulationListener = listener
 }
 

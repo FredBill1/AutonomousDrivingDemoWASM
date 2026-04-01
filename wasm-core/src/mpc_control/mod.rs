@@ -1,14 +1,15 @@
 mod builder;
 mod control;
+mod matrix_utils;
 mod types;
 
 pub use types::MpcControlResult;
 
 #[cfg(test)]
 mod tests {
-    use super::types::{MAX_ACCEL, MAX_STEER, RollingCarState};
-    use super::control::{mpc_control_preview, predict_motion};
     use super::builder::linear_mpc_control;
+    use super::control::{mpc_control_preview, predict_motion};
+    use super::types::{MAX_ACCEL, MAX_STEER, RollingCarState};
 
     fn assert_close(actual: &[f64], expected: &[f64], tolerance: f64) {
         assert_eq!(actual.len(), expected.len());
@@ -55,12 +56,30 @@ mod tests {
     #[test]
     fn aligns_vehicle_yaw_to_wrapped_reference() {
         let xref = vec![
-            0.0, 0.0, 3.0, std::f64::consts::PI - 0.02,
-            -0.8, 0.0, 3.0, std::f64::consts::PI - 0.01,
-            -1.6, 0.0, 3.0, std::f64::consts::PI,
-            -2.4, 0.0, 3.0, -std::f64::consts::PI + 0.01,
-            -3.2, 0.0, 2.5, -std::f64::consts::PI + 0.02,
-            -4.0, 0.0, 0.0, -std::f64::consts::PI + 0.02,
+            0.0,
+            0.0,
+            3.0,
+            std::f64::consts::PI - 0.02,
+            -0.8,
+            0.0,
+            3.0,
+            std::f64::consts::PI - 0.01,
+            -1.6,
+            0.0,
+            3.0,
+            std::f64::consts::PI,
+            -2.4,
+            0.0,
+            3.0,
+            -std::f64::consts::PI + 0.01,
+            -3.2,
+            0.0,
+            2.5,
+            -std::f64::consts::PI + 0.02,
+            -4.0,
+            0.0,
+            0.0,
+            -std::f64::consts::PI + 0.02,
         ];
 
         let result =
@@ -82,19 +101,42 @@ mod tests {
             .expect("straight fixture preview");
 
         let expected_controls = vec![
-            14.999998614949373, 0.0,
-            10.571998681548704, 0.0,
-            4.895701473376704, 0.0,
-            0.19554004160815755, 0.0,
-            -2.8430650137075264, 0.0,
+            14.999998614949373,
+            0.0,
+            10.571998681548704,
+            0.0,
+            4.895701473376704,
+            0.0,
+            0.19554004160815755,
+            0.0,
+            -2.8430650137075264,
+            0.0,
         ];
         let expected_states = vec![
-            0.0, 0.0, 3.0, 0.0,
-            0.21, 0.0, 4.049999903046456, 0.0,
-            0.4934999932132519, 0.0, 4.790039810754866, 0.0,
-            0.8288027799660924, 0.0, 5.1327389138912345, 0.0,
-            1.188094503938479, 0.0, 5.146426716803806, 0.0,
-            1.5483443741147453, 0.0, 4.947412165844279, 0.0,
+            0.0,
+            0.0,
+            3.0,
+            0.0,
+            0.21,
+            0.0,
+            4.049999903046456,
+            0.0,
+            0.4934999932132519,
+            0.0,
+            4.790039810754866,
+            0.0,
+            0.8288027799660924,
+            0.0,
+            5.1327389138912345,
+            0.0,
+            1.188094503938479,
+            0.0,
+            5.146426716803806,
+            0.0,
+            1.5483443741147453,
+            0.0,
+            4.947412165844279,
+            0.0,
         ];
 
         assert_close(&straight.controls(), &expected_controls, 1e-4);
@@ -142,7 +184,7 @@ mod tests {
                 yaw: 0.0,
                 steer: 0.0,
             },
-            &vec![[0.0, 0.0]; 5],
+            &[[0.0, 0.0]; 5],
             0.07,
         );
         let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, 0.07).expect("solver result");

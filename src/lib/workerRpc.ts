@@ -17,7 +17,10 @@ function isRpcResponse(message: WorkerMessage): message is RpcResponse {
   return 'id' in message && typeof message.id === 'number' && 'ok' in message
 }
 
-export function createWorkerRpc(workerFactory: () => Worker, onEvent?: (message: { type: string; payload?: unknown }) => void) {
+export function createWorkerRpc(
+  workerFactory: () => Worker,
+  onEvent?: (message: { type: string; payload?: unknown }) => void,
+) {
   let worker: Worker | null = null
   let nextId = 1
   const pending = new Map<number, PendingRequest>()

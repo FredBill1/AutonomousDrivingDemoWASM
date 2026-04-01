@@ -1,13 +1,13 @@
 use crate::car::CarConfig;
 use crate::car::CarState;
-use crate::rsplan::{solve_all_paths, SegmentKind};
+use crate::rsplan::{SegmentKind, solve_all_paths};
 
 use super::heuristic::HeuristicGrid;
 use super::types::SearchNode;
 use super::utils::{calc_ijk, wrap_angle};
 use super::{
-    BACKWARDS_COST, H_DIST_COST, H_YAW_COST, MOTION_DISTANCE, MOTION_RESOLUTION,
-    STEER_CHANGE_COST, STEER_COST, SWITCH_DIRECTION_COST,
+    BACKWARDS_COST, H_DIST_COST, H_YAW_COST, MOTION_DISTANCE, MOTION_RESOLUTION, STEER_CHANGE_COST,
+    STEER_COST, SWITCH_DIRECTION_COST,
 };
 
 pub(crate) fn generate_neighbour(
@@ -202,7 +202,7 @@ pub(crate) fn traceback_path(goal_node: SearchNode) -> Vec<f64> {
         .into_iter()
         .zip(keep)
         .filter_map(|(point, keep_point)| keep_point.then_some(point))
-        .flat_map(|point| point)
+        .flatten()
         .collect()
 }
 

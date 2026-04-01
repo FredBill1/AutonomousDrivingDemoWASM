@@ -42,9 +42,18 @@ type PointerHandlersParams = {
 
 export function createPointerHandlers(params: PointerHandlersParams) {
   const {
-    viewportRef, boundsRef, hostRef, primaryDragRef, middlePanRef,
-    touchStateRef, fitScaleRef, canvasRef,
-    onPrimaryDragStartRef, onPrimaryDragMoveRef, onPrimaryDragEndRef, onPrimaryDragCancelRef,
+    viewportRef,
+    boundsRef,
+    hostRef,
+    primaryDragRef,
+    middlePanRef,
+    touchStateRef,
+    fitScaleRef,
+    canvasRef,
+    onPrimaryDragStartRef,
+    onPrimaryDragMoveRef,
+    onPrimaryDragEndRef,
+    onPrimaryDragCancelRef,
   } = params
 
   const toWorldFromClient = (clientX: number, clientY: number) => {
@@ -77,7 +86,11 @@ export function createPointerHandlers(params: PointerHandlersParams) {
 
     if (event.pointerType === 'mouse' && event.button === 1) {
       event.preventDefault()
-      middlePanRef.current = { pointerId: event.pointerId, lastX: event.clientX, lastY: event.clientY }
+      middlePanRef.current = {
+        pointerId: event.pointerId,
+        lastX: event.clientX,
+        lastY: event.clientY,
+      }
       canvas.setPointerCapture(event.pointerId)
       return
     }
@@ -125,7 +138,11 @@ export function createPointerHandlers(params: PointerHandlersParams) {
       }
       viewport.position.x += event.clientX - middlePanRef.current.lastX
       viewport.position.y += event.clientY - middlePanRef.current.lastY
-      middlePanRef.current = { pointerId: event.pointerId, lastX: event.clientX, lastY: event.clientY }
+      middlePanRef.current = {
+        pointerId: event.pointerId,
+        lastX: event.clientX,
+        lastY: event.clientY,
+      }
       return
     }
 
@@ -215,7 +232,11 @@ export function createPointerHandlers(params: PointerHandlersParams) {
     const screenY = event.clientY - rect.top
     const worldPoint = viewport.toWorld(screenX, screenY)
     const scaleFactor = Math.exp(-event.deltaY * 0.0015)
-    const nextScale = clamp(viewport.scale.x * scaleFactor, Math.max(MIN_ZOOM, fitScaleRef.current * 0.1), MAX_ZOOM)
+    const nextScale = clamp(
+      viewport.scale.x * scaleFactor,
+      Math.max(MIN_ZOOM, fitScaleRef.current * 0.1),
+      MAX_ZOOM,
+    )
     setViewportTransform(viewport, screenX, screenY, nextScale, worldPoint)
   }
 

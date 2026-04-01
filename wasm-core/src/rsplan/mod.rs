@@ -18,9 +18,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use math::{rs_change_base, rs_euclidean_distance, rs_polar, rs_steering_angles, rs_wrap_to_pi};
 pub use path::ReedsSheppPath;
 pub use segment::ReedsSheppSegment;
-pub use solve::rs_solve_path;
+pub(crate) use solve::solve_all_paths;
 pub use types::SegmentKind;
-pub(crate) use solve::{solve_all_paths, solve_best_path};
