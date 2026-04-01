@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-checks:
+    name: Rust lint, format, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Restore Rust build cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wasm-core -> target
+          cache-on-failure: true
+
+      - name: Check formatting
+        working-directory: wasm-core
+        run: cargo fmt --check
+
+      - name: Clippy
+        working-directory: wasm-core
+        run: cargo clippy -- -D warnings
+
+      - name: Tests
+        working-directory: wasm-core
+        run: cargo test
+
+  typescript-checks:
+    name: TypeScript lint, format, duplication, file lengths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check file lengths
+        run: node scripts/check-file-lengths.mjs
+
+      - name: Prettier format check
+        run: npx prettier --check "src/**/*.{ts,tsx}"
+
+      - name: ESLint
+        run: npx eslint "src/**/*.{ts,tsx}"
+
+      - name: jscpd duplication check
+        run: npx jscpd src --threshold 5
