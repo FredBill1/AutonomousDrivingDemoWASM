@@ -4,7 +4,7 @@ mod state;
 
 pub use collision::{path_check_collision, trajectory_check_collision};
 pub use config::CarConfig;
-pub use state::{CarState, CarUpdateResult};
+pub use state::CarState;
 
 #[cfg(test)]
 mod tests {

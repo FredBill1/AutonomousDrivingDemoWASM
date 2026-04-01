@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 
 import { Application, Container, Graphics, Text } from 'pixi.js';
 
+import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
+
 type HistoryPoint = {
     t: number;
     value: number;
@@ -26,11 +28,6 @@ const AXIS_ALPHA = 0.18;
 
 function destroyContainerChildren(container: Container) {
     container.removeChildren().forEach((child) => child.destroy());
-}
-
-function syncCanvasElementSize(canvas: HTMLCanvasElement, width: number, height: number) {
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
 }
 
 function clampRange(value: number) {
@@ -134,14 +131,9 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
                 resolution: Math.min(window.devicePixelRatio || 1, 2),
             })
             .then(() => {
-                if (disposed) {
-                    app.destroy(true, { children: true });
+                if (!setupPixiCanvas(app, host, width, height, disposed)) {
                     return;
                 }
-
-                app.canvas.classList.add('pixi-surface');
-                syncCanvasElementSize(app.canvas, width, height);
-                host.appendChild(app.canvas);
 
                 const frame = new Graphics();
                 const line = new Graphics();
@@ -160,16 +152,11 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
                 });
             });
 
-        const resizeObserver = new ResizeObserver(syncChartSize);
-        resizeObserver.observe(host);
-        window.addEventListener('resize', syncChartSize);
-        window.visualViewport?.addEventListener('resize', syncChartSize);
+        const removeResizeListeners = setupResizeListeners(host, syncChartSize);
 
         return () => {
             disposed = true;
-            resizeObserver.disconnect();
-            window.removeEventListener('resize', syncChartSize);
-            window.visualViewport?.removeEventListener('resize', syncChartSize);
+            removeResizeListeners();
             if (initialResizeFrame !== 0) {
                 window.cancelAnimationFrame(initialResizeFrame);
             }
@@ -207,6 +194,16 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
             frame.clear();
             destroyContainerChildren(labels);
 
+            const createTickLabel = (text: string): Text =>
+                new Text({
+                    text,
+                    style: {
+                        fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
+                        fontSize: 10,
+                        fill: LABEL_COLOR,
+                    },
+                });
+
             yTicks.forEach((tick) => {
                 const y = baseY + plotHeight - ((tick.value - minValue) / valueRange) * plotHeight;
                 frame
@@ -215,14 +212,7 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
                     .moveTo(baseX - TICK_SIZE, y)
                     .lineTo(baseX, y);
 
-                const label = new Text({
-                    text: tick.label,
-                    style: {
-                        fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
-                        fontSize: 10,
-                        fill: LABEL_COLOR,
-                    },
-                });
+                const label = createTickLabel(tick.label);
                 label.anchor.set(1, 0.5);
                 label.position.set(baseX - TICK_SIZE - 4, y);
                 labels.addChild(label);
@@ -236,30 +226,22 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
                     .moveTo(x, baseY + plotHeight)
                     .lineTo(x, baseY + plotHeight + TICK_SIZE);
 
-                const label = new Text({
-                    text: tick.label,
-                    style: {
-                        fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
-                        fontSize: 10,
-                        fill: LABEL_COLOR,
-                    },
-                });
+                const label = createTickLabel(tick.label);
                 label.anchor.set(0.5, 0);
                 label.position.set(x, baseY + plotHeight + TICK_SIZE + 2);
                 labels.addChild(label);
             });
 
-            frame
-                .moveTo(baseX, baseY)
-                .lineTo(baseX, baseY + plotHeight)
-                .lineTo(baseX + plotWidth, baseY + plotHeight)
-                .stroke({ width: 1, color: GRID_COLOR, alpha: GRID_ALPHA });
+            const strokeFrame = (strokeWidth: number, alpha: number) => {
+                frame
+                    .moveTo(baseX, baseY)
+                    .lineTo(baseX, baseY + plotHeight)
+                    .lineTo(baseX + plotWidth, baseY + plotHeight)
+                    .stroke({ width: strokeWidth, color: GRID_COLOR, alpha });
+            };
 
-            frame
-                .moveTo(baseX, baseY)
-                .lineTo(baseX, baseY + plotHeight)
-                .lineTo(baseX + plotWidth, baseY + plotHeight)
-                .stroke({ width: 1.2, color: GRID_COLOR, alpha: AXIS_ALPHA });
+            strokeFrame(1, GRID_ALPHA);
+            strokeFrame(1.2, AXIS_ALPHA);
 
             line.clear();
             if (points.length < 2) {

@@ -4,7 +4,7 @@ import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
 import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
-import { MapServerNode, flattenObstacleCoordinates } from './lib/mapServerNode';
+import { MapServerNode } from './lib/mapServerNode';
 import {
     checkCollision,
     checkTrajectoryCollision,
@@ -42,6 +42,25 @@ import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 
 export type { CarShape, MotionLimits, GoalUnreachableState };
+
+type ChartPanelProps = {
+    heading: string;
+    points: { t: number; value: number }[];
+    minValue: number;
+    maxValue: number;
+    lineColor: number;
+};
+
+function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPanelProps) {
+    return (
+        <section className="panel chart-panel">
+            <div className="panel-heading compact">
+                <AutoShrinkHeading text={heading} />
+            </div>
+            <HistoryChart points={points} minValue={minValue} maxValue={maxValue} lineColor={lineColor} />
+        </section>
+    );
+}
 
 const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
 const LOCAL_PLANNER_DT = 0.07;
@@ -181,59 +200,20 @@ function App() {
         timestampRef,
         localPlanningRef,
         brakeTrajectoryRef,
+        mapSnapshotRef,
         setGlobalPlannerSegments,
         setLocalTrajectory,
         setReferencePoints,
         setMapSnapshot,
         setCar,
         setTimestamp,
+        setVelocityHistory,
+        setSteerHistory,
+        historyLimit: HISTORY_LIMIT,
         localPlannerDt: LOCAL_PLANNER_DT,
         localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
         maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
     });
-
-    useEffect(() => {
-        if (!car) {
-            return;
-        }
-
-        const mapUpdate = mapServerNodeRef.current?.update(car);
-        if (!mapUpdate || mapUpdate.newObstacles.length === 0) {
-            return;
-        }
-
-        mapSnapshotRef.current = mapUpdate;
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
-            flattenObstacleCoordinates(mapUpdate.knownObstacles),
-        );
-        setMapSnapshot(mapUpdate);
-
-        void trajectoryCollisionCheckingNodeRef.current
-            ?.checkCollision(flattenObstacleCoordinates(mapUpdate.newObstacles))
-            .then((collided) => {
-                if (!collided) {
-                    return;
-                }
-            })
-            .catch((error) => {
-                console.error('Failed to check trajectory collision', error);
-            });
-    }, [car]);
-
-    useEffect(() => {
-        if (!car) {
-            return;
-        }
-
-        setVelocityHistory((history) => [
-            ...history.slice(-HISTORY_LIMIT + 1),
-            { t: timestamp, value: car.velocity * 3.6 },
-        ]);
-        setSteerHistory((history) => [
-            ...history.slice(-HISTORY_LIMIT + 1),
-            { t: timestamp, value: (car.steer * 180) / Math.PI },
-        ]);
-    }, [car, timestamp]);
 
     const {
         handleCancel,
@@ -336,33 +316,21 @@ function App() {
                 </section>
 
                 <div className={`side-stack side-stack--${dashboardLayout}`}>
-                    <section className="panel chart-panel">
-                        <div className="panel-heading compact">
-                            <AutoShrinkHeading
-                                text={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`}
-                            />
-                        </div>
-                        <HistoryChart
-                            points={velocityHistory}
-                            minValue={motionLimits.minSpeedKmh}
-                            maxValue={motionLimits.maxSpeedKmh}
-                            lineColor={0x9fe870}
-                        />
-                    </section>
+                    <ChartPanel
+                        heading={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`}
+                        points={velocityHistory}
+                        minValue={motionLimits.minSpeedKmh}
+                        maxValue={motionLimits.maxSpeedKmh}
+                        lineColor={0x9fe870}
+                    />
 
-                    <section className="panel chart-panel">
-                        <div className="panel-heading compact">
-                            <AutoShrinkHeading
-                                text={`Steer: ${formatFixedWithoutNegativeZero(((car?.steer ?? 0) * 180) / Math.PI, 1)}°`}
-                            />
-                        </div>
-                        <HistoryChart
-                            points={steerHistory}
-                            minValue={-motionLimits.maxSteerDeg}
-                            maxValue={motionLimits.maxSteerDeg}
-                            lineColor={0x57d8ff}
-                        />
-                    </section>
+                    <ChartPanel
+                        heading={`Steer: ${formatFixedWithoutNegativeZero(((car?.steer ?? 0) * 180) / Math.PI, 1)}°`}
+                        points={steerHistory}
+                        minValue={-motionLimits.maxSteerDeg}
+                        maxValue={motionLimits.maxSteerDeg}
+                        lineColor={0x57d8ff}
+                    />
                 </div>
             </main>
 

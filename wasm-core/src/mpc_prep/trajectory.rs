@@ -153,6 +153,24 @@ fn limit_velocity_by_curvature(points: &mut [[f64; 4]], us: &[f64]) {
     }
 }
 
+fn quadratic_xy_derivatives(
+    us: &[f64],
+    points: &[[f64; 4]],
+    start: usize,
+    mid: usize,
+    end: usize,
+    coord_index: usize,
+    target_u: f64,
+) -> (f64, f64) {
+    let first = quadratic_first_derivative(
+        us[start], us[mid], us[end], points[start][coord_index], points[mid][coord_index], points[end][coord_index], target_u,
+    );
+    let second = quadratic_second_derivative(
+        us[start], us[mid], us[end], points[start][coord_index], points[mid][coord_index], points[end][coord_index],
+    );
+    (first, second)
+}
+
 fn estimate_curvature(points: &[[f64; 4]], us: &[f64], index: usize) -> f64 {
     let (start, mid, end) = if index == 0 {
         (0, 1, 2)
@@ -163,40 +181,8 @@ fn estimate_curvature(points: &[[f64; 4]], us: &[f64], index: usize) -> f64 {
     };
 
     let target_u = us[index];
-    let dx = quadratic_first_derivative(
-        us[start],
-        us[mid],
-        us[end],
-        points[start][0],
-        points[mid][0],
-        points[end][0],
-        target_u,
-    );
-    let dy = quadratic_first_derivative(
-        us[start],
-        us[mid],
-        us[end],
-        points[start][1],
-        points[mid][1],
-        points[end][1],
-        target_u,
-    );
-    let ddx = quadratic_second_derivative(
-        us[start],
-        us[mid],
-        us[end],
-        points[start][0],
-        points[mid][0],
-        points[end][0],
-    );
-    let ddy = quadratic_second_derivative(
-        us[start],
-        us[mid],
-        us[end],
-        points[start][1],
-        points[mid][1],
-        points[end][1],
-    );
+    let (dx, ddx) = quadratic_xy_derivatives(us, points, start, mid, end, 0, target_u);
+    let (dy, ddy) = quadratic_xy_derivatives(us, points, start, mid, end, 1, target_u);
 
     let denom = (dx * dx + dy * dy).powf(1.5);
     if denom == 0.0 {

@@ -49,10 +49,7 @@ export function clamp(value: number, minValue: number, maxValue: number) {
     return Math.min(maxValue, Math.max(minValue, value));
 }
 
-export function syncCanvasElementSize(canvas: HTMLCanvasElement, width: number, height: number) {
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-}
+export { syncCanvasElementSize } from './pixiAppInit';
 
 export function worldWidth(bounds: MapBoundingBox) {
     return bounds.maxX - bounds.minX;

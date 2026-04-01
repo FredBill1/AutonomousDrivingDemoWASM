@@ -58,11 +58,7 @@ impl PartialEq for QueueEntry {
 
 impl Eq for QueueEntry {}
 
-impl PartialOrd for QueueEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+super::impl_partial_ord_from_ord!(QueueEntry);
 
 impl Ord for QueueEntry {
     fn cmp(&self, other: &Self) -> Ordering {

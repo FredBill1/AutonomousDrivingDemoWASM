@@ -92,7 +92,7 @@ export function decodeControlPairs(
     return controlSequence;
 }
 
-export async function runLocalPlannerUpdate(
+export function runLocalPlannerUpdate(
     tracker: MpcReferenceTracker,
     state: WasmCarState,
     timestamp: number,
@@ -103,7 +103,7 @@ export async function runLocalPlannerUpdate(
     const modelReferenceStates = referenceResult.model_reference_states;
     if (referenceStates.length === 0) {
         referenceResult.free();
-        return null;
+        return Promise.resolve(null);
     }
 
     const brakeTrajectory = referenceResult.brake_trajectory;
@@ -117,7 +117,7 @@ export async function runLocalPlannerUpdate(
         dt,
     );
     try {
-        return {
+        return Promise.resolve({
             controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),
             localTrajectory: decodePredictedStateQuads(controlResult.predicted_states).map((point) => ({
                 x: point.x,
@@ -126,7 +126,7 @@ export async function runLocalPlannerUpdate(
             })),
             referencePoints: decodePlannerStateQuads(referenceStates),
             brakeTrajectory: decodePlannerStateQuads(brakeTrajectory),
-        };
+        });
     } finally {
         controlResult.free();
         referenceResult.free();

@@ -26,12 +26,16 @@ type UseSimulationSetupParams = {
     timestampRef: React.MutableRefObject<number>;
     localPlanningRef: React.MutableRefObject<boolean>;
     brakeTrajectoryRef: React.MutableRefObject<LocalPlannerReferencePoint[] | null>;
+    mapSnapshotRef: React.MutableRefObject<MapServerSnapshot>;
     setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
     setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
     setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
     setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>;
     setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
     setTimestamp: React.Dispatch<React.SetStateAction<number>>;
+    setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
+    setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
+    historyLimit: number;
     localPlannerDt: number;
     localPlannerUpdateIntervalMs: number;
     maxGlobalPlannerDisplayBatches: number;
@@ -45,12 +49,16 @@ export function useSimulationSetup({
     timestampRef,
     localPlanningRef,
     brakeTrajectoryRef,
+    mapSnapshotRef,
     setGlobalPlannerSegments,
     setLocalTrajectory,
     setReferencePoints,
     setMapSnapshot,
     setCar,
     setTimestamp,
+    setVelocityHistory,
+    setSteerHistory,
+    historyLimit,
     localPlannerDt,
     localPlannerUpdateIntervalMs,
     maxGlobalPlannerDisplayBatches,
@@ -98,6 +106,34 @@ export function useSimulationSetup({
             timestampRef.current = event.timestamp;
             setTimestamp(event.timestamp);
             setCar(event.state);
+
+            setVelocityHistory((history) => [
+                ...history.slice(-historyLimit + 1),
+                { t: event.timestamp, value: event.state.velocity * 3.6 },
+            ]);
+            setSteerHistory((history) => [
+                ...history.slice(-historyLimit + 1),
+                { t: event.timestamp, value: (event.state.steer * 180) / Math.PI },
+            ]);
+
+            const mapUpdate = mapServerNodeRef.current?.update(event.state);
+            if (mapUpdate && mapUpdate.newObstacles.length > 0) {
+                mapSnapshotRef.current = mapUpdate;
+                trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
+                    flattenObstacleCoordinates(mapUpdate.knownObstacles),
+                );
+                setMapSnapshot(mapUpdate);
+                void trajectoryCollisionCheckingNodeRef.current
+                    ?.checkCollision(flattenObstacleCoordinates(mapUpdate.newObstacles))
+                    .then((collided) => {
+                        if (!collided) {
+                            return;
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Failed to check trajectory collision', error);
+                    });
+            }
         });
 
         void (async () => {

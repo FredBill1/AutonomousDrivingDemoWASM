@@ -72,6 +72,20 @@ fn create_segment(segment_param: f64, kind: SegmentKind, direction: i8, turn_rad
     }
 }
 
+fn collect_tuv_paths(
+    all: super::types::PathParameters,
+    start_pose: Pose,
+    end_pose: Pose,
+    step_size: f64,
+    turn_radius: f64,
+) -> Vec<ReedsSheppPath> {
+    all.iter()
+        .map(|(_, t, u, v, path_ix)| {
+            create_path(start_pose, end_pose, step_size, &[t, u, v], PATHS[path_ix], turn_radius)
+        })
+        .collect()
+}
+
 pub(super) fn csc(
     start_pose: Pose,
     end_pose: Pose,
@@ -89,11 +103,7 @@ pub(super) fn csc(
     all.push_from(csca_params);
     all.push_from(cscb_params);
 
-    all.iter()
-        .map(|(_, t, u, v, path_ix)| {
-            create_path(start_pose, end_pose, step_size, &[t, u, v], PATHS[path_ix], turn_radius)
-        })
-        .collect()
+    collect_tuv_paths(all, start_pose, end_pose, step_size, turn_radius)
 }
 
 pub(super) fn ccc(
@@ -106,40 +116,13 @@ pub(super) fn ccc(
     turn_radius: f64,
 ) -> Vec<ReedsSheppPath> {
     let steering = rs_steering_angles(phi, turn_radius);
+    let gp = |f: CurveFormula, idx: usize| gen_path_parameters(f, PATH_TYPE_INDICES[idx], x, y, phi, steering[0], turn_radius);
     let mut all = super::types::PathParameters::default();
-    all.push_from(gen_path_parameters(
-        c_c_c,
-        PATH_TYPE_INDICES[2],
-        x,
-        y,
-        phi,
-        steering[0],
-        turn_radius,
-    ));
-    all.push_from(gen_path_parameters(
-        c_cc,
-        PATH_TYPE_INDICES[3],
-        x,
-        y,
-        phi,
-        steering[0],
-        turn_radius,
-    ));
-    all.push_from(gen_path_parameters(
-        cc_c,
-        PATH_TYPE_INDICES[4],
-        x,
-        y,
-        phi,
-        steering[0],
-        turn_radius,
-    ));
+    all.push_from(gp(c_c_c, 2));
+    all.push_from(gp(c_cc, 3));
+    all.push_from(gp(cc_c, 4));
 
-    all.iter()
-        .map(|(_, t, u, v, path_ix)| {
-            create_path(start_pose, end_pose, step_size, &[t, u, v], PATHS[path_ix], turn_radius)
-        })
-        .collect()
+    collect_tuv_paths(all, start_pose, end_pose, step_size, turn_radius)
 }
 
 pub(super) fn cccc(
@@ -152,25 +135,10 @@ pub(super) fn cccc(
     turn_radius: f64,
 ) -> Vec<ReedsSheppPath> {
     let steering = rs_steering_angles(phi, turn_radius);
+    let gp = |f: CurveFormula, idx: usize| gen_path_parameters(f, PATH_TYPE_INDICES[idx], x, y, phi, steering[1], turn_radius);
     let mut all = super::types::PathParameters::default();
-    all.push_from(gen_path_parameters(
-        ccu_cuc,
-        PATH_TYPE_INDICES[5],
-        x,
-        y,
-        phi,
-        steering[1],
-        turn_radius,
-    ));
-    all.push_from(gen_path_parameters(
-        c_cucu_c,
-        PATH_TYPE_INDICES[6],
-        x,
-        y,
-        phi,
-        steering[1],
-        turn_radius,
-    ));
+    all.push_from(gp(ccu_cuc, 5));
+    all.push_from(gp(c_cucu_c, 6));
 
     all.iter()
         .map(|(_, t, u, v, path_ix)| {
@@ -196,25 +164,10 @@ pub(super) fn ccsc(
     turn_radius: f64,
 ) -> Vec<ReedsSheppPath> {
     let steering = rs_steering_angles(phi, turn_radius);
+    let gp = |f: CurveFormula, idx: usize, si: usize| gen_path_parameters(f, PATH_TYPE_INDICES[idx], x, y, phi, steering[si], turn_radius);
     let mut all = super::types::PathParameters::default();
-    all.push_from(gen_path_parameters(
-        c_c2sca,
-        PATH_TYPE_INDICES[7],
-        x,
-        y,
-        phi,
-        steering[0],
-        turn_radius,
-    ));
-    all.push_from(gen_path_parameters(
-        c_c2scb,
-        PATH_TYPE_INDICES[8],
-        x,
-        y,
-        phi,
-        steering[1],
-        turn_radius,
-    ));
+    all.push_from(gp(c_c2sca, 7, 0));
+    all.push_from(gp(c_c2scb, 8, 1));
 
     all.iter()
         .map(|(ix, t, u, v, path_ix)| {
@@ -240,25 +193,10 @@ pub(super) fn cscc(
     turn_radius: f64,
 ) -> Vec<ReedsSheppPath> {
     let steering = rs_steering_angles(phi, turn_radius);
+    let gp = |f: CurveFormula, idx: usize, si: usize| gen_path_parameters(f, PATH_TYPE_INDICES[idx], x, y, phi, steering[si], turn_radius);
     let mut all = super::types::PathParameters::default();
-    all.push_from(gen_path_parameters(
-        csc2_ca,
-        PATH_TYPE_INDICES[9],
-        x,
-        y,
-        phi,
-        steering[0],
-        turn_radius,
-    ));
-    all.push_from(gen_path_parameters(
-        csc2_cb,
-        PATH_TYPE_INDICES[10],
-        x,
-        y,
-        phi,
-        steering[1],
-        turn_radius,
-    ));
+    all.push_from(gp(csc2_ca, 9, 0));
+    all.push_from(gp(csc2_cb, 10, 1));
 
     all.iter()
         .map(|(ix, t, u, v, path_ix)| {

@@ -191,11 +191,7 @@ impl PartialEq for GridEntry {
 
 impl Eq for GridEntry {}
 
-impl PartialOrd for GridEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+super::impl_partial_ord_from_ord!(GridEntry);
 
 impl Ord for GridEntry {
     fn cmp(&self, other: &Self) -> Ordering {

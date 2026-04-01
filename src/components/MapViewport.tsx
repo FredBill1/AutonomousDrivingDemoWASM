@@ -16,6 +16,7 @@ import {
     syncCanvasElementSize,
 } from '../lib/mapViewportDraw';
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction';
+import { setupPixiCanvas, setupResizeListeners } from '../lib/pixiAppInit';
 
 type MapViewportProps = {
     bounds: MapBoundingBox;
@@ -159,14 +160,9 @@ export function MapViewport({
                 resolution: Math.min(window.devicePixelRatio || 1, 2),
             })
             .then(() => {
-                if (disposed) {
-                    app.destroy(true, { children: true });
+                if (!setupPixiCanvas(app, host, width, height, disposed)) {
                     return;
                 }
-
-                app.canvas.classList.add('pixi-surface');
-                syncCanvasElementSize(app.canvas, width, height);
-                host.appendChild(app.canvas);
                 canvasRef.current = app.canvas;
 
                 const viewport = new Viewport({
@@ -244,16 +240,11 @@ export function MapViewport({
                 });
             });
 
-        const resizeObserver = new ResizeObserver(syncViewportSize);
-        resizeObserver.observe(host);
-        window.addEventListener('resize', syncViewportSize);
-        window.visualViewport?.addEventListener('resize', syncViewportSize);
+        const removeResizeListeners = setupResizeListeners(host, syncViewportSize);
 
         return () => {
             disposed = true;
-            resizeObserver.disconnect();
-            window.removeEventListener('resize', syncViewportSize);
-            window.visualViewport?.removeEventListener('resize', syncViewportSize);
+            removeResizeListeners();
             if (initialResizeFrame !== 0) {
                 window.cancelAnimationFrame(initialResizeFrame);
             }

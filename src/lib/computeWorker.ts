@@ -46,7 +46,7 @@ const handlers = {
         };
     },
 
-    async stepCarState(payload: { current: WasmCarState; targetVelocity: number; targetSteer: number; dt: number }) {
+    stepCarState(payload: { current: WasmCarState; targetVelocity: number; targetSteer: number; dt: number }) {
         const { current, targetVelocity, targetSteer, dt } = payload;
         return computeStepCarState(current, targetVelocity, targetSteer, dt);
     },
@@ -104,40 +104,40 @@ const handlers = {
         return null;
     },
 
-    async setSimulationControlSequence(payload: {
+    setSimulationControlSequence(payload: {
         controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>;
     }) {
         if (!workerState.simulationSession) {
-            throw new Error('Simulation not initialized');
+            return Promise.reject(new Error('Simulation not initialized'));
         }
         setSimulationControlSequenceInternal(workerState.simulationSession, payload.controlSequence);
-        return null;
+        return Promise.resolve(null);
     },
 
-    async stopSimulationMotion() {
+    stopSimulationMotion() {
         if (!workerState.simulationSession) {
-            throw new Error('Simulation not initialized');
+            return Promise.reject(new Error('Simulation not initialized'));
         }
         applySimulationStop(workerState.simulationSession);
-        return null;
+        return Promise.resolve(null);
     },
 
-    async setLocalPlannerTrajectory(payload: {
+    setLocalPlannerTrajectory(payload: {
         trajectory: Array<{ x: number; y: number; yaw: number; direction: number }> | null;
     }) {
         const session = ensureLocalPlannerSession();
 
         if (!payload.trajectory || payload.trajectory.length === 0) {
             session.tracker?.brake();
-            return null;
+            return Promise.resolve(null);
         }
 
         session.tracker?.free();
         session.tracker = new MpcReferenceTracker(Float64Array.from(flattenTrajectoryPoints(payload.trajectory)));
-        return null;
+        return Promise.resolve(null);
     },
 
-    async setLocalPlannerState(payload: {
+    setLocalPlannerState(payload: {
         state: WasmCarState;
         timestamp: number;
         dt?: number;
@@ -156,37 +156,37 @@ const handlers = {
             clearLocalPlannerTimer();
             ensureLocalPlannerSession();
         }
-        return null;
+        return Promise.resolve(null);
     },
 
-    async brakeLocalPlanner() {
+    brakeLocalPlanner() {
         workerState.localPlannerSession?.tracker?.brake();
-        return null;
+        return Promise.resolve(null);
     },
 
-    async cancelLocalPlanner() {
+    cancelLocalPlanner() {
         if (workerState.localPlannerSession) {
             workerState.localPlannerSession.tracker?.free();
             workerState.localPlannerSession.tracker = null;
         }
-        return null;
+        return Promise.resolve(null);
     },
 
-    async resumeSimulationMotion() {
+    resumeSimulationMotion() {
         if (!workerState.simulationSession) {
-            throw new Error('Simulation not initialized');
+            return Promise.reject(new Error('Simulation not initialized'));
         }
         workerState.simulationSession.stopped = false;
-        return null;
+        return Promise.resolve(null);
     },
 
-    async stopSimulation() {
+    stopSimulation() {
         clearSimulationTimers();
         workerState.simulationSession = null;
         clearLocalPlannerTimer();
         workerState.localPlannerSession?.tracker?.free();
         workerState.localPlannerSession = null;
-        return null;
+        return Promise.resolve(null);
     },
 
     async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
@@ -284,11 +284,11 @@ const handlers = {
 
     solveHybridAStar,
 
-    async cancelHybridAStar() {
+    cancelHybridAStar() {
         if (workerState.activePlanner) {
             workerState.activePlanner.cancelled = true;
         }
-        return null;
+        return Promise.resolve(null);
     },
 } as const;
 

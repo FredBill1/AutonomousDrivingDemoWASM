@@ -16,10 +16,7 @@ export default defineConfig(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    rules: {
-      '@typescript-eslint/require-await': 'off',
-      'react-hooks/set-state-in-effect': 'off',
-    },
+    rules: {},
   },
   {
     files: ['**/*.{js,mjs,cjs}'],

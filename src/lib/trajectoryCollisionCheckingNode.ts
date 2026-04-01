@@ -16,7 +16,7 @@ export class TrajectoryCollisionCheckingNode {
         this.collidedListener = listener;
     }
 
-    async setTrajectory(trajectory: PathPoint[] | null) {
+    setTrajectory(trajectory: PathPoint[] | null): Promise<boolean> {
         this.generation += 1;
         const generation = this.generation;
         this.trajectory =
@@ -30,7 +30,7 @@ export class TrajectoryCollisionCheckingNode {
 
         const knownObstacleCoordinates = this.knownObstacleCoordinates;
         if (this.trajectory === null || !knownObstacleCoordinates) {
-            return false;
+            return Promise.resolve(false);
         }
 
         return this.checkCurrentTrajectory(this.trajectory, knownObstacleCoordinates, generation);
@@ -40,10 +40,10 @@ export class TrajectoryCollisionCheckingNode {
         this.knownObstacleCoordinates = Float64Array.from(knownObstacleCoordinates);
     }
 
-    async checkCollision(obstacleCoordinates: Float64Array) {
+    checkCollision(obstacleCoordinates: Float64Array): Promise<boolean> {
         const trajectory = this.trajectory;
         if (trajectory === null) {
-            return false;
+            return Promise.resolve(false);
         }
 
         return this.checkCurrentTrajectory(trajectory, obstacleCoordinates, this.generation);

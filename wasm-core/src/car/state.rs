@@ -111,10 +111,10 @@ impl CarState {
         self.steer = clamp(self.steer, -config.max_steer(), config.max_steer());
     }
 
-    pub fn stepped(&self, config: &CarConfig, target_velocity: f64, target_steer: f64, dt: f64) -> CarUpdateResult {
+    pub fn stepped(&self, config: &CarConfig, target_velocity: f64, target_steer: f64, dt: f64) -> CarState {
         let mut next = *self;
         next.update_with_control(config, target_velocity, target_steer, dt);
-        CarUpdateResult::from_state(next)
+        next
     }
 
     pub fn collision_center_x(&self, config: &CarConfig) -> f64 {
@@ -140,52 +140,3 @@ impl CarState {
     }
 }
 
-#[wasm_bindgen]
-#[derive(Clone, Copy, Debug)]
-pub struct CarUpdateResult {
-    x: f64,
-    y: f64,
-    yaw: f64,
-    velocity: f64,
-    steer: f64,
-}
-
-#[wasm_bindgen]
-impl CarUpdateResult {
-    #[wasm_bindgen(getter)]
-    pub fn x(&self) -> f64 {
-        self.x
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn y(&self) -> f64 {
-        self.y
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn yaw(&self) -> f64 {
-        self.yaw
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn velocity(&self) -> f64 {
-        self.velocity
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn steer(&self) -> f64 {
-        self.steer
-    }
-}
-
-impl CarUpdateResult {
-    pub(super) fn from_state(state: CarState) -> Self {
-        Self {
-            x: state.x,
-            y: state.y,
-            yaw: state.yaw,
-            velocity: state.velocity,
-            steer: state.steer,
-        }
-    }
-}
