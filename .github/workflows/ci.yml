@@ -26,13 +26,23 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
       - name: Restore Rust build cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: wasm-core -> target
+          workspaces: |
+            wasm-core -> target
+          cache-workspace-crates: true
+          cache-all-crates: true
           cache-on-failure: true
+
+      - name: Install wasm-pack
+        run: |
+          if ! command -v wasm-pack >/dev/null 2>&1; then
+            cargo install wasm-pack --locked
+          fi
 
       - name: Install dependencies
         run: npm ci
