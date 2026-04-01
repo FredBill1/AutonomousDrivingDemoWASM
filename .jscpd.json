@@ -1,0 +1,10 @@
+{
+  "threshold": 5,
+  "minLines": 5,
+  "minTokens": 50,
+  "format": "console",
+  "reporters": ["console"],
+  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/wasm-core/pkg/**"],
+  "path": ["src"],
+  "languages": ["typescript"]
+}

@@ -1,0 +1,5 @@
+[build]
+rustflags = ["-D", "warnings"]
+
+[alias]
+clippy-check = "clippy --all-targets --all-features -- -D warnings -W clippy::pedantic -W clippy::nursery -A clippy::missing_errors_doc -A clippy::missing_panics_doc -A clippy::module_name_repetitions -A clippy::must_use_candidate"
