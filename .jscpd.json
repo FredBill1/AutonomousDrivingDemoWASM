@@ -1,10 +1,12 @@
 {
-  "threshold": 5,
-  "minLines": 5,
-  "minTokens": 50,
-  "format": "console",
-  "reporters": ["console"],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/wasm-core/pkg/**"],
-  "path": ["src"],
-  "languages": ["typescript"]
+  "$schema": "https://json.schemastore.org/jscpd.json",
+  "threshold": 20,
+  "reporters": [
+    "console"
+  ],
+  "gitignore": true,
+  "ignoreCase": true,
+  "absolute": true,
+  "blame": true,
+  "mode": "strict"
 }

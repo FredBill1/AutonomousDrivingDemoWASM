@@ -4,7 +4,7 @@
 import { readdirSync, readFileSync } from 'fs'
 import { join, extname } from 'path'
 import { URL, fileURLToPath } from 'url'
-import console from 'node:console';
+import console from 'console'
 import process from 'process'
 
 const MAX_FILE_LINES = 400

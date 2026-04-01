@@ -14,10 +14,12 @@
     "format:ts": "prettier --write src/",
     "format:rs": "cargo fmt --manifest-path wasm-core/Cargo.toml",
     "check:lengths": "node scripts/check-file-lengths.mjs",
-    "check:duplication:ts": "jscpd",
-    "check": "npm run check:wasm && npm run lint:ts && npm run lint:rs && npm run check:format:ts && npm run check:format:rs && npm run check:lengths && npm run check:duplication:ts",
+    "check:duplication:ts": "jscpd ./src --format typescript",
+    "check:duplication:tsx": "jscpd ./src --format tsx",
+    "check:duplication:rs": "jscpd ./wasm-core/src --format rust",
     "check:format:ts": "prettier --check src/",
-    "check:format:rs": "cargo fmt --manifest-path wasm-core/Cargo.toml --check"
+    "check:format:rs": "cargo fmt --manifest-path wasm-core/Cargo.toml --check",
+    "check": "node scripts/run-checks.mjs"
   },
   "dependencies": {
     "pixi-viewport": "^6.0.3",
