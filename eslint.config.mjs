@@ -4,26 +4,33 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 import { defineConfig } from 'eslint/config'
 
-
 export default defineConfig(
   eslint.configs.recommended,
-  tseslint.configs.recommendedTypeChecked,
   reactHooks.configs.flat['recommended-latest'],
   {
+    files: ['src/**/*.{ts,tsx}'],
+    extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
         projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
       },
     },
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
-    rules: {
-      "@typescript-eslint/require-await": "off",  // TODO: remove ths exemption
-      'react-hooks/set-state-in-effect': 'off',  // TODO: remove ths exemption
-    },
-  },
-  {
-    ignores: ['dist/**', 'wasm-core/pkg/**', 'node_modules/**', 'vite.config.mjs'],
+    ignores: ['dist/**', 'wasm-core/pkg/**', 'node_modules/**'],
   },
 )
