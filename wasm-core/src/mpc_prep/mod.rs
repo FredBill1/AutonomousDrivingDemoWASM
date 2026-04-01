@@ -6,6 +6,8 @@ pub use tracker::MpcReferenceTracker;
 pub use types::MpcReferenceResult;
 
 #[cfg(test)]
+pub(crate) use tracker::mpc_prepare_reference;
+#[cfg(test)]
 pub(crate) use trajectory::{process_reference_trajectory, smooth_yaws};
 
 #[cfg(test)]
