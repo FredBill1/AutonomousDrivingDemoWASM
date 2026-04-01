@@ -238,7 +238,7 @@ export function scheduleSimulationTick(
   }, simulationIntervalMs)
 }
 
-export async function startSimulationLoop(simulationIntervalMs: number, publishIntervalMs: number) {
+export function startSimulationLoop(simulationIntervalMs: number, publishIntervalMs: number) {
   if (!workerState.simulationSession) return
   clearSimulationTimers()
 

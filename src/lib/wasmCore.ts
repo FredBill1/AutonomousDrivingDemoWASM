@@ -199,7 +199,7 @@ export function solveHybridAStar(
   start: WasmCarState | HybridAStarStartSeedPoint[],
   goal: WasmCarState,
   obstacleCoordinates: Float64Array,
-  _maxIterations = 4000,
+  maxIterations: number,
   requestToken?: number,
 ) {
   return computeRpc.call<HybridAStarSolution | null>('solveHybridAStar', {
@@ -207,7 +207,7 @@ export function solveHybridAStar(
     startIsTrajectorySeed: Array.isArray(start),
     goal,
     obstacleCoordinates: Array.from(obstacleCoordinates),
-    maxIterations: 4000,
+    maxIterations: maxIterations,
     requestToken,
   })
 }

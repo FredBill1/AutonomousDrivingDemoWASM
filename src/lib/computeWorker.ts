@@ -84,7 +84,7 @@ const handlers = {
       loopToken: 0,
       stateVersion: 0,
     }
-    await startSimulationLoop(
+    startSimulationLoop(
       payload.simulationIntervalMs ?? DEFAULT_SIM_INTERVAL_MS,
       payload.publishIntervalMs ?? DEFAULT_PUBLISH_INTERVAL_MS,
     )
@@ -105,7 +105,7 @@ const handlers = {
         loopToken: 0,
         stateVersion: 0,
       }
-      await startSimulationLoop(DEFAULT_SIM_INTERVAL_MS, DEFAULT_PUBLISH_INTERVAL_MS)
+      startSimulationLoop(DEFAULT_SIM_INTERVAL_MS, DEFAULT_PUBLISH_INTERVAL_MS)
     } else {
       workerState.simulationSession.state = payload.state
       workerState.simulationSession.controlSequence = null
@@ -346,4 +346,4 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
     })
 }
 
-export {}
+export { }
