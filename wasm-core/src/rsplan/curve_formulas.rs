@@ -4,8 +4,8 @@ use super::math::rs_polar;
 use super::types::NEAR_ZERO_TOL;
 
 fn unpack_polar(a: f64, b: f64) -> (f64, f64) {
-    let v = rs_polar(a, b);
-    (v[0], v[1])
+    let polar = rs_polar(a, b);
+    (polar[0], polar[1])
 }
 
 fn non_negative(t: f64, u: f64, v: f64) -> Option<(f64, f64, f64)> {
