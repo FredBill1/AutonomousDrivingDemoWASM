@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 // Checks that no source file exceeds 400 lines and the average is under 200 lines.
 
-import { readdirSync, statSync, readFileSync } from 'fs'
+import { readdirSync, readFileSync } from 'fs'
 import { join, extname } from 'path'
+import { URL, fileURLToPath } from 'url'
+import console from 'node:console';
+import process from 'process'
 
 const MAX_FILE_LINES = 400
 const MAX_AVERAGE_LINES = 200
 
-const ROOT = new URL('..', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('..', import.meta.url))
+console.log(`Checking file lengths in ${ROOT}`)
 
 function collectFiles(dir, extensions) {
   const results = []
