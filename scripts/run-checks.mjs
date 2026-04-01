@@ -10,8 +10,8 @@ const NPM_COMMAND = 'npm'
 
 const checkScripts = [
     'check:wasm',
-    'lint:ts',
-    'lint:rs',
+    'check:lint:ts',
+    'check:lint:rs',
     'check:format:ts',
     'check:format:rs',
     'check:lengths',
