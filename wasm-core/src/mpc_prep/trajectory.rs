@@ -163,10 +163,21 @@ fn quadratic_xy_derivatives(
     target_u: f64,
 ) -> (f64, f64) {
     let first = quadratic_first_derivative(
-        us[start], us[mid], us[end], points[start][coord_index], points[mid][coord_index], points[end][coord_index], target_u,
+        us[start],
+        us[mid],
+        us[end],
+        points[start][coord_index],
+        points[mid][coord_index],
+        points[end][coord_index],
+        target_u,
     );
     let second = quadratic_second_derivative(
-        us[start], us[mid], us[end], points[start][coord_index], points[mid][coord_index], points[end][coord_index],
+        us[start],
+        us[mid],
+        us[end],
+        points[start][coord_index],
+        points[mid][coord_index],
+        points[end][coord_index],
     );
     (first, second)
 }
