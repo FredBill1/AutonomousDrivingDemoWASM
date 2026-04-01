@@ -3,14 +3,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use super::math::rs_polar;
 use super::types::NEAR_ZERO_TOL;
 
-pub(super) fn csca(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    _turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn csca(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, _turn_radius: f64) -> Option<(f64, f64, f64)> {
     let a = x - rsin;
     let b = y + rcos;
     let polar = rs_polar(a, b);
@@ -24,14 +17,7 @@ pub(super) fn csca(
     }
 }
 
-pub(super) fn cscb(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn cscb(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x + rsin;
     let b = y - rcos;
@@ -52,14 +38,7 @@ pub(super) fn cscb(
     None
 }
 
-pub(super) fn c_c_c(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_c_c(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x4 = 4.0 * turn_radius;
     let a = x - rsin;
     let b = y + rcos;
@@ -84,14 +63,7 @@ pub(super) fn c_c_c(
     None
 }
 
-pub(super) fn c_cc(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_cc(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x4 = 4.0 * turn_radius;
     let a = x - rsin;
     let b = y + rcos;
@@ -116,14 +88,7 @@ pub(super) fn c_cc(
     None
 }
 
-pub(super) fn cc_c(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn cc_c(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let turn_radius_x4 = 4.0 * turn_radius;
     let a = x - rsin;
@@ -137,8 +102,7 @@ pub(super) fn cc_c(
     let r = polar[0];
     let theta = polar[1];
     if r <= turn_radius_x4 {
-        let u =
-            ((8.0 * turn_radius * turn_radius - r * r) / (8.0 * turn_radius * turn_radius)).acos();
+        let u = ((8.0 * turn_radius * turn_radius - r * r) / (8.0 * turn_radius * turn_radius)).acos();
         let mut sin_u = u.sin();
         const SIN_NEAR_ZERO: f64 = 0.001;
         if sin_u.abs() < SIN_NEAR_ZERO {
@@ -158,14 +122,7 @@ pub(super) fn cc_c(
     None
 }
 
-pub(super) fn ccu_cuc(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn ccu_cuc(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let turn_radius_x4 = 4.0 * turn_radius;
     let a = x + rsin;
@@ -201,14 +158,7 @@ pub(super) fn ccu_cuc(
     None
 }
 
-pub(super) fn c_cucu_c(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_cucu_c(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x + rsin;
     let b = y - rcos;
@@ -241,14 +191,7 @@ pub(super) fn c_cucu_c(
     }
 }
 
-pub(super) fn c_c2sca(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_c2sca(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x - rsin;
     let b = y + rcos;
@@ -271,14 +214,7 @@ pub(super) fn c_c2sca(
     None
 }
 
-pub(super) fn c_c2scb(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_c2scb(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x + rsin;
     let b = y - rcos;
@@ -298,14 +234,7 @@ pub(super) fn c_c2scb(
     None
 }
 
-pub(super) fn csc2_ca(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn csc2_ca(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x - rsin;
     let b = y + rcos;
@@ -328,14 +257,7 @@ pub(super) fn csc2_ca(
     None
 }
 
-pub(super) fn csc2_cb(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn csc2_cb(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let a = x + rsin;
     let b = y - rcos;
@@ -355,14 +277,7 @@ pub(super) fn csc2_cb(
     None
 }
 
-pub(super) fn c_c2sc2_c(
-    x: f64,
-    y: f64,
-    phi: f64,
-    rsin: f64,
-    rcos: f64,
-    turn_radius: f64,
-) -> Option<(f64, f64, f64)> {
+pub(super) fn c_c2sc2_c(x: f64, y: f64, phi: f64, rsin: f64, rcos: f64, turn_radius: f64) -> Option<(f64, f64, f64)> {
     let turn_radius_x2 = 2.0 * turn_radius;
     let turn_radius_x4 = 4.0 * turn_radius;
     let a = x + rsin;

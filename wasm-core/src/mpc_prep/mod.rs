@@ -12,9 +12,7 @@ pub(crate) use trajectory::{process_reference_trajectory, smooth_yaws};
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws,
-    };
+    use super::{MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws};
 
     #[test]
     fn prepares_reference_and_brake_preview() {
@@ -22,8 +20,7 @@ mod tests {
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0,
         ];
 
-        let result =
-            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
+        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
         assert_eq!(result.model_reference_states().len(), 24);
         assert_eq!(result.reference_states().len(), 24);
         assert!(!result.brake_trajectory().is_empty());
@@ -41,11 +38,7 @@ mod tests {
 
     #[test]
     fn smooth_yaws_preserves_first_heading_like_python() {
-        let mut points = vec![
-            [0.0, 0.0, 1.2, 1.0],
-            [1.0, 0.0, 1.25, 1.0],
-            [2.0, 0.0, 1.3, 1.0],
-        ];
+        let mut points = vec![[0.0, 0.0, 1.2, 1.0], [1.0, 0.0, 1.25, 1.0], [2.0, 0.0, 1.3, 1.0]];
 
         smooth_yaws(&mut points);
 
@@ -72,8 +65,7 @@ mod tests {
     #[test]
     fn tracker_freezes_brake_limit_after_brake() {
         let trajectory = vec![
-            0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0, 20.0,
-            0.0, 0.0, 1.0,
+            0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0, 20.0, 0.0, 0.0, 1.0,
         ];
 
         let mut tracker = MpcReferenceTracker::new(trajectory).expect("tracker");
@@ -121,8 +113,7 @@ mod tests {
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0,
         ];
 
-        let result =
-            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
+        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
         let model = result.model_reference_states();
         let public = result.reference_states();
         let brake = result.brake_trajectory();

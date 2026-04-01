@@ -53,9 +53,7 @@ pub(crate) fn python_sign(value: f64) -> i8 {
     }
 }
 
-pub(crate) fn decode_start_seed(
-    flat: &[f64],
-) -> Result<Vec<StartSeedPoint>, wasm_bindgen::JsValue> {
+pub(crate) fn decode_start_seed(flat: &[f64]) -> Result<Vec<StartSeedPoint>, wasm_bindgen::JsValue> {
     if !flat.len().is_multiple_of(4) {
         return Err(wasm_bindgen::JsValue::from_str(
             "Start trajectory seed must be flat [x, y, yaw, velocity] data",

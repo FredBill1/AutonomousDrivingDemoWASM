@@ -6,8 +6,8 @@ use super::heuristic::HeuristicGrid;
 use super::types::SearchNode;
 use super::utils::{calc_ijk, wrap_angle};
 use super::{
-    BACKWARDS_COST, H_DIST_COST, H_YAW_COST, MOTION_DISTANCE, MOTION_RESOLUTION, STEER_CHANGE_COST,
-    STEER_COST, SWITCH_DIRECTION_COST,
+    BACKWARDS_COST, H_DIST_COST, H_YAW_COST, MOTION_DISTANCE, MOTION_RESOLUTION, STEER_CHANGE_COST, STEER_COST,
+    SWITCH_DIRECTION_COST,
 };
 
 pub(crate) fn generate_neighbour(
@@ -50,11 +50,9 @@ pub(crate) fn generate_neighbour(
     };
     let steer_change_cost = STEER_CHANGE_COST * (steer - current.steer).abs();
     let steer_cost = STEER_COST * steer.abs() * MOTION_DISTANCE;
-    let cost =
-        current.cost + distance_cost + switch_direction_cost + steer_change_cost + steer_cost;
+    let cost = current.cost + distance_cost + switch_direction_cost + steer_change_cost + steer_cost;
 
-    let h_cost = H_DIST_COST * heuristic.distance_at(ijk.0, ijk.1)
-        + H_YAW_COST * wrap_angle(goal[2] - car.yaw()).abs();
+    let h_cost = H_DIST_COST * heuristic.distance_at(ijk.0, ijk.1) + H_YAW_COST * wrap_angle(goal[2] - car.yaw()).abs();
 
     Some(SearchNode {
         ijk,
@@ -122,11 +120,7 @@ pub(crate) fn path_collides(
     false
 }
 
-pub(crate) fn calc_rspath_cost(
-    node: &SearchNode,
-    path: &crate::rsplan::ReedsSheppPath,
-    config: &CarConfig,
-) -> f64 {
+pub(crate) fn calc_rspath_cost(node: &SearchNode, path: &crate::rsplan::ReedsSheppPath, config: &CarConfig) -> f64 {
     let mut last_direction = node.direction;
     let mut last_steer = node.steer;
     let mut distance_cost = 0.0;
@@ -206,21 +200,12 @@ pub(crate) fn traceback_path(goal_node: SearchNode) -> Vec<f64> {
         .collect()
 }
 
-pub(crate) fn push_explored_segment(
-    storage: &mut Vec<f64>,
-    current: &SearchNode,
-    neighbour: &SearchNode,
-) {
+pub(crate) fn push_explored_segment(storage: &mut Vec<f64>, current: &SearchNode, neighbour: &SearchNode) {
     let mut points = Vec::<[f64; 2]>::with_capacity(neighbour.trajectory.len() + 1);
     if let Some(start) = current.trajectory.last() {
         points.push([start[0], start[1]]);
     }
-    points.extend(
-        neighbour
-            .trajectory
-            .iter()
-            .map(|point| [point[0], point[1]]),
-    );
+    points.extend(neighbour.trajectory.iter().map(|point| [point[0], point[1]]));
 
     for pair in points.windows(2) {
         storage.extend_from_slice(&[pair[0][0], pair[0][1], pair[1][0], pair[1][1]]);

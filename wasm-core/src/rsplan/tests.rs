@@ -11,11 +11,7 @@ fn helper_functions_match_python_reference_behavior() {
     let changed = rs_change_base(1.0, 2.0, std::f64::consts::FRAC_PI_2, 3.0, 2.0, 0.25);
     assert_relative_eq!(changed[0], 0.0, epsilon = 1e-12);
     assert_relative_eq!(changed[1], -2.0, epsilon = 1e-12);
-    assert_relative_eq!(
-        changed[2],
-        0.25 - std::f64::consts::FRAC_PI_2,
-        epsilon = 1e-12
-    );
+    assert_relative_eq!(changed[2], 0.25 - std::f64::consts::FRAC_PI_2, epsilon = 1e-12);
 
     let steering = rs_steering_angles(0.4, 3.0);
     assert_relative_eq!(steering[0], 3.0 * (0.4_f64.cos() - 1.0), epsilon = 1e-12);
@@ -45,29 +41,11 @@ fn straight_path_waypoints_follow_python_discretization() {
 
 #[test]
 fn curved_and_runway_segments_produce_expected_metrics() {
-    let mut path = ReedsSheppPath::new(
-        0.0,
-        0.0,
-        0.0,
-        2.0,
-        3.5,
-        std::f64::consts::FRAC_PI_2,
-        2.0,
-        0.5,
-    );
-    path.push_segment(&ReedsSheppSegment::new(
-        SegmentKind::Left,
-        1,
-        std::f64::consts::PI,
-        2.0,
-    ));
+    let mut path = ReedsSheppPath::new(0.0, 0.0, 0.0, 2.0, 3.5, std::f64::consts::FRAC_PI_2, 2.0, 0.5);
+    path.push_segment(&ReedsSheppSegment::new(SegmentKind::Left, 1, std::f64::consts::PI, 2.0));
     path.push_segment(&ReedsSheppSegment::new(SegmentKind::Straight, -1, 1.5, 2.0));
 
-    assert_relative_eq!(
-        path.total_length(),
-        std::f64::consts::PI + 1.5,
-        epsilon = 1e-12
-    );
+    assert_relative_eq!(path.total_length(), std::f64::consts::PI + 1.5, epsilon = 1e-12);
     assert_relative_eq!(path.runway_length(), 1.5, epsilon = 1e-12);
     assert_eq!(path.number_of_cusp_points(), 1);
 
@@ -83,8 +61,7 @@ fn curved_and_runway_segments_produce_expected_metrics() {
 
 #[test]
 fn solved_straight_path_matches_euclidean_distance() {
-    let path = rs_solve_path(0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 2.0, 0.0, 0.05, 2.0)
-        .expect("path should exist");
+    let path = rs_solve_path(0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 2.0, 0.0, 0.05, 2.0).expect("path should exist");
 
     assert_relative_eq!(
         path.total_length(),

@@ -1,6 +1,4 @@
-use super::types::{
-    Control, HORIZON_LENGTH, ModelState, NU, NX, Q_V, Q_X, Q_Y, Q_YAW, QF_SCALE, WHEEL_BASE,
-};
+use super::types::{Control, HORIZON_LENGTH, ModelState, NU, NX, Q_V, Q_X, Q_Y, Q_YAW, QF_SCALE, WHEEL_BASE};
 
 pub(super) fn decode_controls(solution: &[f64]) -> Vec<Control> {
     (0..HORIZON_LENGTH)

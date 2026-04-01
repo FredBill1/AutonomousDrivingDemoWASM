@@ -38,27 +38,15 @@ mod tests {
         assert_relative_eq!(config.collision_length(), 5.0, epsilon = 1e-12);
         assert_relative_eq!(config.collision_width(), 2.5, epsilon = 1e-12);
         assert_relative_eq!(config.collision_radius(), 2.79508497187, epsilon = 1e-11);
-        assert_relative_eq!(
-            config.target_max_steer(),
-            35.0_f64.to_radians(),
-            epsilon = 1e-12
-        );
+        assert_relative_eq!(config.target_max_steer(), 35.0_f64.to_radians(), epsilon = 1e-12);
         assert_relative_eq!(config.max_steer(), 40.0_f64.to_radians(), epsilon = 1e-12);
-        assert_relative_eq!(
-            config.max_steer_speed(),
-            360.0_f64.to_radians(),
-            epsilon = 1e-12
-        );
+        assert_relative_eq!(config.max_steer_speed(), 360.0_f64.to_radians(), epsilon = 1e-12);
         assert_relative_eq!(config.max_speed(), 55.0 / 3.6, epsilon = 1e-12);
         assert_relative_eq!(config.min_speed(), -30.0 / 3.6, epsilon = 1e-12);
         assert_relative_eq!(config.max_accel(), 15.0, epsilon = 1e-12);
         assert_relative_eq!(config.max_centripetal_accel(), 16.0, epsilon = 1e-12);
         assert_relative_eq!(config.target_speed(), 40.0 / 3.6, epsilon = 1e-12);
-        assert_relative_eq!(
-            config.target_min_turning_radius(),
-            3.57037001686,
-            epsilon = 1e-11
-        );
+        assert_relative_eq!(config.target_min_turning_radius(), 3.57037001686, epsilon = 1e-11);
         assert_relative_eq!(config.scan_radius(), 15.0, epsilon = 1e-12);
     }
 
@@ -106,11 +94,7 @@ mod tests {
         let config = CarConfig::new();
         let flat_trajectory = vec![5.2, 5.0, 0.0];
 
-        assert!(!trajectory_check_collision(
-            &config,
-            flat_trajectory,
-            vec![20.0, 20.0],
-        ));
+        assert!(!trajectory_check_collision(&config, flat_trajectory, vec![20.0, 20.0],));
     }
 
     #[test]
@@ -118,10 +102,6 @@ mod tests {
         let config = CarConfig::new();
         let flat_trajectory = vec![5.2, 5.0, 0.0];
 
-        assert!(!trajectory_check_collision(
-            &config,
-            flat_trajectory,
-            vec![6.45, 7.7],
-        ));
+        assert!(!trajectory_check_collision(&config, flat_trajectory, vec![6.45, 7.7],));
     }
 }

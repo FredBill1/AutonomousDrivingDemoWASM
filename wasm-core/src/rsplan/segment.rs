@@ -88,11 +88,7 @@ impl ReedsSheppSegment {
             .collect()
     }
 
-    fn segment_coords(
-        &self,
-        start_pose: (f64, f64, f64),
-        segment_points: &[f64],
-    ) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    fn segment_coords(&self, start_pose: (f64, f64, f64), segment_points: &[f64]) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
         let mut xs = Vec::with_capacity(segment_points.len());
         let mut ys = Vec::with_capacity(segment_points.len());
         let mut yaws = Vec::with_capacity(segment_points.len());

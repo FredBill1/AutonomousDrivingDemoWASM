@@ -6,20 +6,10 @@ use super::config::CarConfig;
 use super::state::CarState;
 
 #[wasm_bindgen]
-pub fn path_check_collision(
-    config: &CarConfig,
-    flat_path: Vec<f64>,
-    obstacle_coordinates: Vec<f64>,
-) -> bool {
+pub fn path_check_collision(config: &CarConfig, flat_path: Vec<f64>, obstacle_coordinates: Vec<f64>) -> bool {
     let mut index = 0usize;
     while index + 2 < flat_path.len() {
-        let state = CarState::new(
-            flat_path[index],
-            flat_path[index + 1],
-            flat_path[index + 2],
-            0.0,
-            0.0,
-        );
+        let state = CarState::new(flat_path[index], flat_path[index + 1], flat_path[index + 2], 0.0, 0.0);
         if state.check_collision(config, obstacle_coordinates.clone()) {
             return true;
         }

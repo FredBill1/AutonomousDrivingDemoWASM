@@ -57,14 +57,7 @@ use wasm_bindgen::prelude::*;
 use crate::geometry::{distance, rotate};
 
 #[wasm_bindgen]
-pub fn rs_change_base(
-    start_x: f64,
-    start_y: f64,
-    start_yaw: f64,
-    end_x: f64,
-    end_y: f64,
-    end_yaw: f64,
-) -> Vec<f64> {
+pub fn rs_change_base(start_x: f64, start_y: f64, start_yaw: f64, end_x: f64, end_y: f64, end_yaw: f64) -> Vec<f64> {
     let dx = end_x - start_x;
     let dy = end_y - start_y;
     let (xb, yb) = rotate(dx, dy, -start_yaw);
@@ -73,10 +66,7 @@ pub fn rs_change_base(
 
 #[wasm_bindgen]
 pub fn rs_steering_angles(phi: f64, turn_radius: f64) -> Vec<f64> {
-    vec![
-        turn_radius * (phi.cos() - 1.0),
-        turn_radius * (phi.cos() + 1.0),
-    ]
+    vec![turn_radius * (phi.cos() - 1.0), turn_radius * (phi.cos() + 1.0)]
 }
 
 #[wasm_bindgen]

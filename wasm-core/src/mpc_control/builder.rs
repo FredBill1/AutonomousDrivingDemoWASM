@@ -1,11 +1,10 @@
 use super::matrix_utils::{
-    add_difference_penalty, add_quadratic_term, control_index, decode_controls, decode_states,
-    final_state_weight, get_linear_model_matrix, push_difference_bound, push_entry,
-    push_symmetric_bound, state_index, state_weight,
+    add_difference_penalty, add_quadratic_term, control_index, decode_controls, decode_states, final_state_weight,
+    get_linear_model_matrix, push_difference_bound, push_entry, push_symmetric_bound, state_index, state_weight,
 };
 use super::types::{
-    Control, HORIZON_LENGTH, MAX_ACCEL, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED,
-    ModelState, NU, NX, R_ACCEL, R_STEER, RD_ACCEL, RD_STEER,
+    Control, HORIZON_LENGTH, MAX_ACCEL, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, ModelState, NU, NX, R_ACCEL,
+    R_STEER, RD_ACCEL, RD_STEER,
 };
 use clarabel::{algebra::*, solver::*};
 
@@ -23,15 +22,8 @@ pub(crate) fn linear_mpc_control(
         ..Default::default()
     };
 
-    let mut solver = DefaultSolver::new(
-        &problem.p,
-        &problem.q,
-        &problem.a,
-        &problem.b,
-        &problem.cones,
-        settings,
-    )
-    .ok()?;
+    let mut solver =
+        DefaultSolver::new(&problem.p, &problem.q, &problem.a, &problem.b, &problem.cones, settings).ok()?;
 
     solver.solve();
 
@@ -42,10 +34,7 @@ pub(crate) fn linear_mpc_control(
         return None;
     }
 
-    Some((
-        decode_controls(&solver.solution.x),
-        decode_states(&solver.solution.x),
-    ))
+    Some((decode_controls(&solver.solution.x), decode_states(&solver.solution.x)))
 }
 
 struct MpcProblem {
@@ -57,12 +46,7 @@ struct MpcProblem {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn build_mpc_problem(
-    xref: &[ModelState],
-    xbar: &[ModelState],
-    last_steer: f64,
-    dt: f64,
-) -> MpcProblem {
+fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, dt: f64) -> MpcProblem {
     let nvars = NX * (HORIZON_LENGTH + 1) + NU * HORIZON_LENGTH;
     let mut q = vec![0.0; nvars];
     let mut p_rows = Vec::new();
@@ -204,37 +188,16 @@ fn build_mpc_problem(
         row += 1;
     }
 
-    push_entry(
-        &mut a_rows,
-        &mut a_cols,
-        &mut a_vals,
-        row,
-        control_index(0, 1),
-        1.0,
-    );
+    push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, control_index(0, 1), 1.0);
     b.push(last_steer);
     row += 1;
 
     for t in 0..=HORIZON_LENGTH {
-        push_entry(
-            &mut a_rows,
-            &mut a_cols,
-            &mut a_vals,
-            row,
-            state_index(t, 2),
-            1.0,
-        );
+        push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, state_index(t, 2), 1.0);
         b.push(MAX_SPEED);
         row += 1;
 
-        push_entry(
-            &mut a_rows,
-            &mut a_cols,
-            &mut a_vals,
-            row,
-            state_index(t, 2),
-            -1.0,
-        );
+        push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, state_index(t, 2), -1.0);
         b.push(-MIN_SPEED);
         row += 1;
     }

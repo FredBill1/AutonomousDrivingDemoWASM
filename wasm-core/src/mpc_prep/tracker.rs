@@ -2,9 +2,8 @@ use wasm_bindgen::prelude::*;
 
 use super::trajectory::{decode_trajectory, linspace, process_reference_trajectory};
 use super::types::{
-    DESIRED_MAX_ACCEL_RATIO, DIRECTION_CHANGE_DIST, HORIZON_LENGTH, MAX_ACCEL,
-    MIN_HORIZON_DISTANCE, MOTION_RESOLUTION, MpcReferenceResult, PreparedTrajectory, distance,
-    lerp,
+    DESIRED_MAX_ACCEL_RATIO, DIRECTION_CHANGE_DIST, HORIZON_LENGTH, MAX_ACCEL, MIN_HORIZON_DISTANCE, MOTION_RESOLUTION,
+    MpcReferenceResult, PreparedTrajectory, distance, lerp,
 };
 
 #[wasm_bindgen]
@@ -60,10 +59,7 @@ impl MpcReferenceTracker {
         let reference_states = reorder_public_states(&model_reference_states);
         let brake_trajectory = reorder_public_states(&self.brake_trajectory);
         MpcReferenceResult {
-            model_reference_states: model_reference_states
-                .iter()
-                .flat_map(|state| *state)
-                .collect(),
+            model_reference_states: model_reference_states.iter().flat_map(|state| *state).collect(),
             reference_states,
             brake_trajectory,
         }
@@ -118,10 +114,7 @@ impl MpcReferenceTracker {
 
     fn update_brake_trajectory(&mut self, state_velocity: f64, changing_point: f64) {
         let brake_length = state_velocity.powi(2) / (2.0 * MAX_ACCEL * DESIRED_MAX_ACCEL_RATIO);
-        let brake_limit = self
-            .u_limit
-            .min(self.cur_u + brake_length)
-            .min(changing_point);
+        let brake_limit = self.u_limit.min(self.cur_u + brake_length).min(changing_point);
         let mut brake_us = Vec::new();
         let mut u = self.cur_u;
         while u <= brake_limit + MOTION_RESOLUTION / 2.0 {
@@ -132,12 +125,7 @@ impl MpcReferenceTracker {
             .into_iter()
             .map(|brake_u| sample_state(&self.prepared, brake_u))
             .collect();
-        let velocity_sign = self
-            .brake_trajectory
-            .iter()
-            .map(|state| state[2])
-            .sum::<f64>()
-            .signum();
+        let velocity_sign = self.brake_trajectory.iter().map(|state| state[2]).sum::<f64>().signum();
         for state in &mut self.brake_trajectory {
             state[2] = velocity_sign;
         }
@@ -148,20 +136,12 @@ impl MpcReferenceTracker {
         }
     }
 
-    fn find_xref(
-        &mut self,
-        state_x: f64,
-        state_y: f64,
-        state_velocity: f64,
-        dt: f64,
-    ) -> Vec<[f64; 4]> {
+    fn find_xref(&mut self, state_x: f64, state_y: f64, state_velocity: f64, dt: f64) -> Vec<[f64; 4]> {
         loop {
             self.find_nearest_point(state_x, state_y);
 
-            let signed_velocity =
-                sample_state(&self.prepared, self.cur_u)[2].signum() * state_velocity;
-            let length =
-                MIN_HORIZON_DISTANCE.max(signed_velocity.max(0.0) * dt * HORIZON_LENGTH as f64);
+            let signed_velocity = sample_state(&self.prepared, self.cur_u)[2].signum() * state_velocity;
+            let length = MIN_HORIZON_DISTANCE.max(signed_velocity.max(0.0) * dt * HORIZON_LENGTH as f64);
             let mut ref_us = linspace(self.cur_u, self.cur_u + length, HORIZON_LENGTH + 1);
             for value in &mut ref_us {
                 *value = value.min(self.u_limit);

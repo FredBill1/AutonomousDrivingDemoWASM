@@ -89,17 +89,10 @@ impl CarState {
     pub fn update(&mut self, config: &CarConfig, dt: f64) {
         self.x += self.velocity * self.yaw.cos() * dt;
         self.y += self.velocity * self.yaw.sin() * dt;
-        self.yaw =
-            wrap_angle(self.yaw + self.velocity / config.wheel_base() * self.steer.tan() * dt);
+        self.yaw = wrap_angle(self.yaw + self.velocity / config.wheel_base() * self.steer.tan() * dt);
     }
 
-    pub fn update_with_control(
-        &mut self,
-        config: &CarConfig,
-        target_velocity: f64,
-        target_steer: f64,
-        dt: f64,
-    ) {
+    pub fn update_with_control(&mut self, config: &CarConfig, target_velocity: f64, target_steer: f64, dt: f64) {
         self.update(config, dt);
 
         let clipped_velocity = clamp(target_velocity, config.min_speed(), config.max_speed());
@@ -118,13 +111,7 @@ impl CarState {
         self.steer = clamp(self.steer, -config.max_steer(), config.max_steer());
     }
 
-    pub fn stepped(
-        &self,
-        config: &CarConfig,
-        target_velocity: f64,
-        target_steer: f64,
-        dt: f64,
-    ) -> CarUpdateResult {
+    pub fn stepped(&self, config: &CarConfig, target_velocity: f64, target_steer: f64, dt: f64) -> CarUpdateResult {
         let mut next = *self;
         next.update_with_control(config, target_velocity, target_steer, dt);
         CarUpdateResult::from_state(next)

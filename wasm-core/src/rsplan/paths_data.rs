@@ -41,11 +41,7 @@ pub(super) const PATHS: [&[(SegmentKind, i8)]; 48] = [
         (SegmentKind::Straight, -1),
         (SegmentKind::Left, -1),
     ],
-    &[
-        (SegmentKind::Left, 1),
-        (SegmentKind::Right, -1),
-        (SegmentKind::Left, 1),
-    ],
+    &[(SegmentKind::Left, 1), (SegmentKind::Right, -1), (SegmentKind::Left, 1)],
     &[
         (SegmentKind::Right, 1),
         (SegmentKind::Left, -1),
@@ -71,21 +67,13 @@ pub(super) const PATHS: [&[(SegmentKind, i8)]; 48] = [
         (SegmentKind::Left, -1),
         (SegmentKind::Right, -1),
     ],
-    &[
-        (SegmentKind::Left, -1),
-        (SegmentKind::Right, 1),
-        (SegmentKind::Left, 1),
-    ],
+    &[(SegmentKind::Left, -1), (SegmentKind::Right, 1), (SegmentKind::Left, 1)],
     &[
         (SegmentKind::Right, -1),
         (SegmentKind::Left, 1),
         (SegmentKind::Right, 1),
     ],
-    &[
-        (SegmentKind::Left, 1),
-        (SegmentKind::Right, 1),
-        (SegmentKind::Left, -1),
-    ],
+    &[(SegmentKind::Left, 1), (SegmentKind::Right, 1), (SegmentKind::Left, -1)],
     &[
         (SegmentKind::Right, 1),
         (SegmentKind::Left, 1),

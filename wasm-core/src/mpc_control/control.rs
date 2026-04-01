@@ -1,7 +1,7 @@
 use super::builder::linear_mpc_control;
 use super::types::{
-    Control, DU_TH, HORIZON_LENGTH, MAX_ACCEL, MAX_ITER, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED,
-    MIN_SPEED, ModelState, MpcControlResult, NX, RollingCarState, WHEEL_BASE,
+    Control, DU_TH, HORIZON_LENGTH, MAX_ACCEL, MAX_ITER, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, ModelState,
+    MpcControlResult, NX, RollingCarState, WHEEL_BASE,
 };
 use wasm_bindgen::prelude::*;
 
@@ -17,9 +17,7 @@ pub fn mpc_control_preview(
 ) -> Result<MpcControlResult, JsValue> {
     let xref = decode_reference(&flat_reference_states)?;
     if xref.len() < HORIZON_LENGTH + 1 {
-        return Err(JsValue::from_str(
-            "Need at least HORIZON_LENGTH + 1 reference states",
-        ));
+        return Err(JsValue::from_str("Need at least HORIZON_LENGTH + 1 reference states"));
     }
 
     state_yaw = align_yaw(state_yaw, xref[0][3]);
@@ -39,9 +37,7 @@ pub fn mpc_control_preview(
         iterations = iteration + 1;
         let xbar = predict_motion(initial_state, &controls, dt);
         let previous_controls = controls.clone();
-        let Some((updated_controls, updated_states)) =
-            linear_mpc_control(&xref, &xbar, last_steer, dt)
-        else {
+        let Some((updated_controls, updated_states)) = linear_mpc_control(&xref, &xbar, last_steer, dt) else {
             break;
         };
         let du = control_delta(&previous_controls, &updated_controls);
@@ -61,9 +57,7 @@ pub fn mpc_control_preview(
 
 fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     if !flat.len().is_multiple_of(4) {
-        return Err(JsValue::from_str(
-            "Reference states must be flat [x, y, v, yaw] data",
-        ));
+        return Err(JsValue::from_str("Reference states must be flat [x, y, v, yaw] data"));
     }
 
     let mut states = Vec::with_capacity(flat.len() / 4);
@@ -73,11 +67,7 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     Ok(states)
 }
 
-pub(crate) fn predict_motion(
-    initial: RollingCarState,
-    controls: &[Control],
-    dt: f64,
-) -> Vec<ModelState> {
+pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], dt: f64) -> Vec<ModelState> {
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {
@@ -88,12 +78,7 @@ pub(crate) fn predict_motion(
     out
 }
 
-fn step_state(
-    mut state: RollingCarState,
-    target_velocity: f64,
-    target_steer: f64,
-    dt: f64,
-) -> RollingCarState {
+fn step_state(mut state: RollingCarState, target_velocity: f64, target_steer: f64, dt: f64) -> RollingCarState {
     state.x += state.velocity * state.yaw.cos() * dt;
     state.y += state.velocity * state.yaw.sin() * dt;
     state.yaw += state.velocity / WHEEL_BASE * state.steer.tan() * dt;

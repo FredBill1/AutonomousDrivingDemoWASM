@@ -1,14 +1,12 @@
 use super::types::{
-    DESIRED_MAX_ACCEL_RATIO, MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MIN_SPEED,
-    PreparedTrajectory, TARGET_SPEED, clamp, distance, midpoint, wrap_angle,
+    DESIRED_MAX_ACCEL_RATIO, MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MIN_SPEED, PreparedTrajectory, TARGET_SPEED,
+    clamp, distance, midpoint, wrap_angle,
 };
 use wasm_bindgen::prelude::*;
 
 pub(crate) fn decode_trajectory(flat: &[f64]) -> Result<Vec<[f64; 4]>, JsValue> {
     if !flat.len().is_multiple_of(4) {
-        return Err(JsValue::from_str(
-            "Trajectory must be flat [x, y, yaw, direction] data",
-        ));
+        return Err(JsValue::from_str("Trajectory must be flat [x, y, yaw, direction] data"));
     }
 
     let mut points = Vec::with_capacity(flat.len() / 4);
@@ -18,9 +16,7 @@ pub(crate) fn decode_trajectory(flat: &[f64]) -> Result<Vec<[f64; 4]>, JsValue> 
     Ok(points)
 }
 
-pub(crate) fn process_reference_trajectory(
-    mut points: Vec<[f64; 4]>,
-) -> Result<PreparedTrajectory, &'static str> {
+pub(crate) fn process_reference_trajectory(mut points: Vec<[f64; 4]>) -> Result<PreparedTrajectory, &'static str> {
     if points.is_empty() {
         return Err("Reference trajectory is empty");
     }
@@ -229,7 +225,5 @@ pub(crate) fn linspace(start: f64, end: f64, count: usize) -> Vec<f64> {
         return vec![start];
     }
     let step = (end - start) / (count - 1) as f64;
-    (0..count)
-        .map(|index| start + step * index as f64)
-        .collect()
+    (0..count).map(|index| start + step * index as f64).collect()
 }

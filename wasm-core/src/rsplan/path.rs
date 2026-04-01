@@ -52,27 +52,19 @@ impl ReedsSheppPath {
     }
 
     pub fn total_length(&self) -> f64 {
-        self.segments
-            .iter()
-            .map(|segment| segment.length.abs())
-            .sum()
+        self.segments.iter().map(|segment| segment.length.abs()).sum()
     }
 
     pub fn runway_length(&self) -> f64 {
         if self.has_runway() {
-            self.segments
-                .last()
-                .map(|segment| segment.length.abs())
-                .unwrap_or(0.0)
+            self.segments.last().map(|segment| segment.length.abs()).unwrap_or(0.0)
         } else {
             0.0
         }
     }
 
     pub fn has_runway(&self) -> bool {
-        self.segments
-            .last()
-            .is_some_and(ReedsSheppSegment::is_straight)
+        self.segments.last().is_some_and(ReedsSheppSegment::is_straight)
     }
 
     pub fn number_of_cusp_points(&self) -> usize {
@@ -168,12 +160,8 @@ impl ReedsSheppPath {
 
         for (index, segment) in self.segments.iter().enumerate() {
             let is_runway = self.has_runway() && index == self.segments.len() - 1;
-            let mut segment_points = segment.calc_waypoints(
-                (x0, y0, yaw0),
-                self.step_size,
-                is_runway,
-                self.end_pose_tuple(),
-            );
+            let mut segment_points =
+                segment.calc_waypoints((x0, y0, yaw0), self.step_size, is_runway, self.end_pose_tuple());
 
             if let (Some(last), Some(first)) = (path_points.last(), segment_points.first())
                 && last.is_close(first)

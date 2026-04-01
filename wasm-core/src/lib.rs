@@ -7,9 +7,7 @@ mod rsplan;
 
 use wasm_bindgen::prelude::*;
 
-pub use car::{
-    CarConfig, CarState, CarUpdateResult, path_check_collision, trajectory_check_collision,
-};
+pub use car::{CarConfig, CarState, CarUpdateResult, path_check_collision, trajectory_check_collision};
 pub use hybrid_astar::{HybridAStarPlanner, HybridAStarResult};
 pub use mpc_control::MpcControlResult;
 pub use mpc_prep::{MpcReferenceResult, MpcReferenceTracker};
