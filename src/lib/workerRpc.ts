@@ -1,5 +1,5 @@
 type PendingRequest = {
-  resolve: (value: any) => void
+  resolve: (value: unknown) => void
   reject: (reason?: unknown) => void
 }
 
@@ -79,7 +79,7 @@ export function createWorkerRpc(
       nextId += 1
 
       return new Promise<T>((resolve, reject) => {
-        pending.set(id, { resolve, reject })
+        pending.set(id, { resolve: (value) => resolve(value as T), reject })
         activeWorker.postMessage({ id, type, payload })
       })
     },
