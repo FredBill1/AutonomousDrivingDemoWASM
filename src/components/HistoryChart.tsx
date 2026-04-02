@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Text, type Application } from 'pixi.js';
 
-import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
+import { usePixiLifecycle } from '../hooks/usePixiLifecycle';
 
 type HistoryPoint = {
   t: number;
@@ -94,47 +94,10 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
   const labelsRef = useRef<Container | null>(null);
   const drawRef = useRef<() => void>(() => {});
 
-  useEffect(() => {
-    let disposed = false;
-    let initialResizeFrame = 0;
-    const host = hostRef.current;
-    if (!host) {
-      return;
-    }
-
-    const width = Math.max(1, host.clientWidth);
-    const height = Math.max(1, host.clientHeight);
-    const app = new Application();
-
-    const syncChartSize = () => {
-      const currentApp = appRef.current;
-      const currentHost = hostRef.current;
-      if (!currentApp || !currentHost) {
-        return;
-      }
-
-      const nextWidth = Math.max(1, currentHost.clientWidth);
-      const nextHeight = Math.max(1, currentHost.clientHeight);
-      currentApp.renderer.resize(nextWidth, nextHeight);
-      syncCanvasElementSize(currentApp.canvas, nextWidth, nextHeight);
-      drawRef.current();
-    };
-
-    void app
-      .init({
-        width,
-        height,
-        antialias: true,
-        autoDensity: true,
-        backgroundAlpha: 0,
-        preference: 'webgl',
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
-      })
-      .then(() => {
-        if (!setupPixiCanvas(app, host, width, height, disposed)) {
-          return;
-        }
-
+  usePixiLifecycle(
+    hostRef,
+    useCallback(
+      ({ app }: { app: Application }) => {
         const frame = new Graphics();
         const line = new Graphics();
         const labels = new Container();
@@ -146,27 +109,22 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
         frameRef.current = frame;
         lineRef.current = line;
         labelsRef.current = labels;
-        syncChartSize();
-        initialResizeFrame = window.requestAnimationFrame(() => {
-          syncChartSize();
-        });
-      });
 
-    const removeResizeListeners = setupResizeListeners(host, syncChartSize);
-
-    return () => {
-      disposed = true;
-      removeResizeListeners();
-      if (initialResizeFrame !== 0) {
-        window.cancelAnimationFrame(initialResizeFrame);
-      }
-      lineRef.current = null;
-      frameRef.current = null;
-      labelsRef.current = null;
-      appRef.current?.destroy(true, { children: true });
-      appRef.current = null;
-    };
-  }, []);
+        return {
+          handleResize: () => {
+            drawRef.current();
+          },
+          cleanup: () => {
+            lineRef.current = null;
+            frameRef.current = null;
+            labelsRef.current = null;
+            appRef.current = null;
+          },
+        };
+      },
+      [],
+    ),
+  );
 
   useEffect(() => {
     drawRef.current = () => {

@@ -34,16 +34,22 @@ export function checkTrajectoryCollision(
   return trajectory_check_collision(config, trajectory, Float64Array.from(obstacleCoordinates));
 }
 
-export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x: number; y: number; yaw: number }> {
-  const points = [];
-  for (let index = 0; index < flatCoordinates.length; index += 3) {
-    points.push({
-      x: flatCoordinates[index],
-      y: flatCoordinates[index + 1],
-      yaw: flatCoordinates[index + 2],
-    });
+type FlatArray = ArrayLike<number>;
+
+function decodeFlatValues<T>(values: FlatArray, stride: number, map: (source: FlatArray, index: number) => T) {
+  const decoded: T[] = [];
+  for (let index = 0; index < values.length; index += stride) {
+    decoded.push(map(values, index));
   }
-  return points;
+  return decoded;
+}
+
+export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x: number; y: number; yaw: number }> {
+  return decodeFlatValues(flatCoordinates, 3, (coords, index) => ({
+    x: coords[index],
+    y: coords[index + 1],
+    yaw: coords[index + 2],
+  }));
 }
 
 export function flattenTrajectoryPoints(points: Array<{ x: number; y: number; yaw: number; direction: number }>) {
@@ -51,28 +57,20 @@ export function flattenTrajectoryPoints(points: Array<{ x: number; y: number; ya
 }
 
 export function decodePredictedStateQuads(flatValues: number[] | Float64Array): LocalPlannerPathPoint[] {
-  const points: LocalPlannerPathPoint[] = [];
-  for (let index = 0; index < flatValues.length; index += 4) {
-    points.push({
-      x: flatValues[index],
-      y: flatValues[index + 1],
-      yaw: flatValues[index + 3],
-    });
-  }
-  return points;
+  return decodeFlatValues(flatValues, 4, (values, index) => ({
+    x: values[index],
+    y: values[index + 1],
+    yaw: values[index + 3],
+  }));
 }
 
 export function decodePlannerStateQuads(flatValues: number[] | Float64Array): LocalPlannerReferencePoint[] {
-  const points: LocalPlannerReferencePoint[] = [];
-  for (let index = 0; index < flatValues.length; index += 4) {
-    points.push({
-      x: flatValues[index],
-      y: flatValues[index + 1],
-      yaw: flatValues[index + 2],
-      velocity: flatValues[index + 3],
-    });
-  }
-  return points;
+  return decodeFlatValues(flatValues, 4, (values, index) => ({
+    x: values[index],
+    y: values[index + 1],
+    yaw: values[index + 2],
+    velocity: values[index + 3],
+  }));
 }
 
 export function decodeControlPairs(
@@ -158,22 +156,15 @@ export function decodeHybridResult(result: {
   const pathValues = result.flat_path;
   const exploredValues = result.explored_segments;
 
-  const path: Array<{ x: number; y: number; yaw: number }> = [];
-  const directions: number[] = [];
-  for (let index = 0; index < pathValues.length; index += 4) {
-    path.push({ x: pathValues[index], y: pathValues[index + 1], yaw: pathValues[index + 2] });
-    directions.push(pathValues[index + 3]);
-  }
-
-  const exploredSegments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-  for (let index = 0; index < exploredValues.length; index += 4) {
-    exploredSegments.push({
-      x1: exploredValues[index],
-      y1: exploredValues[index + 1],
-      x2: exploredValues[index + 2],
-      y2: exploredValues[index + 3],
-    });
-  }
+  const pathPoints = decodeFlatValues(pathValues, 4, (values, index) => ({
+    x: values[index],
+    y: values[index + 1],
+    yaw: values[index + 2],
+    direction: values[index + 3],
+  }));
+  const path = pathPoints.map(({ direction: _direction, ...rest }) => rest);
+  const directions = pathPoints.map((point) => point.direction);
+  const exploredSegments = decodeExploredSegments(exploredValues);
 
   return {
     token: result.token,
@@ -215,14 +206,10 @@ export function flattenHybridSeedPoints(seed: { x: number; y: number; yaw: numbe
 }
 
 export function decodeExploredSegments(flatSegments: Float64Array | number[]) {
-  const segments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-  for (let index = 0; index < flatSegments.length; index += 4) {
-    segments.push({
-      x1: flatSegments[index],
-      y1: flatSegments[index + 1],
-      x2: flatSegments[index + 2],
-      y2: flatSegments[index + 3],
-    });
-  }
-  return segments;
+  return decodeFlatValues(flatSegments, 4, (values, index) => ({
+    x1: values[index],
+    y1: values[index + 1],
+    x2: values[index + 2],
+    y2: values[index + 3],
+  }));
 }

@@ -1,6 +1,7 @@
 import type { PathPoint } from './appModel';
 import { createWorkerRpc } from './workerRpc';
 import { type LocalPlannerControlPoint, type LocalPlannerUpdateResult, type WasmCarState } from './workerTypes';
+import type { CarShape } from './appTypes';
 
 export type {
   LocalPlannerControlPoint,
@@ -10,15 +11,7 @@ export type {
   WasmCarState,
 } from './workerTypes';
 
-export type WasmConfigSnapshot = {
-  wheelBase: number;
-  length: number;
-  width: number;
-  backToWheel: number;
-  wheelLength: number;
-  wheelWidth: number;
-  wheelSpacing: number;
-  backToCenter: number;
+export type WasmConfigSnapshot = CarShape & {
   collisionLength: number;
   collisionWidth: number;
   collisionRadius: number;
@@ -34,13 +27,18 @@ export type WasmConfigSnapshot = {
   scanRadius: number;
 };
 
-export type HybridAStarSolution = {
+type HybridAStarSegment = { x1: number; y1: number; x2: number; y2: number };
+
+type HybridAStarMetrics = {
   token: number;
-  path: PathPoint[];
-  directions: number[];
-  exploredSegments: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   exploredCount: number;
   analyticExpansions: number;
+};
+
+export type HybridAStarSolution = HybridAStarMetrics & {
+  path: PathPoint[];
+  directions: number[];
+  exploredSegments: HybridAStarSegment[];
 };
 
 export type HybridAStarStartSeedPoint = {
@@ -50,11 +48,8 @@ export type HybridAStarStartSeedPoint = {
   velocity: number;
 };
 
-export type HybridAStarProgress = {
-  token: number;
-  segments: Array<{ x1: number; y1: number; x2: number; y2: number }>;
-  exploredCount: number;
-  analyticExpansions: number;
+export type HybridAStarProgress = HybridAStarMetrics & {
+  segments: HybridAStarSegment[];
 };
 
 export type LocalPlannerTrajectoryPoint = {
@@ -94,12 +89,33 @@ const computeRpc = createWorkerRpc(
   },
 );
 
+type WorkerMethod = Parameters<typeof computeRpc.call>[0];
+
+function callWorker<T>(method: WorkerMethod): Promise<T>;
+function callWorker<T, P>(method: WorkerMethod, payload: P): Promise<T>;
+function callWorker<T, P>(method: WorkerMethod, payload?: P) {
+  return payload === undefined
+    ? computeRpc.call<T>(method)
+    : computeRpc.call<T>(method, payload as never);
+}
+
+const callWorkerVoid = (method: WorkerMethod) => callWorker<null>(method);
+const callVoidMethod = (method: WorkerMethod) => () => callWorkerVoid(method);
+const voidCalls = {
+  stopSimulationMotion: callVoidMethod('stopSimulationMotion'),
+  resumeSimulationMotion: callVoidMethod('resumeSimulationMotion'),
+  stopSimulation: callVoidMethod('stopSimulation'),
+  cancelHybridAStar: callVoidMethod('cancelHybridAStar'),
+  brakeLocalPlanner: callVoidMethod('brakeLocalPlanner'),
+  cancelLocalPlanner: callVoidMethod('cancelLocalPlanner'),
+};
+
 export async function ensureWasmCore() {
-  await computeRpc.call('getCarConfigSnapshot');
+  await callWorker('getCarConfigSnapshot');
 }
 
 export function stepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
-  return computeRpc.call<WasmCarState>('stepCarState', { current, targetVelocity, targetSteer, dt });
+  return callWorker<WasmCarState>('stepCarState', { current, targetVelocity, targetSteer, dt });
 }
 
 export function initSimulation(
@@ -109,7 +125,7 @@ export function initSimulation(
   simulationIntervalMs = 20,
   publishIntervalMs = 50,
 ) {
-  return computeRpc.call<null>('initSimulation', {
+  return callWorker<null>('initSimulation', {
     state,
     timestamp,
     simDeltaTime,
@@ -119,48 +135,45 @@ export function initSimulation(
 }
 
 export function setSimulationState(state: WasmCarState, timestamp?: number) {
-  return computeRpc.call<null>('setSimulationState', { state, timestamp });
+  return callWorker<null>('setSimulationState', { state, timestamp });
 }
 
 export function setSimulationControlSequence(controlSequence: LocalPlannerControlPoint[]) {
-  return computeRpc.call<null>('setSimulationControlSequence', { controlSequence });
+  return callWorker<null>('setSimulationControlSequence', { controlSequence });
 }
 
-export function stopSimulationMotion() {
-  return computeRpc.call<null>('stopSimulationMotion');
-}
-
-export function resumeSimulationMotion() {
-  return computeRpc.call<null>('resumeSimulationMotion');
-}
-
-export function stopSimulation() {
-  return computeRpc.call<null>('stopSimulation');
-}
+export const {
+  stopSimulationMotion,
+  resumeSimulationMotion,
+  stopSimulation,
+  cancelHybridAStar,
+  brakeLocalPlanner,
+  cancelLocalPlanner,
+} = voidCalls;
 
 export function checkCollision(state: WasmCarState, obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkCollision', {
+  return callWorker<boolean>('checkCollision', {
     state,
     obstacleCoordinates: Array.from(obstacleCoordinates),
   });
 }
 
 export function checkPathCollision(path: PathPoint[], obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkPathCollision', {
+  return callWorker<boolean>('checkPathCollision', {
     path,
     obstacleCoordinates: Array.from(obstacleCoordinates),
   });
 }
 
 export function checkTrajectoryCollision(path: PathPoint[], obstacleCoordinates: Float64Array) {
-  return computeRpc.call<boolean>('checkTrajectoryCollision', {
+  return callWorker<boolean>('checkTrajectoryCollision', {
     path,
     obstacleCoordinates: Array.from(obstacleCoordinates),
   });
 }
 
 export function getCarConfigSnapshot() {
-  return computeRpc.call<WasmConfigSnapshot>('getCarConfigSnapshot');
+  return callWorker<WasmConfigSnapshot>('getCarConfigSnapshot');
 }
 
 export function solveHybridAStar(
@@ -170,7 +183,7 @@ export function solveHybridAStar(
   maxIterations: number,
   requestToken?: number,
 ) {
-  return computeRpc.call<HybridAStarSolution | null>('solveHybridAStar', {
+  return callWorker<HybridAStarSolution | null>('solveHybridAStar', {
     start,
     startIsTrajectorySeed: Array.isArray(start),
     goal,
@@ -180,24 +193,12 @@ export function solveHybridAStar(
   });
 }
 
-export function cancelHybridAStar() {
-  return computeRpc.call<null>('cancelHybridAStar');
-}
-
 export function setLocalPlannerTrajectory(trajectory: LocalPlannerTrajectoryPoint[] | null) {
-  return computeRpc.call<null>('setLocalPlannerTrajectory', { trajectory });
+  return callWorker<null>('setLocalPlannerTrajectory', { trajectory });
 }
 
 export function setLocalPlannerState(state: WasmCarState, timestamp: number, updateIntervalMs?: number) {
-  return computeRpc.call<null>('setLocalPlannerState', { state, timestamp, updateIntervalMs });
-}
-
-export function brakeLocalPlanner() {
-  return computeRpc.call<null>('brakeLocalPlanner');
-}
-
-export function cancelLocalPlanner() {
-  return computeRpc.call<null>('cancelLocalPlanner');
+  return callWorker<null>('setLocalPlannerState', { state, timestamp, updateIntervalMs });
 }
 
 export function setLocalPlannerUpdateListener(listener: ((event: LocalPlannerUpdateEvent) => void) | null) {

@@ -21,20 +21,11 @@ import {
   type LocalPlannerPathPoint,
   type LocalPlannerReferencePoint,
 } from '../lib/wasmCore';
+import type { PlanningRefs, PlanningSetters } from './planningTypes';
 
-type UseSimulationSetupParams = {
-  planningRequestRef: React.RefObject<number>;
-  mapServerNodeRef: React.RefObject<MapServerNode | null>;
-  trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-  carRef: React.RefObject<CarState | null>;
+type UseSimulationSetupParams = PlanningRefs &
+  PlanningSetters & {
   timestampRef: React.RefObject<number>;
-  localPlanningRef: React.RefObject<boolean>;
-  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
-  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
-  setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
-  setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
-  setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
-  setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>;
   setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
   setTimestamp: React.Dispatch<React.SetStateAction<number>>;
   setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;

@@ -30,10 +30,32 @@ import {
   type WorkerResponse,
 } from './workerTypes';
 
+const withCarConfig = async <T>(fn: (config: CarConfig) => Promise<T> | T) => {
+  const config = await ensureWasmCore();
+  return fn(config);
+};
+
+const withCarConfigFor = async <Payload, Result>(
+  payload: Payload,
+  handler: (config: CarConfig, payload: Payload) => Result | Promise<Result>,
+) => withCarConfig((config) => handler(config, payload));
+
+const handlePathCollision = (
+  config: CarConfig,
+  payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] },
+) => {
+  const flatPath = payload.path.flatMap((point) => [point.x, point.y, point.yaw]);
+  return path_check_collision(config, Float64Array.from(flatPath), Float64Array.from(payload.obstacleCoordinates));
+};
+
+const handleTrajectoryCollision = (
+  config: CarConfig,
+  payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] },
+) => checkTrajectoryCollision(config, { path: payload.path, directions: [] }, payload.obstacleCoordinates);
+
 const handlers = {
   async getCarConfigSnapshot() {
-    const config = await ensureWasmCore();
-    return {
+    return withCarConfig((config) => ({
       wheelBase: config.wheel_base,
       length: config.length,
       width: config.width,
@@ -55,7 +77,7 @@ const handlers = {
       targetSpeed: config.target_speed,
       targetMinTurningRadius: config.target_min_turning_radius,
       scanRadius: config.scan_radius,
-    };
+    }));
   },
 
   stepCarState(payload: { current: WasmCarState; targetVelocity: number; targetSteer: number; dt: number }) {
@@ -203,32 +225,24 @@ const handlers = {
   },
 
   async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
-    const config = await ensureWasmCore();
-    const { state: stateLike, obstacleCoordinates } = payload;
-    const state = new CarState(stateLike.x, stateLike.y, stateLike.yaw, stateLike.velocity, stateLike.steer);
-    try {
-      return state.check_collision(config, Float64Array.from(obstacleCoordinates));
-    } finally {
-      state.free();
-    }
+    return withCarConfig((config) => {
+      const { state: stateLike, obstacleCoordinates } = payload;
+      const state = new CarState(stateLike.x, stateLike.y, stateLike.yaw, stateLike.velocity, stateLike.steer);
+      try {
+        return state.check_collision(config, Float64Array.from(obstacleCoordinates));
+      } finally {
+        state.free();
+      }
+    });
   },
 
-  async checkPathCollision(payload: {
-    path: Array<{ x: number; y: number; yaw: number }>;
-    obstacleCoordinates: number[];
-  }) {
-    const config = await ensureWasmCore();
-    const flatPath = payload.path.flatMap((point) => [point.x, point.y, point.yaw]);
-    return path_check_collision(config, Float64Array.from(flatPath), Float64Array.from(payload.obstacleCoordinates));
-  },
+  checkPathCollision: (payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] }) =>
+    withCarConfigFor(payload, handlePathCollision),
 
-  async checkTrajectoryCollision(payload: {
+  checkTrajectoryCollision: (payload: {
     path: Array<{ x: number; y: number; yaw: number }>;
     obstacleCoordinates: number[];
-  }) {
-    const config = await ensureWasmCore();
-    return checkTrajectoryCollision(config, { path: payload.path, directions: [] }, payload.obstacleCoordinates);
-  },
+  }) => withCarConfigFor(payload, handleTrajectoryCollision),
 
   async solveReedsSheppCandidates(payload: {
     start: WasmCarState;

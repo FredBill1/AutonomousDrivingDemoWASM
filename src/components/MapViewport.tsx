@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { Viewport } from 'pixi-viewport';
-import { Application, Graphics, Text } from 'pixi.js';
+import { Graphics, Text, type Application } from 'pixi.js';
 
 import type { CarState, Mode, Obstacle } from '../lib/appModel';
 import type { CarShape, GoalUnreachableState, MotionLimits } from '../lib/appTypes';
@@ -10,12 +10,11 @@ import {
   type DrawLayers,
   type PathPoint,
   performDraw,
-  syncCanvasElementSize,
   worldHeight,
   worldWidth,
 } from '../lib/mapViewportDraw';
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction';
-import { setupPixiCanvas, setupResizeListeners } from '../lib/pixiAppInit';
+import { usePixiLifecycle } from '../hooks/usePixiLifecycle';
 import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from '../lib/wasmCore';
 
 type MapViewportProps = {
@@ -87,188 +86,141 @@ export function MapViewport({
     onPrimaryDragCancelRef.current = onPrimaryDragCancel;
   }, [onPrimaryDragCancel, onPrimaryDragEnd, onPrimaryDragMove, onPrimaryDragStart]);
 
-  useEffect(() => {
-    let disposed = false;
-    let handlePointerUp: ((event: PointerEvent) => void) | null = null;
-    let handlePointerCancel: ((event: PointerEvent) => void) | null = null;
-    let initialResizeFrame = 0;
-    const host = hostRef.current;
-    if (!host) {
-      return;
-    }
+  const onPixiReady = useCallback(
+    ({ app }: { app: Application }) => {
+      const { handlePointerDown, handlePointerMove, finishPointer, handleWheel, handleContextMenu } =
+        createPointerHandlers({
+          viewportRef,
+          boundsRef,
+          hostRef,
+          primaryDragRef,
+          middlePanRef,
+          touchStateRef,
+          fitScaleRef,
+          canvasRef,
+          onPrimaryDragStartRef,
+          onPrimaryDragMoveRef,
+          onPrimaryDragEndRef,
+          onPrimaryDragCancelRef,
+        });
 
-    const width = Math.max(1, host.clientWidth);
-    const height = Math.max(1, host.clientHeight);
-    const app = new Application();
-
-    const { handlePointerDown, handlePointerMove, finishPointer, handleWheel, handleContextMenu } =
-      createPointerHandlers({
-        viewportRef,
-        boundsRef,
-        hostRef,
-        primaryDragRef,
-        middlePanRef,
-        touchStateRef,
-        fitScaleRef,
-        canvasRef,
-        onPrimaryDragStartRef,
-        onPrimaryDragMoveRef,
-        onPrimaryDragEndRef,
-        onPrimaryDragCancelRef,
+      const viewport = new Viewport({
+        screenWidth: app.renderer.width,
+        screenHeight: app.renderer.height,
+        worldWidth: worldWidth(boundsRef.current),
+        worldHeight: worldHeight(boundsRef.current),
+        events: app.renderer.events,
       });
+      app.stage.addChild(viewport);
 
-    const syncViewportSize = () => {
-      const currentApp = appRef.current;
-      const viewport = viewportRef.current;
-      const currentHost = hostRef.current;
-      if (!currentApp || !viewport || !currentHost) {
-        return;
-      }
-
-      const nextWidth = Math.max(1, currentHost.clientWidth);
-      const nextHeight = Math.max(1, currentHost.clientHeight);
-      const currentBounds = boundsRef.current;
-      currentApp.renderer.resize(nextWidth, nextHeight);
-      syncCanvasElementSize(currentApp.canvas, nextWidth, nextHeight);
-      viewport.resize(nextWidth, nextHeight, worldWidth(currentBounds), worldHeight(currentBounds));
-
-      if (fittedBoundsKeyRef.current === null) {
-        const scale = Math.min(
-          nextWidth / Math.max(worldWidth(currentBounds), 1),
-          nextHeight / Math.max(worldHeight(currentBounds), 1),
-        );
-        fitScaleRef.current = scale;
-        viewport.setZoom(scale);
-        viewport.position.set(
-          (nextWidth - worldWidth(currentBounds) * scale) / 2,
-          (nextHeight - worldHeight(currentBounds) * scale) / 2,
-        );
-        fittedBoundsKeyRef.current = `${currentBounds.minX}:${currentBounds.minY}:${currentBounds.maxX}:${currentBounds.maxY}`;
-      }
-
-      drawRef.current();
-    };
-
-    void app
-      .init({
-        width,
-        height,
-        antialias: true,
-        autoDensity: true,
-        backgroundAlpha: 0,
-        preference: 'webgl',
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
-      })
-      .then(() => {
-        if (!setupPixiCanvas(app, host, width, height, disposed)) {
-          return;
-        }
-        canvasRef.current = app.canvas;
-
-        const viewport = new Viewport({
-          screenWidth: width,
-          screenHeight: height,
-          worldWidth: worldWidth(boundsRef.current),
-          worldHeight: worldHeight(boundsRef.current),
-          events: app.renderer.events,
-        });
-        app.stage.addChild(viewport);
-
-        const grid = new Graphics();
-        const boundary = new Graphics();
-        const segments = new Graphics();
-        const unknownObstaclesLayer = new Graphics();
-        const knownObstaclesLayer = new Graphics();
-        const globalTrajectoryLayer = new Graphics();
-        const localTrajectoryLayer = new Graphics();
-        const referencePointsLayer = new Graphics();
-        const scanRingLayer = new Graphics();
-        const carsLayer = new Graphics();
-        const label = new Text({
-          text: 'Goal is unreachable',
-          style: {
-            fill: 0xff7b7b,
-            fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
-            fontSize: 18,
-            fontWeight: '700',
-            align: 'center',
-          },
-        });
-        label.anchor.set(0.5);
-
-        viewport.addChild(grid);
-        viewport.addChild(boundary);
-        viewport.addChild(segments);
-        viewport.addChild(unknownObstaclesLayer);
-        viewport.addChild(knownObstaclesLayer);
-        viewport.addChild(globalTrajectoryLayer);
-        viewport.addChild(localTrajectoryLayer);
-        viewport.addChild(referencePointsLayer);
-        viewport.addChild(scanRingLayer);
-        viewport.addChild(carsLayer);
-        app.stage.addChild(label);
-
-        appRef.current = app;
-        viewportRef.current = viewport;
-        layersRef.current = {
-          grid,
-          boundary,
-          segments,
-          unknownObstacles: unknownObstaclesLayer,
-          knownObstacles: knownObstaclesLayer,
-          globalTrajectory: globalTrajectoryLayer,
-          localTrajectory: localTrajectoryLayer,
-          referencePoints: referencePointsLayer,
-          scanRing: scanRingLayer,
-          cars: carsLayer,
-          label,
-        };
-
-        handlePointerUp = (event: PointerEvent) => finishPointer(event, false);
-        handlePointerCancel = (event: PointerEvent) => finishPointer(event, true);
-
-        app.canvas.addEventListener('pointerdown', handlePointerDown);
-        app.canvas.addEventListener('pointermove', handlePointerMove);
-        app.canvas.addEventListener('pointerup', handlePointerUp);
-        app.canvas.addEventListener('pointercancel', handlePointerCancel);
-        app.canvas.addEventListener('wheel', handleWheel, { passive: false });
-        app.canvas.addEventListener('contextmenu', handleContextMenu);
-
-        syncViewportSize();
-        initialResizeFrame = window.requestAnimationFrame(() => {
-          syncViewportSize();
-        });
+      const grid = new Graphics();
+      const boundary = new Graphics();
+      const segments = new Graphics();
+      const unknownObstaclesLayer = new Graphics();
+      const knownObstaclesLayer = new Graphics();
+      const globalTrajectoryLayer = new Graphics();
+      const localTrajectoryLayer = new Graphics();
+      const referencePointsLayer = new Graphics();
+      const scanRingLayer = new Graphics();
+      const carsLayer = new Graphics();
+      const label = new Text({
+        text: 'Goal is unreachable',
+        style: {
+          fill: 0xff7b7b,
+          fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
+          fontSize: 18,
+          fontWeight: '700',
+          align: 'center',
+        },
       });
+      label.anchor.set(0.5);
 
-    const removeResizeListeners = setupResizeListeners(host, syncViewportSize);
+      viewport.addChild(grid);
+      viewport.addChild(boundary);
+      viewport.addChild(segments);
+      viewport.addChild(unknownObstaclesLayer);
+      viewport.addChild(knownObstaclesLayer);
+      viewport.addChild(globalTrajectoryLayer);
+      viewport.addChild(localTrajectoryLayer);
+      viewport.addChild(referencePointsLayer);
+      viewport.addChild(scanRingLayer);
+      viewport.addChild(carsLayer);
+      app.stage.addChild(label);
 
-    return () => {
-      disposed = true;
-      removeResizeListeners();
-      if (initialResizeFrame !== 0) {
-        window.cancelAnimationFrame(initialResizeFrame);
-      }
-      app.canvas.removeEventListener('pointerdown', handlePointerDown);
-      app.canvas.removeEventListener('pointermove', handlePointerMove);
-      if (handlePointerUp) {
-        app.canvas.removeEventListener('pointerup', handlePointerUp);
-      }
-      if (handlePointerCancel) {
-        app.canvas.removeEventListener('pointercancel', handlePointerCancel);
-      }
-      app.canvas.removeEventListener('wheel', handleWheel);
-      app.canvas.removeEventListener('contextmenu', handleContextMenu);
-      middlePanRef.current = null;
-      primaryDragRef.current = null;
-      touchStateRef.current = { points: new Map(), gesture: null };
-      canvasRef.current = null;
-      layersRef.current = null;
-      viewportRef.current?.destroy({ children: true });
-      viewportRef.current = null;
-      appRef.current?.destroy(true, { children: true });
-      appRef.current = null;
-    };
-  }, []);
+      const handlePointerUp = (event: PointerEvent) => finishPointer(event, false);
+      const handlePointerCancel = (event: PointerEvent) => finishPointer(event, true);
+      app.canvas.addEventListener('pointerdown', handlePointerDown);
+      app.canvas.addEventListener('pointermove', handlePointerMove);
+      app.canvas.addEventListener('pointerup', handlePointerUp);
+      app.canvas.addEventListener('pointercancel', handlePointerCancel);
+      app.canvas.addEventListener('wheel', handleWheel, { passive: false });
+      app.canvas.addEventListener('contextmenu', handleContextMenu);
+
+      appRef.current = app;
+      viewportRef.current = viewport;
+      layersRef.current = {
+        grid,
+        boundary,
+        segments,
+        unknownObstacles: unknownObstaclesLayer,
+        knownObstacles: knownObstaclesLayer,
+        globalTrajectory: globalTrajectoryLayer,
+        localTrajectory: localTrajectoryLayer,
+        referencePoints: referencePointsLayer,
+        scanRing: scanRingLayer,
+        cars: carsLayer,
+        label,
+      };
+      canvasRef.current = app.canvas;
+
+      return {
+        handleResize: () => {
+          const currentBounds = boundsRef.current;
+          viewport.resize(
+            app.renderer.width,
+            app.renderer.height,
+            worldWidth(currentBounds),
+            worldHeight(currentBounds),
+          );
+
+          if (fittedBoundsKeyRef.current === null) {
+            const scale = Math.min(
+              app.renderer.width / Math.max(worldWidth(currentBounds), 1),
+              app.renderer.height / Math.max(worldHeight(currentBounds), 1),
+            );
+            fitScaleRef.current = scale;
+            viewport.setZoom(scale);
+            viewport.position.set(
+              (app.renderer.width - worldWidth(currentBounds) * scale) / 2,
+              (app.renderer.height - worldHeight(currentBounds) * scale) / 2,
+            );
+            fittedBoundsKeyRef.current = `${currentBounds.minX}:${currentBounds.minY}:${currentBounds.maxX}:${currentBounds.maxY}`;
+          }
+
+          drawRef.current();
+        },
+        cleanup: () => {
+          app.canvas.removeEventListener('pointerdown', handlePointerDown);
+          app.canvas.removeEventListener('pointermove', handlePointerMove);
+          app.canvas.removeEventListener('pointerup', handlePointerUp);
+          app.canvas.removeEventListener('pointercancel', handlePointerCancel);
+          app.canvas.removeEventListener('wheel', handleWheel);
+          app.canvas.removeEventListener('contextmenu', handleContextMenu);
+          middlePanRef.current = null;
+          primaryDragRef.current = null;
+          touchStateRef.current = { points: new Map(), gesture: null };
+          canvasRef.current = null;
+          layersRef.current = null;
+          viewportRef.current?.destroy({ children: true });
+          viewportRef.current = null;
+          appRef.current = null;
+        },
+      };
+    },
+    [],
+  );
+
+  usePixiLifecycle(hostRef, onPixiReady);
 
   useEffect(() => {
     const viewport = viewportRef.current;

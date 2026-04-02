@@ -11,28 +11,19 @@ import type {
   LocalPlannerReferencePoint,
   LocalPlannerTrajectoryPoint,
 } from '../lib/wasmCore';
+import type { PlanningRefs, PlanningSetters } from './planningTypes';
 
-export type UsePlanningCallbacksParams = {
+export type UsePlanningCallbacksParams = PlanningRefs &
+  PlanningSetters & {
   mode: Mode;
-  carRef: React.RefObject<CarState | null>;
   goalRef: React.RefObject<CarState | null>;
-  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
-  globalTrajectoryRef: React.RefObject<LocalPlannerTrajectoryPoint[] | null>;
-  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
   dragStartRef: React.RefObject<DragStartState | null>;
-  planningRequestRef: React.RefObject<number>;
-  localPlanningRef: React.RefObject<boolean>;
-  trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-  mapServerNodeRef: React.RefObject<MapServerNode | null>;
+  globalTrajectoryRef: React.RefObject<LocalPlannerTrajectoryPoint[] | null>;
   setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
   setGoal: React.Dispatch<React.SetStateAction<CarState | null>>;
   setPressedPose: React.Dispatch<React.SetStateAction<CarState | null>>;
   setGoalUnreachable: React.Dispatch<React.SetStateAction<GoalUnreachableState>>;
   setGlobalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerTrajectoryPoint[] | null>>;
-  setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
-  setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
-  setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
-  setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>;
   replanMaxSpeed: number;
   toHybridAStarStartSeed: (points: LocalPlannerReferencePoint[]) => HybridAStarStartSeedPoint[];
 };
