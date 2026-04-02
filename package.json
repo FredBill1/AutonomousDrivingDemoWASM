@@ -13,6 +13,7 @@
     "format:rs": "cargo fmt --manifest-path wasm-core/Cargo.toml",
     "format": "npm run format:ts && npm run format:rs",
     "check:wasm": "cargo test --manifest-path wasm-core/Cargo.toml",
+    "check:tsc": "npm run build:wasm:debug && tsc --noEmit",
     "check:lengths": "node scripts/check-file-lengths.mjs",
     "check:lint:ts": "npm run build:wasm:debug && eslint src/",
     "check:lint:rs": "cargo clippy --manifest-path wasm-core/Cargo.toml --all-targets -- -D warnings",

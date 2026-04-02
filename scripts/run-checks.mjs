@@ -10,6 +10,7 @@ const NPM_COMMAND = 'npm';
 
 const checkScripts = [
   'check:wasm',
+  'check:tsc',
   'check:lint:ts',
   'check:lint:rs',
   'check:format:ts',
