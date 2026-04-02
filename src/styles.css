@@ -220,7 +220,7 @@ button {
 }
 
 .segmented-control button.active {
-  background: linear-gradient(135deg, rgba(159, 232, 112, 0.24), rgba(87, 216, 255, 0.12));
+  background: linear-gradient(135deg, rgba(158, 232, 112, 0.5), rgba(87, 216, 255, 0.5));
   color: white;
 }
 
