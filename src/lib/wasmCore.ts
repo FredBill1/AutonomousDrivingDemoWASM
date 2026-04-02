@@ -1,13 +1,14 @@
 import type { PathPoint } from './appModel';
 import { createWorkerRpc } from './workerRpc';
+import { type LocalPlannerControlPoint, type LocalPlannerUpdateResult, type WasmCarState } from './workerTypes';
 
-export type WasmCarState = {
-    x: number;
-    y: number;
-    yaw: number;
-    velocity: number;
-    steer: number;
-};
+export type {
+    LocalPlannerControlPoint,
+    LocalPlannerPathPoint,
+    LocalPlannerReferencePoint,
+    LocalPlannerUpdateResult,
+    WasmCarState,
+} from './workerTypes';
 
 export type WasmConfigSnapshot = {
     wheelBase: number;
@@ -61,32 +62,6 @@ export type LocalPlannerTrajectoryPoint = {
     y: number;
     yaw: number;
     direction: number;
-};
-
-export type LocalPlannerPathPoint = {
-    x: number;
-    y: number;
-    yaw: number;
-};
-
-export type LocalPlannerReferencePoint = {
-    x: number;
-    y: number;
-    velocity: number;
-    yaw: number;
-};
-
-export type LocalPlannerControlPoint = {
-    timestamp: number;
-    targetVelocity: number;
-    targetSteer: number;
-};
-
-export type LocalPlannerUpdateResult = {
-    controlSequence: LocalPlannerControlPoint[];
-    localTrajectory: LocalPlannerPathPoint[];
-    referencePoints: LocalPlannerReferencePoint[];
-    brakeTrajectory: LocalPlannerReferencePoint[];
 };
 
 export type LocalPlannerUpdateEvent = LocalPlannerUpdateResult;
@@ -147,9 +122,7 @@ export function setSimulationState(state: WasmCarState, timestamp?: number) {
     return computeRpc.call<null>('setSimulationState', { state, timestamp });
 }
 
-export function setSimulationControlSequence(
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>,
-) {
+export function setSimulationControlSequence(controlSequence: LocalPlannerControlPoint[]) {
     return computeRpc.call<null>('setSimulationControlSequence', { controlSequence });
 }
 

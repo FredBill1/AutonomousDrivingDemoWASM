@@ -3,6 +3,7 @@ mod control;
 mod matrix_utils;
 mod types;
 
+pub(crate) use types::HORIZON_LENGTH;
 pub use types::MpcControlResult;
 
 #[cfg(test)]

@@ -1,5 +1,7 @@
 use wasm_bindgen::prelude::*;
 
+pub(crate) use crate::car::constants::{MAX_ACCEL, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, WHEEL_BASE};
+
 pub(crate) const HORIZON_LENGTH: usize = 5;
 pub(crate) const MAX_ITER: usize = 5;
 pub(crate) const DU_TH: f64 = 0.1;
@@ -15,13 +17,6 @@ pub(crate) const Q_Y: f64 = 1.1;
 pub(crate) const Q_V: f64 = 0.05;
 pub(crate) const Q_YAW: f64 = 1.1;
 pub(crate) const QF_SCALE: f64 = 2.0;
-
-pub(crate) const WHEEL_BASE: f64 = 2.5;
-pub(crate) const MAX_STEER: f64 = 40.0_f64.to_radians();
-pub(crate) const MAX_STEER_SPEED: f64 = 360.0_f64.to_radians();
-pub(crate) const MAX_SPEED: f64 = 55.0 / 3.6;
-pub(crate) const MIN_SPEED: f64 = -30.0 / 3.6;
-pub(crate) const MAX_ACCEL: f64 = 15.0;
 
 pub(crate) type ModelState = [f64; 4];
 pub(crate) type Control = [f64; 2];

@@ -1,7 +1,11 @@
-import type { WasmConfigSnapshot } from './wasmCore';
 import type { CarShape, MotionLimits } from './appTypes';
 import type { MapBoundingBox } from './mapServerNode';
-import type { HybridAStarStartSeedPoint, LocalPlannerReferencePoint, LocalPlannerTrajectoryPoint } from './wasmCore';
+import type {
+    HybridAStarStartSeedPoint,
+    LocalPlannerReferencePoint,
+    LocalPlannerTrajectoryPoint,
+    WasmConfigSnapshot,
+} from './wasmCore';
 
 export function createCarShape(snapshot: WasmConfigSnapshot): CarShape {
     return {
@@ -30,7 +34,7 @@ export function isPointInBounds(point: { x: number; y: number }, bounds: MapBoun
 }
 
 export function toTrajectoryPath(points: LocalPlannerTrajectoryPoint[]) {
-    return points.map((point) => ({ x: point.x, y: point.y }));
+    return points.map((point) => ({ x: point.x, y: point.y, yaw: point.yaw }));
 }
 
 export function toHybridAStarStartSeed(points: LocalPlannerReferencePoint[]): HybridAStarStartSeedPoint[] {

@@ -1,10 +1,11 @@
 use crate::car::CarConfig;
 use crate::car::CarState;
+use crate::geometry::wrap_angle;
 use crate::rsplan::{SegmentKind, solve_all_paths};
 
 use super::heuristic::HeuristicGrid;
 use super::types::SearchNode;
-use super::utils::{calc_ijk, wrap_angle};
+use super::utils::calc_ijk;
 use super::{
     BACKWARDS_COST, H_DIST_COST, H_YAW_COST, MOTION_DISTANCE, MOTION_RESOLUTION, STEER_CHANGE_COST, STEER_COST,
     SWITCH_DIRECTION_COST,

@@ -3,6 +3,7 @@ use super::types::{
     Control, DU_TH, HORIZON_LENGTH, MAX_ACCEL, MAX_ITER, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, ModelState,
     MpcControlResult, NX, RollingCarState, WHEEL_BASE,
 };
+use crate::geometry::{clamp, wrap_angle};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -108,18 +109,4 @@ fn control_delta(left: &[Control], right: &[Control]) -> f64 {
         .map(|(lhs, rhs)| (lhs[0] - rhs[0]).powi(2) + (lhs[1] - rhs[1]).powi(2))
         .sum::<f64>()
         .sqrt()
-}
-
-pub(crate) fn wrap_angle(mut angle: f64) -> f64 {
-    while angle >= std::f64::consts::PI {
-        angle -= std::f64::consts::TAU;
-    }
-    while angle < -std::f64::consts::PI {
-        angle += std::f64::consts::TAU;
-    }
-    angle
-}
-
-pub(crate) fn clamp(value: f64, min: f64, max: f64) -> f64 {
-    value.max(min).min(max)
 }

@@ -1,0 +1,9 @@
+pub(crate) const WHEEL_BASE: f64 = 2.5;
+pub(crate) const MAX_STEER: f64 = 40.0_f64.to_radians();
+pub(crate) const MAX_STEER_SPEED: f64 = 360.0_f64.to_radians();
+pub(crate) const MAX_SPEED: f64 = 55.0 / 3.6;
+pub(crate) const MIN_SPEED: f64 = -30.0 / 3.6;
+pub(crate) const MAX_ACCEL: f64 = 15.0;
+pub(crate) const MAX_CENTRIPETAL_ACCEL: f64 = 16.0;
+pub(crate) const TARGET_SPEED: f64 = 40.0 / 3.6;
+pub(crate) const MOTION_RESOLUTION: f64 = 0.5;

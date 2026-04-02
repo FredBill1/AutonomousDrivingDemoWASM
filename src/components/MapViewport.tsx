@@ -1,22 +1,22 @@
 import { useEffect, useRef } from 'react';
 
-import { Application, Graphics, Text } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
+import { Application, Graphics, Text } from 'pixi.js';
 
 import type { CarState, Mode, Obstacle } from '../lib/appModel';
-import type { MapBoundingBox } from '../lib/mapServerNode';
-import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from '../lib/wasmCore';
 import type { CarShape, GoalUnreachableState, MotionLimits } from '../lib/appTypes';
+import type { MapBoundingBox } from '../lib/mapServerNode';
 import {
     type DrawLayers,
     type PathPoint,
     performDraw,
-    worldWidth,
-    worldHeight,
     syncCanvasElementSize,
+    worldHeight,
+    worldWidth,
 } from '../lib/mapViewportDraw';
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction';
 import { setupPixiCanvas, setupResizeListeners } from '../lib/pixiAppInit';
+import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from '../lib/wasmCore';
 
 type MapViewportProps = {
     bounds: MapBoundingBox;

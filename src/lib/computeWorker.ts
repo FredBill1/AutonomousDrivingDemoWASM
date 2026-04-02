@@ -1,22 +1,27 @@
 import { CarState, MpcReferenceTracker, path_check_collision, rs_solve_path } from '../../wasm-core/pkg/wasm_core';
 
 import { checkTrajectoryCollision, decodeFlatCoordinates, flattenTrajectoryPoints } from './workerCodecs';
+import { solveHybridAStar } from './workerHandlers';
 import {
     applySimulationStop,
     clearLocalPlannerTimer,
     clearSimulationTimers,
     computeStepCarState,
+    DEFAULT_PUBLISH_INTERVAL_MS,
+    DEFAULT_SIM_DELTA_TIME,
+    DEFAULT_SIM_INTERVAL_MS,
     ensureLocalPlannerSession,
     ensureWasmCore,
     setSimulationControlSequenceInternal,
     startSimulationLoop,
     workerState,
-    DEFAULT_SIM_DELTA_TIME,
-    DEFAULT_SIM_INTERVAL_MS,
-    DEFAULT_PUBLISH_INTERVAL_MS,
 } from './workerHelpers';
-import { type WasmCarState, type WorkerRequest, type WorkerResponse } from './workerTypes';
-import { solveHybridAStar } from './workerHandlers';
+import {
+    type LocalPlannerControlPoint,
+    type WasmCarState,
+    type WorkerRequest,
+    type WorkerResponse,
+} from './workerTypes';
 
 const handlers = {
     async getCarConfigSnapshot() {
@@ -104,9 +109,7 @@ const handlers = {
         return null;
     },
 
-    setSimulationControlSequence(payload: {
-        controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>;
-    }) {
+    setSimulationControlSequence(payload: { controlSequence: LocalPlannerControlPoint[] }) {
         if (!workerState.simulationSession) {
             return Promise.reject(new Error('Simulation not initialized'));
         }
