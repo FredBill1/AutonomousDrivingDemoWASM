@@ -32,9 +32,9 @@ export type DrawParams = {
   localTrajectory: LocalPlannerPathPoint[];
   referencePoints: LocalPlannerReferencePoint[];
   car: CarState | null;
-  carShape: CarShape;
+  carShape: CarShape | null;
   goal: CarState | null;
-  motionLimits: MotionLimits;
+  motionLimits: MotionLimits | null;
   pressedPose: CarState | null;
   mode: Mode;
   goalUnreachable: GoalUnreachableState;
@@ -258,7 +258,7 @@ export function performDraw(layers: DrawLayers, viewportRef: React.RefObject<Vie
   layers.referencePoints.stroke({ width: 0.25, color: 0xff7a7a, alpha: 0.94 });
 
   layers.scanRing.clear();
-  if (car) {
+  if (car && carShape && motionLimits) {
     const scanCenter = toViewportPoint(
       {
         x: car.x + carShape.backToCenter * Math.cos(car.yaw),
@@ -273,13 +273,13 @@ export function performDraw(layers: DrawLayers, viewportRef: React.RefObject<Vie
   }
 
   layers.cars.clear();
-  if (car) {
+  if (car && carShape) {
     drawCar(layers.cars, car, bounds, carShape, 0xffffff);
   }
-  if (goal) {
+  if (goal && carShape) {
     drawCar(layers.cars, goal, bounds, carShape, 0x9fe870);
   }
-  if (pressedPose) {
+  if (pressedPose && carShape) {
     drawCar(layers.cars, pressedPose, bounds, carShape, mode === 'pose' ? 0xffffff : 0x9fe870);
   }
 

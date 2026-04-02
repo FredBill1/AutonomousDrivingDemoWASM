@@ -3,6 +3,7 @@ use approx::assert_relative_eq;
 use crate::rsplan::{ReedsSheppPath, ReedsSheppSegment, SegmentKind};
 
 use super::{
+    HybridAStarConfig,
     heuristic::HeuristicGrid,
     planner::HybridAStarPlanner,
     search::{calc_rspath_cost, generate_neighbour, traceback_path},
@@ -24,8 +25,8 @@ fn planner_uses_python_target_max_steer_for_rs_radius() {
     )
     .expect("planner");
 
-    let expected = planner.config.wheel_base() / 35.0_f64.to_radians().tan();
-    let actual = planner.config.target_min_turning_radius();
+    let expected = planner.car_config.wheel_base() / 35.0_f64.to_radians().tan();
+    let actual = planner.car_config.target_min_turning_radius();
 
     assert_relative_eq!(actual, expected, epsilon = 1e-12);
     assert!(
@@ -39,9 +40,10 @@ fn planner_uses_python_target_max_steer_for_rs_radius() {
 #[test]
 fn heuristic_grid_indexes_goal_cell() {
     let obstacles = vec![0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 10.0];
-    let config = crate::car::CarConfig::new();
-    let grid = HeuristicGrid::from_obstacles(&obstacles, 5.0, 5.0, &config).expect("grid");
-    let index = calc_ijk(5.0, 5.0, 0.0, &grid);
+    let car_config = crate::car::CarConfig::new();
+    let ha_config = HybridAStarConfig::default();
+    let grid = HeuristicGrid::from_obstacles(&obstacles, 5.0, 5.0, &car_config, &ha_config).expect("grid");
+    let index = calc_ijk(5.0, 5.0, 0.0, &grid, ha_config.yaw_grid_resolution);
     assert!(grid.contains(index.0, index.1));
     assert!(grid.distance_at(index.0, index.1) <= 1.0);
 }
@@ -49,8 +51,9 @@ fn heuristic_grid_indexes_goal_cell() {
 #[test]
 fn heuristic_grid_matches_python_downsampling() {
     let obstacles = vec![0.0, 0.0, 0.0, 4.0, 4.0, 0.0, 4.0, 4.0, 1.75, 1.75];
-    let config = crate::car::CarConfig::new();
-    let grid = HeuristicGrid::from_obstacles(&obstacles, 2.0, 2.0, &config).expect("grid");
+    let car_config = crate::car::CarConfig::new();
+    let ha_config = HybridAStarConfig::default();
+    let grid = HeuristicGrid::from_obstacles(&obstacles, 2.0, 2.0, &car_config, &ha_config).expect("grid");
 
     assert_eq!(grid.width, 5);
     assert_eq!(grid.height, 5);
@@ -122,7 +125,8 @@ fn point_start_collision_keeps_first_escape_rollout() {
         1,
         0.0,
         &planner.goal,
-        &planner.config,
+        &planner.car_config,
+        &planner.ha_config,
         &planner.heuristic,
         &planner.obstacle_coordinates,
         true,
@@ -152,11 +156,22 @@ fn neighbour_acceptance_does_not_prune_blocked_heuristic_cells() {
         blocked: vec![true; 64],
         distances: vec![0.0; 64],
     };
-    let config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::new();
+    let ha_config = HybridAStarConfig::default();
     let goal = [7.0, 7.0, 0.0];
     let obstacles = box_obstacles(8.0, 8.0);
 
-    let neighbour = generate_neighbour(&current, 1, 0.0, &goal, &config, &heuristic, &obstacles, false);
+    let neighbour = generate_neighbour(
+        &current,
+        1,
+        0.0,
+        &goal,
+        &car_config,
+        &ha_config,
+        &heuristic,
+        &obstacles,
+        false,
+    );
 
     assert!(neighbour.is_some());
 }
@@ -210,7 +225,8 @@ fn planner_ignores_runtime_iteration_cap_parameter() {
 
 #[test]
 fn rs_cost_matches_python_segment_penalties() {
-    let config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::new();
+    let ha_config = HybridAStarConfig::default();
     let node = SearchNode {
         ijk: (0, 0, 0),
         trajectory: vec![[0.0, 0.0, 0.0, 1.0]],
@@ -225,13 +241,13 @@ fn rs_cost_matches_python_segment_penalties() {
     path.push_segment(&ReedsSheppSegment::new(SegmentKind::Left, 1, 2.0, 2.0));
     path.push_segment(&ReedsSheppSegment::new(SegmentKind::Straight, -1, 1.0, 2.0));
 
-    let cost = calc_rspath_cost(&node, &path, &config);
+    let cost = calc_rspath_cost(&node, &path, &car_config, &ha_config);
     let expected = 2.0
         + 1.0 * 4.0
         + 25.0
-        + 3.0 * config.target_max_steer().abs()
-        + 3.0 * config.target_max_steer().abs()
-        + 1.5 * config.target_max_steer().abs() * 2.0;
+        + 3.0 * car_config.target_max_steer().abs()
+        + 3.0 * car_config.target_max_steer().abs()
+        + 1.5 * car_config.target_max_steer().abs() * 2.0;
     assert_relative_eq!(cost, expected, epsilon = 1e-12);
 }
 

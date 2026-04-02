@@ -16,7 +16,9 @@ export default defineConfig(
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    rules: {},
+    rules: {
+      '@typescript-eslint/no-deprecated': 'error',
+    },
   },
   {
     files: ['**/*.{js,mjs,cjs}'],

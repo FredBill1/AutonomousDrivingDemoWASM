@@ -1,13 +1,13 @@
 use crate::car::CarConfig;
 
+use super::config::HybridAStarConfig;
 use super::heuristic::HeuristicGrid;
 use super::types::{SearchNode, StartSeedPoint};
-use super::{NUM_STEER_COMMANDS, YAW_GRID_RESOLUTION};
 
-pub(crate) fn steer_commands(max_steer: f64) -> Vec<f64> {
-    let mut commands = Vec::with_capacity(NUM_STEER_COMMANDS + 1);
-    for index in 0..NUM_STEER_COMMANDS {
-        let t = index as f64 / (NUM_STEER_COMMANDS - 1) as f64;
+pub(crate) fn steer_commands(max_steer: f64, num_steer_commands: usize) -> Vec<f64> {
+    let mut commands = Vec::with_capacity(num_steer_commands + 1);
+    for index in 0..num_steer_commands {
+        let t = index as f64 / (num_steer_commands - 1) as f64;
         commands.push(-max_steer + (2.0 * max_steer) * t);
     }
     commands.push(0.0);
@@ -16,11 +16,17 @@ pub(crate) fn steer_commands(max_steer: f64) -> Vec<f64> {
     commands
 }
 
-pub(crate) fn calc_ijk(x: f64, y: f64, yaw: f64, heuristic: &HeuristicGrid) -> (i32, i32, i32) {
+pub(crate) fn calc_ijk(
+    x: f64,
+    y: f64,
+    yaw: f64,
+    heuristic: &HeuristicGrid,
+    yaw_grid_resolution: f64,
+) -> (i32, i32, i32) {
     let (i, j) = heuristic.calc_index(x, y);
-    let yaw_bins = (2.0 * std::f64::consts::PI / YAW_GRID_RESOLUTION).round() as i32;
+    let yaw_bins = (2.0 * std::f64::consts::PI / yaw_grid_resolution).round() as i32;
     let wrapped = wrap_zero_to_two_pi(yaw);
-    let k = ((wrapped / YAW_GRID_RESOLUTION).floor() as i32).rem_euclid(yaw_bins);
+    let k = ((wrapped / yaw_grid_resolution).floor() as i32).rem_euclid(yaw_bins);
     (i, j, k)
 }
 
@@ -80,8 +86,9 @@ pub(crate) fn build_point_start_node(
     start_y: f64,
     start_yaw: f64,
     heuristic: &HeuristicGrid,
+    ha_config: &HybridAStarConfig,
 ) -> SearchNode {
-    let start_ijk = calc_ijk(start_x, start_y, start_yaw, heuristic);
+    let start_ijk = calc_ijk(start_x, start_y, start_yaw, heuristic, ha_config.yaw_grid_resolution);
     SearchNode {
         ijk: start_ijk,
         trajectory: vec![[start_x, start_y, start_yaw, 0.0]],
@@ -97,12 +104,13 @@ pub(crate) fn build_point_start_node(
 pub(crate) fn build_seed_start_node(
     start_seed: &[StartSeedPoint],
     heuristic: &HeuristicGrid,
-    config: &CarConfig,
+    car_config: &CarConfig,
+    ha_config: &HybridAStarConfig,
 ) -> Result<SearchNode, wasm_bindgen::JsValue> {
     let last = start_seed
         .last()
         .ok_or_else(|| wasm_bindgen::JsValue::from_str("Start trajectory seed cannot be empty"))?;
-    let start_ijk = calc_ijk(last.x, last.y, last.yaw, heuristic);
+    let start_ijk = calc_ijk(last.x, last.y, last.yaw, heuristic, ha_config.yaw_grid_resolution);
     let direction = python_sign(start_seed[0].velocity);
     let steer = start_seed
         .windows(2)
@@ -113,7 +121,7 @@ pub(crate) fn build_seed_start_node(
             let length = dx.hypot(dy);
             (length > 0.0).then(|| {
                 let delta_yaw = window[1].yaw - window[0].yaw;
-                (config.wheel_base() * delta_yaw / length).atan()
+                (car_config.wheel_base() * delta_yaw / length).atan()
             })
         })
         .unwrap_or(0.0);

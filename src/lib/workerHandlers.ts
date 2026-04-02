@@ -2,7 +2,12 @@ import { HybridAStarPlanner } from '../../wasm-core/pkg/wasm_core';
 
 import { decodeExploredSegments, flattenHybridSeedPoints, snapshotHybridResult } from './workerCodecs';
 import { ensureWasmCore, postEvent, workerState } from './workerHelpers';
-import { HYBRID_SEGMENT_BATCH_SIZE, HYBRID_STEP_BUDGET, type HybridSeedPoint, type WasmCarState } from './workerTypes';
+import {
+  HYBRID_ASTAR_STEP_BUDGET,
+  HYBRID_SEGMENT_BATCH_SIZE,
+  type HybridSeedPoint,
+  type WasmCarState,
+} from './workerTypes';
 
 export async function solveHybridAStar(payload: {
   start: WasmCarState | HybridSeedPoint[];
@@ -46,7 +51,7 @@ export async function solveHybridAStar(payload: {
   const plannerSession = workerState.activePlanner;
 
   while (!plannerSession.cancelled) {
-    const finished = plannerSession.planner.step(HYBRID_STEP_BUDGET);
+    const finished = plannerSession.planner.step(HYBRID_ASTAR_STEP_BUDGET);
     const exploredFlat = plannerSession.planner.take_explored_segments();
     if (exploredFlat.length > 0) {
       const decoded = decodeExploredSegments(exploredFlat);

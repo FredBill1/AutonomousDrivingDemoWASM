@@ -1,7 +1,6 @@
-use super::types::{
-    DESIRED_MAX_ACCEL_RATIO, MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MIN_SPEED, PreparedTrajectory, TARGET_SPEED,
-    clamp, distance, midpoint, wrap_angle,
-};
+use super::types::{PreparedTrajectory, clamp, distance, midpoint, wrap_angle};
+use crate::car::CarConfig;
+use crate::mpc_control::MpcConfig;
 use wasm_bindgen::prelude::*;
 
 pub(crate) fn decode_trajectory(flat: &[f64]) -> Result<Vec<[f64; 4]>, JsValue> {
@@ -16,7 +15,11 @@ pub(crate) fn decode_trajectory(flat: &[f64]) -> Result<Vec<[f64; 4]>, JsValue> 
     Ok(points)
 }
 
-pub(crate) fn process_reference_trajectory(mut points: Vec<[f64; 4]>) -> Result<PreparedTrajectory, &'static str> {
+pub(crate) fn process_reference_trajectory(
+    mut points: Vec<[f64; 4]>,
+    mpc_config: &MpcConfig,
+    car_config: &CarConfig,
+) -> Result<PreparedTrajectory, &'static str> {
     if points.is_empty() {
         return Err("Reference trajectory is empty");
     }
@@ -53,7 +56,11 @@ pub(crate) fn process_reference_trajectory(mut points: Vec<[f64; 4]>) -> Result<
     }
 
     for point in &mut expanded {
-        point[3] = clamp(point[3] * TARGET_SPEED, MIN_SPEED, MAX_SPEED);
+        point[3] = clamp(
+            point[3] * car_config.target_speed(),
+            car_config.min_speed(),
+            car_config.max_speed(),
+        );
     }
 
     let mut reordered = expanded
@@ -62,8 +69,8 @@ pub(crate) fn process_reference_trajectory(mut points: Vec<[f64; 4]>) -> Result<
         .collect::<Vec<_>>();
 
     let us = cumulative_distances(&reordered);
-    limit_velocity_for_stops(&mut reordered, &us);
-    limit_velocity_by_curvature(&mut reordered, &us);
+    limit_velocity_for_stops(&mut reordered, &us, mpc_config, car_config);
+    limit_velocity_by_curvature(&mut reordered, &us, car_config);
     let direction_change_us = reordered
         .iter()
         .zip(us.iter())
@@ -124,20 +131,20 @@ fn cumulative_distances(points: &[[f64; 4]]) -> Vec<f64> {
     us
 }
 
-fn limit_velocity_for_stops(points: &mut [[f64; 4]], us: &[f64]) {
+fn limit_velocity_for_stops(points: &mut [[f64; 4]], us: &[f64], mpc_config: &MpcConfig, car_config: &CarConfig) {
     let mut last_zero = None;
     for index in (0..points.len()).rev() {
         if points[index][2] == 0.0 {
             last_zero = Some(us[index]);
         } else if let Some(stop_u) = last_zero {
             let dist = stop_u - us[index];
-            let limit = (2.0 * DESIRED_MAX_ACCEL_RATIO * MAX_ACCEL * dist.max(0.0)).sqrt();
+            let limit = (2.0 * mpc_config.desired_max_accel_ratio * car_config.max_accel() * dist.max(0.0)).sqrt();
             points[index][2] = clamp(points[index][2], -limit, limit);
         }
     }
 }
 
-fn limit_velocity_by_curvature(points: &mut [[f64; 4]], us: &[f64]) {
+fn limit_velocity_by_curvature(points: &mut [[f64; 4]], us: &[f64], car_config: &CarConfig) {
     if points.len() < 3 {
         return;
     }
@@ -145,7 +152,7 @@ fn limit_velocity_by_curvature(points: &mut [[f64; 4]], us: &[f64]) {
     for index in 0..points.len() {
         let curvature = estimate_curvature(points, us, index);
         if curvature.is_finite() && curvature > 0.0 {
-            let max_v = (MAX_CENTRIPETAL_ACCEL / curvature).sqrt();
+            let max_v = (car_config.max_centripetal_accel() / curvature).sqrt();
             points[index][2] = clamp(points[index][2], -max_v, max_v);
         } else if curvature.is_infinite() {
             points[index][2] = 0.0;

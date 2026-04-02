@@ -188,8 +188,8 @@ export function setLocalPlannerTrajectory(trajectory: LocalPlannerTrajectoryPoin
   return computeRpc.call<null>('setLocalPlannerTrajectory', { trajectory });
 }
 
-export function setLocalPlannerState(state: WasmCarState, timestamp: number, dt?: number, updateIntervalMs?: number) {
-  return computeRpc.call<null>('setLocalPlannerState', { state, timestamp, dt, updateIntervalMs });
+export function setLocalPlannerState(state: WasmCarState, timestamp: number, updateIntervalMs?: number) {
+  return computeRpc.call<null>('setLocalPlannerState', { state, timestamp, updateIntervalMs });
 }
 
 export function brakeLocalPlanner() {

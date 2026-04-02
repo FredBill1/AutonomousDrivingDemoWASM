@@ -1,55 +1,58 @@
 use super::builder::linear_mpc_control;
-use super::types::{
-    Control, DU_TH, HORIZON_LENGTH, MAX_ACCEL, MAX_ITER, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, ModelState,
-    MpcControlResult, NX, RollingCarState, WHEEL_BASE,
-};
+use super::config::MpcConfig;
+use super::types::{Control, ModelState, NX, RollingCarState};
+use crate::car::CarConfig;
 use crate::geometry::{clamp, wrap_angle};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn mpc_control_preview(
+    mpc_config: &MpcConfig,
+    car_config: &CarConfig,
+    dt: f64,
     flat_reference_states: Vec<f64>,
     state_x: f64,
     state_y: f64,
     state_velocity: f64,
-    mut state_yaw: f64,
+    state_yaw: f64,
     last_steer: f64,
-    dt: f64,
-) -> Result<MpcControlResult, JsValue> {
+) -> Result<super::types::MpcControlResult, JsValue> {
     let xref = decode_reference(&flat_reference_states)?;
-    if xref.len() < HORIZON_LENGTH + 1 {
-        return Err(JsValue::from_str("Need at least HORIZON_LENGTH + 1 reference states"));
+    if xref.len() < mpc_config.horizon_length as usize + 1 {
+        return Err(JsValue::from_str("Need at least horizon_length + 1 reference states"));
     }
 
-    state_yaw = align_yaw(state_yaw, xref[0][3]);
+    let aligned_yaw = align_yaw(state_yaw, xref[0][3]);
 
     let initial_state = RollingCarState {
         x: state_x,
         y: state_y,
         velocity: state_velocity,
-        yaw: state_yaw,
+        yaw: aligned_yaw,
         steer: last_steer,
     };
-    let mut controls = vec![[0.0, 0.0]; HORIZON_LENGTH];
-    let mut predicted_states = vec![[0.0; NX]; HORIZON_LENGTH + 1];
+    let mut controls = vec![[0.0, 0.0]; mpc_config.horizon_length as usize];
+    let mut predicted_states = vec![[0.0; NX]; mpc_config.horizon_length as usize + 1];
     let mut iterations = 0;
 
-    for iteration in 0..MAX_ITER {
+    for iteration in 0..mpc_config.max_iter as usize {
         iterations = iteration + 1;
-        let xbar = predict_motion(initial_state, &controls, dt);
+        let xbar = predict_motion(initial_state, &controls, dt, car_config);
         let previous_controls = controls.clone();
-        let Some((updated_controls, updated_states)) = linear_mpc_control(&xref, &xbar, last_steer, dt) else {
+        let Some((updated_controls, updated_states)) =
+            linear_mpc_control(&xref, &xbar, last_steer, dt, mpc_config, car_config)
+        else {
             break;
         };
         let du = control_delta(&previous_controls, &updated_controls);
         controls = updated_controls;
         predicted_states = updated_states;
-        if du < DU_TH {
+        if du < mpc_config.du_th {
             break;
         }
     }
 
-    Ok(MpcControlResult {
+    Ok(super::types::MpcControlResult {
         controls: controls.into_iter().flatten().collect(),
         predicted_states: predicted_states.into_iter().flatten().collect(),
         iterations,
@@ -68,33 +71,44 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     Ok(states)
 }
 
-pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], dt: f64) -> Vec<ModelState> {
+pub(crate) fn predict_motion(
+    initial: RollingCarState,
+    controls: &[Control],
+    dt: f64,
+    car_config: &CarConfig,
+) -> Vec<ModelState> {
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {
         let target_velocity = state.velocity + control[0] * dt;
-        state = step_state(state, target_velocity, control[1], dt);
+        state = step_state(state, target_velocity, control[1], dt, car_config);
         out.push([state.x, state.y, state.velocity, state.yaw]);
     }
     out
 }
 
-fn step_state(mut state: RollingCarState, target_velocity: f64, target_steer: f64, dt: f64) -> RollingCarState {
+fn step_state(
+    mut state: RollingCarState,
+    target_velocity: f64,
+    target_steer: f64,
+    dt: f64,
+    car_config: &CarConfig,
+) -> RollingCarState {
     state.x += state.velocity * state.yaw.cos() * dt;
     state.y += state.velocity * state.yaw.sin() * dt;
-    state.yaw += state.velocity / WHEEL_BASE * state.steer.tan() * dt;
+    state.yaw += state.velocity / car_config.wheel_base() * state.steer.tan() * dt;
 
-    let clipped_target_velocity = clamp(target_velocity, MIN_SPEED, MAX_SPEED);
-    let clipped_target_steer = clamp(target_steer, -MAX_STEER, MAX_STEER);
+    let clipped_target_velocity = clamp(target_velocity, car_config.min_speed(), car_config.max_speed());
+    let clipped_target_steer = clamp(target_steer, -car_config.max_steer(), car_config.max_steer());
     state.velocity += clamp(
         clipped_target_velocity - state.velocity,
-        -MAX_ACCEL * dt,
-        MAX_ACCEL * dt,
+        -car_config.max_accel() * dt,
+        car_config.max_accel() * dt,
     );
     state.steer += clamp(
         clipped_target_steer - state.steer,
-        -MAX_STEER_SPEED * dt,
-        MAX_STEER_SPEED * dt,
+        -car_config.max_steer_speed() * dt,
+        car_config.max_steer_speed() * dt,
     );
     state
 }

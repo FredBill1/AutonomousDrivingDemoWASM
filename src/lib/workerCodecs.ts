@@ -1,5 +1,6 @@
 import {
   CarConfig,
+  MpcConfig,
   MpcReferenceTracker,
   mpc_control_preview,
   trajectory_check_collision,
@@ -12,6 +13,7 @@ import type {
   TrackingPlan,
   WasmCarState,
 } from './workerTypes';
+import { MPC_DT } from './workerTypes';
 
 export function buildTrajectoryCollisionInput(plan: TrackingPlan | null) {
   if (!plan || plan.path.length === 0) {
@@ -96,26 +98,34 @@ export function runLocalPlannerUpdate(
   tracker: MpcReferenceTracker,
   state: WasmCarState,
   timestamp: number,
-  dt: number,
 ): Promise<LocalPlannerUpdateResult | null> {
+  const mpcConfig = new MpcConfig();
+  const carConfig = new CarConfig();
+  const dt = MPC_DT;
   const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
   const referenceStates = referenceResult.reference_states;
   const modelReferenceStates = referenceResult.model_reference_states;
   if (referenceStates.length === 0) {
     referenceResult.free();
+    mpcConfig.free();
+    carConfig.free();
     return Promise.resolve(null);
   }
 
   const brakeTrajectory = referenceResult.brake_trajectory;
   const controlResult = mpc_control_preview(
+    mpcConfig,
+    carConfig,
+    dt,
     modelReferenceStates,
     state.x,
     state.y,
     state.velocity,
     state.yaw,
     state.steer,
-    dt,
   );
+  mpcConfig.free();
+  carConfig.free();
   try {
     return Promise.resolve({
       controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),

@@ -79,16 +79,15 @@ export type LocalPlannerUpdateResult = {
 export type LocalPlannerSession = {
   tracker: MpcReferenceTracker | null;
   latestState: { state: WasmCarState; timestamp: number } | null;
-  simDeltaTime: number;
   updateIntervalMs: number;
   updateTimerId: number | null;
   updateInFlight: boolean;
 };
 
-export const HYBRID_STEP_BUDGET = 96;
 export const HYBRID_SEGMENT_BATCH_SIZE = 320;
 export const DEFAULT_SIM_DELTA_TIME = 0.015;
 export const DEFAULT_SIM_INTERVAL_MS = 20;
 export const DEFAULT_PUBLISH_INTERVAL_MS = 50;
-export const DEFAULT_LOCAL_PLANNER_DT = 0.07;
 export const DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
+export const HYBRID_ASTAR_STEP_BUDGET = 96;
+export const MPC_DT = 0.07;

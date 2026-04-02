@@ -1,4 +1,11 @@
-import { CarState, MpcReferenceTracker, path_check_collision, rs_solve_path } from '../../wasm-core/pkg/wasm_core';
+import {
+  CarConfig,
+  CarState,
+  MpcConfig,
+  MpcReferenceTracker,
+  path_check_collision,
+  rs_solve_path,
+} from '../../wasm-core/pkg/wasm_core';
 
 import { checkTrajectoryCollision, decodeFlatCoordinates, flattenTrajectoryPoints } from './workerCodecs';
 import { solveHybridAStar } from './workerHandlers';
@@ -136,19 +143,27 @@ const handlers = {
     }
 
     session.tracker?.free();
-    session.tracker = new MpcReferenceTracker(Float64Array.from(flattenTrajectoryPoints(payload.trajectory)));
+    const mpcConfig = new MpcConfig();
+    const carConfig = new CarConfig();
+    try {
+      session.tracker = new MpcReferenceTracker(
+        Float64Array.from(flattenTrajectoryPoints(payload.trajectory)),
+        mpcConfig,
+        carConfig,
+      );
+    } finally {
+      mpcConfig.free();
+      carConfig.free();
+    }
     return Promise.resolve(null);
   },
 
-  setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; dt?: number; updateIntervalMs?: number }) {
+  setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; updateIntervalMs?: number }) {
     const session = ensureLocalPlannerSession();
     session.latestState = {
       state: payload.state,
       timestamp: payload.timestamp,
     };
-    if (payload.dt !== undefined) {
-      session.simDeltaTime = payload.dt;
-    }
     if (payload.updateIntervalMs !== undefined && payload.updateIntervalMs !== session.updateIntervalMs) {
       session.updateIntervalMs = payload.updateIntervalMs;
       clearLocalPlannerTimer();

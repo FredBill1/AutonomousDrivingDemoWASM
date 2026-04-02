@@ -2,7 +2,6 @@ import initWasm, { CarConfig, CarState } from '../../wasm-core/pkg/wasm_core';
 
 import { runLocalPlannerUpdate } from './workerCodecs';
 import {
-  DEFAULT_LOCAL_PLANNER_DT,
   DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS,
   DEFAULT_PUBLISH_INTERVAL_MS,
   DEFAULT_SIM_DELTA_TIME,
@@ -246,7 +245,6 @@ export function ensureLocalPlannerSession() {
     workerState.localPlannerSession = {
       tracker: null,
       latestState: null,
-      simDeltaTime: DEFAULT_LOCAL_PLANNER_DT,
       updateIntervalMs: DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS,
       updateTimerId: null,
       updateInFlight: false,
@@ -267,7 +265,7 @@ export function ensureLocalPlannerSession() {
 
       const activeSession = workerState.localPlannerSession;
       activeSession.updateInFlight = true;
-      void runLocalPlannerUpdate(tracker, latestState.state, latestState.timestamp, activeSession.simDeltaTime)
+      void runLocalPlannerUpdate(tracker, latestState.state, latestState.timestamp)
         .then((result) => {
           if (!result || !workerState.localPlannerSession || workerState.localPlannerSession !== activeSession) {
             return;
