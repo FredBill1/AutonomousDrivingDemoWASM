@@ -4,6 +4,9 @@ use super::types::{Control, ModelState, NX, RollingCarState};
 use crate::geometry::{clamp, wrap_angle};
 use wasm_bindgen::prelude::*;
 
+/// Runs the MPC preview using default configuration values.
+///
+/// For customised configuration, use [`mpc_control_preview_with_config`].
 #[wasm_bindgen]
 pub fn mpc_control_preview(
     flat_reference_states: Vec<f64>,
