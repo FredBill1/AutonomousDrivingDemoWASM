@@ -7,6 +7,8 @@ import {
   rs_solve_path,
 } from '../../wasm-core/pkg/wasm_core';
 
+import { encodeFlatTuplesToFloat64 } from './flatCodec';
+import { disposeWasmResource, usingWasmPair, usingWasmResource } from './wasmResource';
 import { checkTrajectoryCollision, decodeFlatCoordinates, flattenTrajectoryPoints } from './workerCodecs';
 import { solveHybridAStar } from './workerHandlers';
 import {
@@ -29,6 +31,65 @@ import {
   type WorkerRequest,
   type WorkerResponse,
 } from './workerTypes';
+
+function createSimulationSession(state: WasmCarState, timestamp = 0, simDeltaTime = DEFAULT_SIM_DELTA_TIME) {
+  return {
+    state,
+    timestamp,
+    simDeltaTime,
+    controlSequence: null,
+    stopped: true,
+    simulationTimerId: null,
+    publishTimerId: null,
+    loopToken: 0,
+    stateVersion: 0,
+  };
+}
+
+function requireSimulationSession() {
+  if (!workerState.simulationSession) {
+    throw new Error('Simulation not initialized');
+  }
+  return workerState.simulationSession;
+}
+
+function replaceLocalPlannerTracker(tracker: MpcReferenceTracker | null) {
+  disposeWasmResource(workerState.localPlannerSession?.tracker);
+  if (workerState.localPlannerSession) {
+    workerState.localPlannerSession.tracker = tracker;
+  }
+}
+
+function solveReedsSheppCandidate(payload: {
+  start: WasmCarState;
+  goal: WasmCarState;
+  turnRadius: number;
+  runwayLength: number;
+  stepSize: number;
+  lengthTolerance: number;
+}) {
+  return usingWasmResource(
+    rs_solve_path(
+      payload.start.x,
+      payload.start.y,
+      payload.start.yaw,
+      payload.goal.x,
+      payload.goal.y,
+      payload.goal.yaw,
+      payload.turnRadius,
+      payload.runwayLength,
+      payload.stepSize,
+      payload.lengthTolerance,
+    ),
+    (solvedPath) => ({
+      path: decodeFlatCoordinates(solvedPath.flat_coordinates()),
+      totalLength: solvedPath.total_length(),
+      segmentCount: solvedPath.segment_count(),
+      runwayLength: solvedPath.runway_length(),
+      turnRadius: solvedPath.turn_radius(),
+    }),
+  );
+}
 
 const handlers = {
   async getCarConfigSnapshot() {
@@ -71,17 +132,11 @@ const handlers = {
     publishIntervalMs?: number;
   }) {
     await ensureWasmCore();
-    workerState.simulationSession = {
-      state: payload.state,
-      timestamp: payload.timestamp ?? 0,
-      simDeltaTime: payload.simDeltaTime ?? DEFAULT_SIM_DELTA_TIME,
-      controlSequence: null,
-      stopped: true,
-      simulationTimerId: null,
-      publishTimerId: null,
-      loopToken: 0,
-      stateVersion: 0,
-    };
+    workerState.simulationSession = createSimulationSession(
+      payload.state,
+      payload.timestamp ?? 0,
+      payload.simDeltaTime ?? DEFAULT_SIM_DELTA_TIME,
+    );
     startSimulationLoop(
       payload.simulationIntervalMs ?? DEFAULT_SIM_INTERVAL_MS,
       payload.publishIntervalMs ?? DEFAULT_PUBLISH_INTERVAL_MS,
@@ -92,17 +147,7 @@ const handlers = {
   async setSimulationState(payload: { state: WasmCarState; timestamp?: number }) {
     await ensureWasmCore();
     if (!workerState.simulationSession) {
-      workerState.simulationSession = {
-        state: payload.state,
-        timestamp: payload.timestamp ?? 0,
-        simDeltaTime: DEFAULT_SIM_DELTA_TIME,
-        controlSequence: null,
-        stopped: true,
-        simulationTimerId: null,
-        publishTimerId: null,
-        loopToken: 0,
-        stateVersion: 0,
-      };
+      workerState.simulationSession = createSimulationSession(payload.state, payload.timestamp ?? 0);
       startSimulationLoop(DEFAULT_SIM_INTERVAL_MS, DEFAULT_PUBLISH_INTERVAL_MS);
     } else {
       workerState.simulationSession.state = payload.state;
@@ -117,18 +162,12 @@ const handlers = {
   },
 
   setSimulationControlSequence(payload: { controlSequence: LocalPlannerControlPoint[] }) {
-    if (!workerState.simulationSession) {
-      return Promise.reject(new Error('Simulation not initialized'));
-    }
-    setSimulationControlSequenceInternal(workerState.simulationSession, payload.controlSequence);
+    setSimulationControlSequenceInternal(requireSimulationSession(), payload.controlSequence);
     return Promise.resolve(null);
   },
 
   stopSimulationMotion() {
-    if (!workerState.simulationSession) {
-      return Promise.reject(new Error('Simulation not initialized'));
-    }
-    applySimulationStop(workerState.simulationSession);
+    applySimulationStop(requireSimulationSession());
     return Promise.resolve(null);
   },
 
@@ -142,19 +181,14 @@ const handlers = {
       return Promise.resolve(null);
     }
 
-    session.tracker?.free();
-    const mpcConfig = new MpcConfig();
-    const carConfig = new CarConfig();
-    try {
-      session.tracker = new MpcReferenceTracker(
+    session.tracker = usingWasmPair(new MpcConfig(), new CarConfig(), (mpcConfig, carConfig) => {
+      disposeWasmResource(session.tracker);
+      return new MpcReferenceTracker(
         Float64Array.from(flattenTrajectoryPoints(payload.trajectory)),
         mpcConfig,
         carConfig,
       );
-    } finally {
-      mpcConfig.free();
-      carConfig.free();
-    }
+    });
     return Promise.resolve(null);
   },
 
@@ -179,17 +213,13 @@ const handlers = {
 
   cancelLocalPlanner() {
     if (workerState.localPlannerSession) {
-      workerState.localPlannerSession.tracker?.free();
-      workerState.localPlannerSession.tracker = null;
+      replaceLocalPlannerTracker(null);
     }
     return Promise.resolve(null);
   },
 
   resumeSimulationMotion() {
-    if (!workerState.simulationSession) {
-      return Promise.reject(new Error('Simulation not initialized'));
-    }
-    workerState.simulationSession.stopped = false;
+    requireSimulationSession().stopped = false;
     return Promise.resolve(null);
   },
 
@@ -197,7 +227,7 @@ const handlers = {
     clearSimulationTimers();
     workerState.simulationSession = null;
     clearLocalPlannerTimer();
-    workerState.localPlannerSession?.tracker?.free();
+    disposeWasmResource(workerState.localPlannerSession?.tracker);
     workerState.localPlannerSession = null;
     return Promise.resolve(null);
   },
@@ -205,12 +235,10 @@ const handlers = {
   async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
     const config = await ensureWasmCore();
     const { state: stateLike, obstacleCoordinates } = payload;
-    const state = new CarState(stateLike.x, stateLike.y, stateLike.yaw, stateLike.velocity, stateLike.steer);
-    try {
-      return state.check_collision(config, Float64Array.from(obstacleCoordinates));
-    } finally {
-      state.free();
-    }
+    return usingWasmResource(
+      new CarState(stateLike.x, stateLike.y, stateLike.yaw, stateLike.velocity, stateLike.steer),
+      (state) => state.check_collision(config, Float64Array.from(obstacleCoordinates)),
+    );
   },
 
   async checkPathCollision(payload: {
@@ -218,8 +246,11 @@ const handlers = {
     obstacleCoordinates: number[];
   }) {
     const config = await ensureWasmCore();
-    const flatPath = payload.path.flatMap((point) => [point.x, point.y, point.yaw]);
-    return path_check_collision(config, Float64Array.from(flatPath), Float64Array.from(payload.obstacleCoordinates));
+    return path_check_collision(
+      config,
+      encodeFlatTuplesToFloat64(payload.path, (point) => [point.x, point.y, point.yaw]),
+      Float64Array.from(payload.obstacleCoordinates),
+    );
   },
 
   async checkTrajectoryCollision(payload: {
@@ -251,30 +282,16 @@ const handlers = {
     for (const turnRadius of payload.turnRadii) {
       for (const runwayLength of payload.runwayLengths) {
         try {
-          const solvedPath = rs_solve_path(
-            payload.start.x,
-            payload.start.y,
-            payload.start.yaw,
-            payload.goal.x,
-            payload.goal.y,
-            payload.goal.yaw,
-            turnRadius,
-            runwayLength,
-            payload.stepSize,
-            payload.lengthTolerance,
+          solutions.push(
+            solveReedsSheppCandidate({
+              start: payload.start,
+              goal: payload.goal,
+              turnRadius,
+              runwayLength,
+              stepSize: payload.stepSize,
+              lengthTolerance: payload.lengthTolerance,
+            }),
           );
-
-          try {
-            solutions.push({
-              path: decodeFlatCoordinates(solvedPath.flat_coordinates()),
-              totalLength: solvedPath.total_length(),
-              segmentCount: solvedPath.segment_count(),
-              runwayLength: solvedPath.runway_length(),
-              turnRadius: solvedPath.turn_radius(),
-            });
-          } finally {
-            solvedPath.free();
-          }
         } catch {
           // Ignore invalid combinations.
         }

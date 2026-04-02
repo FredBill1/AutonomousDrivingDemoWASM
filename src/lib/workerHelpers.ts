@@ -1,5 +1,6 @@
 import initWasm, { CarConfig, CarState } from '../../wasm-core/pkg/wasm_core';
 
+import { usingWasmResource } from './wasmResource';
 import { runLocalPlannerUpdate } from './workerCodecs';
 import {
   DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS,
@@ -150,23 +151,15 @@ export async function computeStepCarState(
   dt: number,
 ) {
   const config = await ensureWasmCore();
-  const state = new CarState(current.x, current.y, current.yaw, current.velocity, current.steer);
-  try {
-    const next = state.stepped(config, targetVelocity, targetSteer, dt);
-    try {
-      return {
-        x: next.x,
-        y: next.y,
-        yaw: next.yaw,
-        velocity: next.velocity,
-        steer: next.steer,
-      };
-    } finally {
-      next.free();
-    }
-  } finally {
-    state.free();
-  }
+  return usingWasmResource(new CarState(current.x, current.y, current.yaw, current.velocity, current.steer), (state) =>
+    usingWasmResource(state.stepped(config, targetVelocity, targetSteer, dt), (next) => ({
+      x: next.x,
+      y: next.y,
+      yaw: next.yaw,
+      velocity: next.velocity,
+      steer: next.steer,
+    })),
+  );
 }
 
 export async function computeOpenLoopStepCarState(current: WasmCarState, dt: number) {
