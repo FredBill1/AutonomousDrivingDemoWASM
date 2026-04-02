@@ -24,13 +24,13 @@ import {
 
 type UseSimulationSetupParams = {
   planningRequestRef: React.RefObject<number>;
-  mapServerNodeRef: React.RefObject<MapServerNode | null>;
+  mapServerNodeRef: React.MutableRefObject<MapServerNode | null>;
   trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-  carRef: React.RefObject<CarState | null>;
-  timestampRef: React.RefObject<number>;
+  carRef: React.MutableRefObject<CarState | null>;
+  timestampRef: React.MutableRefObject<number>;
   localPlanningRef: React.RefObject<boolean>;
-  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
-  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
+  brakeTrajectoryRef: React.MutableRefObject<LocalPlannerReferencePoint[] | null>;
+  mapSnapshotRef: React.MutableRefObject<MapServerSnapshot>;
   setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
   setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
   setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
@@ -161,7 +161,7 @@ export function useSimulationSetup({
             backToCenter: configSnapshot.backToCenter,
             scanRadius: configSnapshot.scanRadius,
           });
-          (mapServerNodeRef as React.MutableRefObject<MapServerNode | null>).current = mapServerNode;
+          mapServerNodeRef.current = mapServerNode;
         } else {
           mapServerNode.setConfig({
             backToCenter: configSnapshot.backToCenter,
