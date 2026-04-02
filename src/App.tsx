@@ -5,11 +5,7 @@ import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
 import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
-import {
-  formatFixedWithoutNegativeZero,
-  toHybridAStarStartSeed,
-  toTrajectoryPath,
-} from './lib/appHelpers';
+import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
 import {
   FALLBACK_MAP_BOUNDING_BOX,

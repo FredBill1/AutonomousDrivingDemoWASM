@@ -58,8 +58,7 @@ mod tests {
         let config = config_with_dt(0.1);
         let car_config = CarConfig::default();
 
-        let result =
-            mpc_control_preview(&config, &car_config, xref, 0.0, 0.0, 3.0, 0.02, last_steer).expect("preview");
+        let result = mpc_control_preview(&config, &car_config, xref, 0.0, 0.0, 3.0, 0.02, last_steer).expect("preview");
         let controls = result.controls();
 
         assert!((controls[1] - last_steer).abs() < 1e-6);
@@ -220,8 +219,7 @@ mod tests {
             &mpc_config,
             &car_config,
         );
-        let (controls, _) =
-            linear_mpc_control(&xref, &xbar, 0.0, &mpc_config, &car_config).expect("solver result");
+        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, &mpc_config, &car_config).expect("solver result");
 
         assert_eq!(controls.len(), 5);
         assert!(controls.iter().all(|pair| pair[0].is_finite() && pair[1].is_finite()));

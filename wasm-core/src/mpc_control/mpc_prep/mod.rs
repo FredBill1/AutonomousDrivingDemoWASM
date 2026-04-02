@@ -25,9 +25,8 @@ mod tests {
         let mpc_config = MpcConfig::default();
         let car_config = CarConfig::default();
 
-        let result =
-            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
-                .expect("mpc prep");
+        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
+            .expect("mpc prep");
         assert_eq!(result.model_reference_states().len(), 24);
         assert_eq!(result.reference_states().len(), 24);
         assert!(!result.brake_trajectory().is_empty());
@@ -97,10 +96,13 @@ mod tests {
     fn rejects_zero_direction_input_like_python_assertion() {
         let mpc_config = MpcConfig::default();
         let car_config = CarConfig::default();
-        let error =
-            process_reference_trajectory(vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]], &mpc_config, &car_config)
-                .err()
-                .expect("zero direction must fail");
+        let error = process_reference_trajectory(
+            vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]],
+            &mpc_config,
+            &car_config,
+        )
+        .err()
+        .expect("zero direction must fail");
 
         assert_eq!(
             error,
@@ -137,9 +139,8 @@ mod tests {
         let mpc_config = MpcConfig::default();
         let car_config = CarConfig::default();
 
-        let result =
-            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
-                .expect("mpc prep");
+        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
+            .expect("mpc prep");
         let model = result.model_reference_states();
         let public = result.reference_states();
         let brake = result.brake_trajectory();

@@ -20,7 +20,11 @@ pub struct MpcReferenceTracker {
 #[wasm_bindgen]
 impl MpcReferenceTracker {
     #[wasm_bindgen(constructor)]
-    pub fn new(flat_trajectory: Vec<f64>, mpc_config: &MpcConfig, car_config: &CarConfig) -> Result<MpcReferenceTracker, JsValue> {
+    pub fn new(
+        flat_trajectory: Vec<f64>,
+        mpc_config: &MpcConfig,
+        car_config: &CarConfig,
+    ) -> Result<MpcReferenceTracker, JsValue> {
         let trajectory = decode_trajectory(&flat_trajectory)?;
         let prepared = process_reference_trajectory(trajectory, mpc_config, car_config).map_err(JsValue::from_str)?;
         let u_limit = *prepared.us.last().unwrap_or(&0.0);
@@ -99,8 +103,8 @@ impl MpcReferenceTracker {
     }
 
     fn update_brake_trajectory(&mut self, state_velocity: f64, changing_point: f64) {
-        let brake_length = state_velocity.powi(2)
-            / (2.0 * self.car_config.max_accel() * self.mpc_config.desired_max_accel_ratio);
+        let brake_length =
+            state_velocity.powi(2) / (2.0 * self.car_config.max_accel() * self.mpc_config.desired_max_accel_ratio);
         let brake_limit = self.u_limit.min(self.cur_u + brake_length).min(changing_point);
         let mut brake_us = Vec::new();
         let mut u = self.cur_u;
@@ -132,7 +136,11 @@ impl MpcReferenceTracker {
                 .mpc_config
                 .min_horizon_distance
                 .max(signed_velocity.max(0.0) * dt * self.mpc_config.horizon_length as f64);
-            let mut ref_us = linspace(self.cur_u, self.cur_u + length, self.mpc_config.horizon_length as usize + 1);
+            let mut ref_us = linspace(
+                self.cur_u,
+                self.cur_u + length,
+                self.mpc_config.horizon_length as usize + 1,
+            );
             for value in &mut ref_us {
                 *value = value.min(self.u_limit);
             }

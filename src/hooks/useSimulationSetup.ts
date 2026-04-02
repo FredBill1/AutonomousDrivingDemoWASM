@@ -1,9 +1,9 @@
 import type React from 'react';
 import { useEffect } from 'react';
 
-import type { CarShape, MotionLimits, MapServerSnapshot } from '../lib/appTypes';
-import type { CarState } from '../lib/appModel';
 import { createCarShape, createMotionLimits } from '../lib/appHelpers';
+import type { CarState } from '../lib/appModel';
+import type { CarShape, MapServerSnapshot, MotionLimits } from '../lib/appTypes';
 import { MapServerNode, flattenObstacleCoordinates } from '../lib/mapServerNode';
 import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import {

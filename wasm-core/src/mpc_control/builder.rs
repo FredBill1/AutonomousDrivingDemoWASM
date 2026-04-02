@@ -146,8 +146,7 @@ fn build_mpc_problem(
     let mut row = 0;
 
     for t in 0..horizon {
-        let (a_t, b_t, c_t) =
-            get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
+        let (a_t, b_t, c_t) = get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
         for state_dim in 0..NX {
             push_entry(
                 &mut a_rows,

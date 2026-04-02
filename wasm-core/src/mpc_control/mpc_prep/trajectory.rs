@@ -1,6 +1,6 @@
+use super::types::{PreparedTrajectory, clamp, distance, midpoint, wrap_angle};
 use crate::car::CarConfig;
 use crate::mpc_control::MpcConfig;
-use super::types::{PreparedTrajectory, clamp, distance, midpoint, wrap_angle};
 use wasm_bindgen::prelude::*;
 
 pub(crate) fn decode_trajectory(flat: &[f64]) -> Result<Vec<[f64; 4]>, JsValue> {
@@ -131,20 +131,14 @@ fn cumulative_distances(points: &[[f64; 4]]) -> Vec<f64> {
     us
 }
 
-fn limit_velocity_for_stops(
-    points: &mut [[f64; 4]],
-    us: &[f64],
-    mpc_config: &MpcConfig,
-    car_config: &CarConfig,
-) {
+fn limit_velocity_for_stops(points: &mut [[f64; 4]], us: &[f64], mpc_config: &MpcConfig, car_config: &CarConfig) {
     let mut last_zero = None;
     for index in (0..points.len()).rev() {
         if points[index][2] == 0.0 {
             last_zero = Some(us[index]);
         } else if let Some(stop_u) = last_zero {
             let dist = stop_u - us[index];
-            let limit =
-                (2.0 * mpc_config.desired_max_accel_ratio * car_config.max_accel() * dist.max(0.0)).sqrt();
+            let limit = (2.0 * mpc_config.desired_max_accel_ratio * car_config.max_accel() * dist.max(0.0)).sqrt();
             points[index][2] = clamp(points[index][2], -limit, limit);
         }
     }
