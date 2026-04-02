@@ -140,15 +140,12 @@ const handlers = {
     return Promise.resolve(null);
   },
 
-  setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; dt?: number; updateIntervalMs?: number }) {
+  setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; updateIntervalMs?: number }) {
     const session = ensureLocalPlannerSession();
     session.latestState = {
       state: payload.state,
       timestamp: payload.timestamp,
     };
-    if (payload.dt !== undefined) {
-      session.simDeltaTime = payload.dt;
-    }
     if (payload.updateIntervalMs !== undefined && payload.updateIntervalMs !== session.updateIntervalMs) {
       session.updateIntervalMs = payload.updateIntervalMs;
       clearLocalPlannerTimer();

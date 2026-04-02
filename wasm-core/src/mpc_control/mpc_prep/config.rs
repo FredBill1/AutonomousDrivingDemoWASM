@@ -29,7 +29,7 @@ impl Default for MpcPrepConfig {
             min_horizon_distance: 0.3,
             direction_change_dist: 0.1,
             motion_resolution: 0.5,
-            horizon_length: mpc.horizon_length,
+            horizon_length: mpc.horizon_length as usize,
         }
     }
 }

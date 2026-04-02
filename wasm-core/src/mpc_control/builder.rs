@@ -11,9 +11,8 @@ pub(crate) fn linear_mpc_control(
     xbar: &[ModelState],
     last_steer: f64,
     config: &MpcConfig,
-    dt: f64,
 ) -> Option<(Vec<Control>, Vec<ModelState>)> {
-    let problem = build_mpc_problem(xref, xbar, last_steer, config, dt);
+    let problem = build_mpc_problem(xref, xbar, last_steer, config);
 
     let settings = DefaultSettings::<f64> {
         verbose: false,
@@ -33,9 +32,10 @@ pub(crate) fn linear_mpc_control(
         return None;
     }
 
+    let horizon = config.horizon_length as usize;
     Some((
-        decode_controls(&solver.solution.x, config.horizon_length),
-        decode_states(&solver.solution.x, config.horizon_length),
+        decode_controls(&solver.solution.x, horizon),
+        decode_states(&solver.solution.x, horizon),
     ))
 }
 
@@ -53,9 +53,9 @@ fn build_mpc_problem(
     xbar: &[ModelState],
     last_steer: f64,
     config: &MpcConfig,
-    dt: f64,
 ) -> MpcProblem {
-    let horizon = config.horizon_length;
+    let dt = config.dt;
+    let horizon = config.horizon_length as usize;
     let nvars = NX * (horizon + 1) + NU * horizon;
     let mut q = vec![0.0; nvars];
     let mut p_rows = Vec::new();

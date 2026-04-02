@@ -14,8 +14,6 @@ import {
 } from './lib/appHelpers';
 import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
 import {
-  DEFAULT_CAR_SHAPE,
-  DEFAULT_MOTION_LIMITS,
   FALLBACK_MAP_BOUNDING_BOX,
   STACKED_LAYOUT_GAP_PX,
   STACKED_LAYOUT_MAX_WIDTH_PX,
@@ -63,7 +61,6 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
 }
 
 const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
-const LOCAL_PLANNER_DT = 0.07;
 const REPLAN_MAX_SPEED = 5 / 3.6;
 const MAX_GLOBAL_PLANNER_DISPLAY_BATCHES = 32;
 
@@ -75,8 +72,8 @@ function App() {
     knownObstacles: [],
     unknownObstacles: [],
   });
-  const [carShape, setCarShape] = useState<CarShape>(DEFAULT_CAR_SHAPE);
-  const [motionLimits, setMotionLimits] = useState<MotionLimits>(DEFAULT_MOTION_LIMITS);
+  const [carShape, setCarShape] = useState<CarShape | null>(null);
+  const [motionLimits, setMotionLimits] = useState<MotionLimits | null>(null);
   const [car, setCar] = useState<CarState | null>(null);
   const [goal, setGoal] = useState<CarState | null>(null);
   const [pressedPose, setPressedPose] = useState<CarState | null>(null);
@@ -108,13 +105,6 @@ function App() {
 
   if (trajectoryCollisionCheckingNodeRef.current === null) {
     trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision);
-  }
-
-  if (mapServerNodeRef.current === null) {
-    mapServerNodeRef.current = new MapServerNode(checkCollision, {
-      backToCenter: DEFAULT_CAR_SHAPE.backToCenter,
-      scanRadius: DEFAULT_MOTION_LIMITS.scanRadius,
-    });
   }
 
   useEffect(() => {
@@ -177,10 +167,18 @@ function App() {
         const nextMotionLimits = createMotionLimits(snapshot);
         setCarShape(nextCarShape);
         setMotionLimits(nextMotionLimits);
-        mapServerNodeRef.current?.setConfig({
-          backToCenter: snapshot.backToCenter,
-          scanRadius: snapshot.scanRadius,
-        });
+
+        if (mapServerNodeRef.current === null) {
+          mapServerNodeRef.current = new MapServerNode(checkCollision, {
+            backToCenter: snapshot.backToCenter,
+            scanRadius: snapshot.scanRadius,
+          });
+        } else {
+          mapServerNodeRef.current.setConfig({
+            backToCenter: snapshot.backToCenter,
+            scanRadius: snapshot.scanRadius,
+          });
+        }
       })
       .catch((error) => {
         console.error('Failed to initialize WASM core', error);
@@ -209,7 +207,6 @@ function App() {
     setVelocityHistory,
     setSteerHistory,
     historyLimit: HISTORY_LIMIT,
-    localPlannerDt: LOCAL_PLANNER_DT,
     localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
   });
@@ -318,16 +315,16 @@ function App() {
           <ChartPanel
             heading={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`}
             points={velocityHistory}
-            minValue={motionLimits.minSpeedKmh}
-            maxValue={motionLimits.maxSpeedKmh}
+            minValue={motionLimits?.minSpeedKmh ?? 0}
+            maxValue={motionLimits?.maxSpeedKmh ?? 0}
             lineColor={0x9fe870}
           />
 
           <ChartPanel
             heading={`Steer: ${formatFixedWithoutNegativeZero(((car?.steer ?? 0) * 180) / Math.PI, 1)}°`}
             points={steerHistory}
-            minValue={-motionLimits.maxSteerDeg}
-            maxValue={motionLimits.maxSteerDeg}
+            minValue={-(motionLimits?.maxSteerDeg ?? 0)}
+            maxValue={motionLimits?.maxSteerDeg ?? 0}
             lineColor={0x57d8ff}
           />
         </div>

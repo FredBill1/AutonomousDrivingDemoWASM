@@ -302,7 +302,7 @@ impl HybridAStarPlanner {
         nodes.insert(start_ijk, start_node);
 
         Ok(Self {
-            steer_commands: steer_commands(car_config.target_max_steer(), ha_config.num_steer_commands),
+            steer_commands: steer_commands(car_config.target_max_steer(), ha_config.num_steer_commands as usize),
             car_config,
             ha_config,
             heuristic,

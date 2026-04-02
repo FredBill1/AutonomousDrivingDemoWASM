@@ -21,8 +21,8 @@ import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferenceP
 type MapViewportProps = {
   bounds: MapBoundingBox;
   mode: Mode;
-  carShape: CarShape;
-  motionLimits: MotionLimits;
+  carShape: CarShape | null;
+  motionLimits: MotionLimits | null;
   knownObstacles: Obstacle[];
   unknownObstacles: Obstacle[];
   car: CarState | null;

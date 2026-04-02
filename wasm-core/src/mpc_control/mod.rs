@@ -5,7 +5,7 @@ mod matrix_utils;
 pub mod mpc_prep;
 mod types;
 
-pub(crate) use config::MpcConfig;
+pub use config::MpcConfig;
 pub use types::MpcControlResult;
 
 #[cfg(test)]
@@ -25,13 +25,18 @@ mod tests {
         }
     }
 
+    fn config_with_dt(dt: f64) -> MpcConfig {
+        MpcConfig { dt, ..MpcConfig::default() }
+    }
+
     #[test]
     fn generates_control_and_prediction_preview() {
         let xref = vec![
             0.0, 0.0, 6.0, 0.0, 1.0, 0.0, 6.0, 0.0, 2.0, 0.0, 6.0, 0.0, 3.0, 0.0, 6.0, 0.0, 4.0, 0.0, 6.0, 0.0, 5.0,
             0.0, 0.0, 0.0,
         ];
-        let result = mpc_control_preview(xref, 0.0, 0.0, 5.0, 0.0, 0.0, 0.07).expect("preview");
+        let config = config_with_dt(0.07);
+        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 5.0, 0.0, 0.0).expect("preview");
         assert_eq!(result.controls().len(), 10);
         assert_eq!(result.predicted_states().len(), 24);
         assert!(result.iterations() >= 1);
@@ -44,10 +49,10 @@ mod tests {
             2.1, 2.5, 0.45,
         ];
         let last_steer = 0.12;
+        let config = config_with_dt(0.1);
 
-        let result = mpc_control_preview(xref, 0.0, 0.0, 3.0, 0.02, last_steer, 0.1).expect("preview");
+        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 3.0, 0.02, last_steer).expect("preview");
         let controls = result.controls();
-        let config = MpcConfig::default();
 
         assert!((controls[1] - last_steer).abs() < 1e-6);
 
@@ -86,7 +91,9 @@ mod tests {
             -std::f64::consts::PI + 0.02,
         ];
 
-        let result = mpc_control_preview(xref, 0.0, 0.0, 2.5, -std::f64::consts::PI + 0.01, 0.0, 0.1).expect("preview");
+        let config = config_with_dt(0.1);
+        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 2.5, -std::f64::consts::PI + 0.01, 0.0)
+            .expect("preview");
         let predicted = result.predicted_states();
         let initial_yaw = predicted[3];
 
@@ -99,8 +106,9 @@ mod tests {
             0.0, 0.0, 4.0, 0.0, 1.0, 0.0, 4.0, 0.0, 2.0, 0.0, 4.0, 0.0, 3.0, 0.0, 4.0, 0.0, 4.0, 0.0, 4.0, 0.0, 5.0,
             0.0, 0.0, 0.0,
         ];
-        let straight =
-            mpc_control_preview(straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0, 0.07).expect("straight fixture preview");
+        let config = config_with_dt(0.07);
+        let straight = mpc_control_preview(&config, straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0)
+            .expect("straight fixture preview");
 
         let expected_controls = vec![
             14.999998614949373,
@@ -151,8 +159,9 @@ mod tests {
             0.0, 0.0, 3.0, 0.15, 0.7, 0.15, 3.2, 0.18, 1.35, 0.45, 3.4, 0.24, 1.9, 0.95, 3.1, 0.33, 2.25, 1.55, 2.7,
             0.41, 2.45, 2.2, 0.0, 0.46,
         ];
-        let turning =
-            mpc_control_preview(turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08, 0.07).expect("turning fixture preview");
+        let config = config_with_dt(0.07);
+        let turning = mpc_control_preview(&config, turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08)
+            .expect("turning fixture preview");
 
         let expected_controls = vec![
             8.750088, 0.08, 5.475858, 0.519823, 2.239496, 0.698132, -0.308206, 0.698132, -1.910972, 0.698131,
@@ -188,9 +197,8 @@ mod tests {
             },
             &[[0.0, 0.0]; 5],
             &config,
-            0.07,
         );
-        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, &config, 0.07).expect("solver result");
+        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, &config).expect("solver result");
 
         assert_eq!(controls.len(), 5);
         assert!(controls.iter().all(|pair| pair[0].is_finite() && pair[1].is_finite()));

@@ -20,7 +20,6 @@ macro_rules! impl_partial_ord_from_ord {
 }
 pub(crate) use impl_partial_ord_from_ord;
 
-#[cfg(test)]
-pub(crate) use config::HybridAStarConfig;
+pub use config::HybridAStarConfig;
 pub use planner::HybridAStarPlanner;
 pub use result::HybridAStarResult;

@@ -1,5 +1,6 @@
 import {
   CarConfig,
+  MpcConfig,
   MpcReferenceTracker,
   mpc_control_preview,
   trajectory_check_collision,
@@ -96,26 +97,29 @@ export function runLocalPlannerUpdate(
   tracker: MpcReferenceTracker,
   state: WasmCarState,
   timestamp: number,
-  dt: number,
 ): Promise<LocalPlannerUpdateResult | null> {
+  const config = new MpcConfig();
+  const dt = config.dt;
   const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
   const referenceStates = referenceResult.reference_states;
   const modelReferenceStates = referenceResult.model_reference_states;
   if (referenceStates.length === 0) {
     referenceResult.free();
+    config.free();
     return Promise.resolve(null);
   }
 
   const brakeTrajectory = referenceResult.brake_trajectory;
   const controlResult = mpc_control_preview(
+    config,
     modelReferenceStates,
     state.x,
     state.y,
     state.velocity,
     state.yaw,
     state.steer,
-    dt,
   );
+  config.free();
   try {
     return Promise.resolve({
       controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),

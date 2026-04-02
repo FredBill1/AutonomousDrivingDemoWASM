@@ -4,65 +4,39 @@ use super::types::{Control, ModelState, NX, RollingCarState};
 use crate::geometry::{clamp, wrap_angle};
 use wasm_bindgen::prelude::*;
 
-/// Runs the MPC preview using default configuration values.
-///
-/// For customised configuration, use [`mpc_control_preview_with_config`].
 #[wasm_bindgen]
 pub fn mpc_control_preview(
+    config: &MpcConfig,
     flat_reference_states: Vec<f64>,
     state_x: f64,
     state_y: f64,
     state_velocity: f64,
     state_yaw: f64,
     last_steer: f64,
-    dt: f64,
-) -> Result<super::types::MpcControlResult, JsValue> {
-    let config = MpcConfig::default();
-    mpc_control_preview_with_config(
-        &config,
-        flat_reference_states,
-        state_x,
-        state_y,
-        state_velocity,
-        state_yaw,
-        last_steer,
-        dt,
-    )
-}
-
-pub(crate) fn mpc_control_preview_with_config(
-    config: &MpcConfig,
-    flat_reference_states: Vec<f64>,
-    state_x: f64,
-    state_y: f64,
-    state_velocity: f64,
-    mut state_yaw: f64,
-    last_steer: f64,
-    dt: f64,
 ) -> Result<super::types::MpcControlResult, JsValue> {
     let xref = decode_reference(&flat_reference_states)?;
-    if xref.len() < config.horizon_length + 1 {
-        return Err(JsValue::from_str("Need at least HORIZON_LENGTH + 1 reference states"));
+    if xref.len() < config.horizon_length as usize + 1 {
+        return Err(JsValue::from_str("Need at least horizon_length + 1 reference states"));
     }
 
-    state_yaw = align_yaw(state_yaw, xref[0][3]);
+    let aligned_yaw = align_yaw(state_yaw, xref[0][3]);
 
     let initial_state = RollingCarState {
         x: state_x,
         y: state_y,
         velocity: state_velocity,
-        yaw: state_yaw,
+        yaw: aligned_yaw,
         steer: last_steer,
     };
-    let mut controls = vec![[0.0, 0.0]; config.horizon_length];
-    let mut predicted_states = vec![[0.0; NX]; config.horizon_length + 1];
+    let mut controls = vec![[0.0, 0.0]; config.horizon_length as usize];
+    let mut predicted_states = vec![[0.0; NX]; config.horizon_length as usize + 1];
     let mut iterations = 0;
 
-    for iteration in 0..config.max_iter {
+    for iteration in 0..config.max_iter as usize {
         iterations = iteration + 1;
-        let xbar = predict_motion(initial_state, &controls, config, dt);
+        let xbar = predict_motion(initial_state, &controls, config);
         let previous_controls = controls.clone();
-        let Some((updated_controls, updated_states)) = linear_mpc_control(&xref, &xbar, last_steer, config, dt) else {
+        let Some((updated_controls, updated_states)) = linear_mpc_control(&xref, &xbar, last_steer, config) else {
             break;
         };
         let du = control_delta(&previous_controls, &updated_controls);
@@ -96,13 +70,13 @@ pub(crate) fn predict_motion(
     initial: RollingCarState,
     controls: &[Control],
     config: &MpcConfig,
-    dt: f64,
 ) -> Vec<ModelState> {
+    let dt = config.dt;
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {
         let target_velocity = state.velocity + control[0] * dt;
-        state = step_state(state, target_velocity, control[1], config, dt);
+        state = step_state(state, target_velocity, control[1], config);
         out.push([state.x, state.y, state.velocity, state.yaw]);
     }
     out
@@ -113,8 +87,8 @@ fn step_state(
     target_velocity: f64,
     target_steer: f64,
     config: &MpcConfig,
-    dt: f64,
 ) -> RollingCarState {
+    let dt = config.dt;
     state.x += state.velocity * state.yaw.cos() * dt;
     state.y += state.velocity * state.yaw.sin() * dt;
     state.yaw += state.velocity / config.wheel_base * state.steer.tan() * dt;

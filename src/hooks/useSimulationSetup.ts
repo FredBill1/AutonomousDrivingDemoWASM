@@ -36,7 +36,6 @@ type UseSimulationSetupParams = {
   setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
   setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
   historyLimit: number;
-  localPlannerDt: number;
   localPlannerUpdateIntervalMs: number;
   maxGlobalPlannerDisplayBatches: number;
 };
@@ -59,7 +58,6 @@ export function useSimulationSetup({
   setVelocityHistory,
   setSteerHistory,
   historyLimit,
-  localPlannerDt,
   localPlannerUpdateIntervalMs,
   maxGlobalPlannerDisplayBatches,
 }: UseSimulationSetupParams): void {
@@ -96,7 +94,7 @@ export function useSimulationSetup({
         return;
       }
 
-      void setLocalPlannerState(event.state, event.timestamp, localPlannerDt, localPlannerUpdateIntervalMs).catch(
+      void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch(
         (error) => {
           console.error('Failed to update local planner state', error);
         },
@@ -180,7 +178,6 @@ export function useSimulationSetup({
     brakeTrajectoryRef,
     setLocalTrajectory,
     setReferencePoints,
-    localPlannerDt,
     localPlannerUpdateIntervalMs,
     carRef,
     timestampRef,
