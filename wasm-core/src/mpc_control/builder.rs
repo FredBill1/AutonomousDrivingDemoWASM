@@ -69,141 +69,43 @@ impl ConstraintBuilder {
         }
     }
 
-    #[allow(clippy::needless_range_loop)]
-    fn push_dynamics_rows(
-        &mut self,
-        horizon: usize,
-        xbar: &[ModelState],
-        last_steer: f64,
-        dt: f64,
-        car_config: &CarConfig,
-    ) {
-        for t in 0..horizon {
-            let (a_t, b_t, c_t) =
-                get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
-            for state_dim in 0..NX {
-                push_entry(
-                    &mut self.rows,
-                    &mut self.cols,
-                    &mut self.vals,
-                    self.row,
-                    state_index(t + 1, state_dim),
-                    1.0,
-                );
-                for previous_dim in 0..NX {
-                    push_entry(
-                        &mut self.rows,
-                        &mut self.cols,
-                        &mut self.vals,
-                        self.row,
-                        state_index(t, previous_dim),
-                        -a_t[state_dim][previous_dim],
-                    );
-                }
-                for control_dim in 0..NU {
-                    push_entry(
-                        &mut self.rows,
-                        &mut self.cols,
-                        &mut self.vals,
-                        self.row,
-                        control_index(t, control_dim, horizon),
-                        -b_t[state_dim][control_dim],
-                    );
-                }
-                self.b.push(c_t[state_dim]);
-                self.row += 1;
-            }
-        }
+    fn push_row_entry(&mut self, column: usize, value: f64) {
+        push_entry(&mut self.rows, &mut self.cols, &mut self.vals, self.row, column, value);
     }
 
-    fn push_initial_state_rows(&mut self, horizon: usize, initial_state: ModelState, last_steer: f64) {
-        for (state_dim, value) in initial_state.into_iter().enumerate() {
-            push_entry(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                self.row,
-                state_index(0, state_dim),
-                1.0,
-            );
-            self.b.push(value);
-            self.row += 1;
-        }
-
-        push_entry(
-            &mut self.rows,
-            &mut self.cols,
-            &mut self.vals,
-            self.row,
-            control_index(0, 1, horizon),
-            1.0,
-        );
-        self.b.push(last_steer);
+    fn finish_row(&mut self, rhs: f64) {
+        self.b.push(rhs);
         self.row += 1;
     }
 
-    fn push_speed_bounds(&mut self, horizon: usize, car_config: &CarConfig) {
-        for t in 0..=horizon {
-            push_entry(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                self.row,
-                state_index(t, 2),
-                1.0,
-            );
-            self.b.push(car_config.max_speed());
-            self.row += 1;
-
-            push_entry(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                self.row,
-                state_index(t, 2),
-                -1.0,
-            );
-            self.b.push(-car_config.min_speed());
-            self.row += 1;
-        }
+    fn push_scalar_row(&mut self, column: usize, value: f64, rhs: f64) {
+        self.push_row_entry(column, value);
+        self.finish_row(rhs);
     }
 
-    fn push_control_bounds(&mut self, horizon: usize, car_config: &CarConfig) {
-        for t in 0..horizon {
-            push_symmetric_bound(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                &mut self.b,
-                &mut self.row,
-                control_index(t, 0, horizon),
-                car_config.max_accel(),
-            );
-            push_symmetric_bound(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                &mut self.b,
-                &mut self.row,
-                control_index(t, 1, horizon),
-                car_config.max_steer(),
-            );
-        }
+    fn push_symmetric_bound_row(&mut self, column: usize, bound: f64) {
+        push_symmetric_bound(
+            &mut self.rows,
+            &mut self.cols,
+            &mut self.vals,
+            &mut self.b,
+            &mut self.row,
+            column,
+            bound,
+        );
     }
 
-    fn push_steer_rate_bounds(&mut self, horizon: usize, steer_delta_limit: f64) {
-        for t in 1..horizon {
-            push_difference_bound(
-                &mut self.rows,
-                &mut self.cols,
-                &mut self.vals,
-                &mut self.b,
-                &mut self.row,
-                control_index(t - 1, 1, horizon),
-                control_index(t, 1, horizon),
-                steer_delta_limit,
-            );
-        }
+    fn push_difference_bound_row(&mut self, left: usize, right: usize, bound: f64) {
+        push_difference_bound(
+            &mut self.rows,
+            &mut self.cols,
+            &mut self.vals,
+            &mut self.b,
+            &mut self.row,
+            left,
+            right,
+            bound,
+        );
     }
 
     fn finish(self, total_rows: usize, nvars: usize) -> (CscMatrix<f64>, Vec<f64>) {
@@ -211,6 +113,66 @@ impl ConstraintBuilder {
             CscMatrix::new_from_triplets(total_rows, nvars, self.rows, self.cols, self.vals),
             self.b,
         )
+    }
+}
+
+#[allow(clippy::needless_range_loop)]
+fn add_dynamics_constraints(
+    constraints: &mut ConstraintBuilder,
+    horizon: usize,
+    xbar: &[ModelState],
+    last_steer: f64,
+    dt: f64,
+    car_config: &CarConfig,
+) {
+    for t in 0..horizon {
+        let (a_t, b_t, c_t) = get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
+        for state_dim in 0..NX {
+            constraints.push_row_entry(state_index(t + 1, state_dim), 1.0);
+            for previous_dim in 0..NX {
+                constraints.push_row_entry(state_index(t, previous_dim), -a_t[state_dim][previous_dim]);
+            }
+            for control_dim in 0..NU {
+                constraints.push_row_entry(control_index(t, control_dim, horizon), -b_t[state_dim][control_dim]);
+            }
+            constraints.finish_row(c_t[state_dim]);
+        }
+    }
+}
+
+fn add_initial_state_constraints(
+    constraints: &mut ConstraintBuilder,
+    horizon: usize,
+    initial_state: ModelState,
+    last_steer: f64,
+) {
+    for (state_dim, value) in initial_state.into_iter().enumerate() {
+        constraints.push_scalar_row(state_index(0, state_dim), 1.0, value);
+    }
+    constraints.push_scalar_row(control_index(0, 1, horizon), 1.0, last_steer);
+}
+
+fn add_speed_constraints(constraints: &mut ConstraintBuilder, horizon: usize, car_config: &CarConfig) {
+    for t in 0..=horizon {
+        constraints.push_scalar_row(state_index(t, 2), 1.0, car_config.max_speed());
+        constraints.push_scalar_row(state_index(t, 2), -1.0, -car_config.min_speed());
+    }
+}
+
+fn add_control_constraints(constraints: &mut ConstraintBuilder, horizon: usize, car_config: &CarConfig) {
+    for t in 0..horizon {
+        constraints.push_symmetric_bound_row(control_index(t, 0, horizon), car_config.max_accel());
+        constraints.push_symmetric_bound_row(control_index(t, 1, horizon), car_config.max_steer());
+    }
+}
+
+fn add_steer_rate_constraints(constraints: &mut ConstraintBuilder, horizon: usize, steer_delta_limit: f64) {
+    for t in 1..horizon {
+        constraints.push_difference_bound_row(
+            control_index(t - 1, 1, horizon),
+            control_index(t, 1, horizon),
+            steer_delta_limit,
+        );
     }
 }
 
@@ -338,11 +300,11 @@ fn build_mpc_problem(
     let total_rows = equality_rows + inequality_rows;
 
     let mut constraints = ConstraintBuilder::new(total_rows);
-    constraints.push_dynamics_rows(horizon, xbar, last_steer, dt, car_config);
-    constraints.push_initial_state_rows(horizon, xbar[0], last_steer);
-    constraints.push_speed_bounds(horizon, car_config);
-    constraints.push_control_bounds(horizon, car_config);
-    constraints.push_steer_rate_bounds(horizon, car_config.max_steer_speed() * dt);
+    add_dynamics_constraints(&mut constraints, horizon, xbar, last_steer, dt, car_config);
+    add_initial_state_constraints(&mut constraints, horizon, xbar[0], last_steer);
+    add_speed_constraints(&mut constraints, horizon, car_config);
+    add_control_constraints(&mut constraints, horizon, car_config);
+    add_steer_rate_constraints(&mut constraints, horizon, car_config.max_steer_speed() * dt);
 
     let (a, b) = constraints.finish(total_rows, nvars);
     let cones = vec![ZeroConeT(equality_rows), NonnegativeConeT(inequality_rows)];

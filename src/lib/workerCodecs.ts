@@ -1,13 +1,12 @@
 import {
-  CarConfig,
-  MpcConfig,
+  type CarConfig,
   MpcReferenceTracker,
   mpc_control_preview,
   trajectory_check_collision,
 } from '../../wasm-core/pkg/wasm_core';
 
-import { decodeFlatTuples, encodeFlatTuples, encodeFlatTuplesToFloat64 } from './flatCodec';
-import { usingWasmPair, usingWasmResource } from './wasmResource';
+import { createFlatTupleDecoder, decodeFlatTuples, encodeFlatTuples, encodeFlatTuplesToFloat64 } from './flatCodec';
+import { ensureWasmRuntime } from './workerRuntime';
 import type {
   LocalPlannerPathPoint,
   LocalPlannerReferencePoint,
@@ -36,34 +35,36 @@ export function checkTrajectoryCollision(
   return trajectory_check_collision(config, trajectory, Float64Array.from(obstacleCoordinates));
 }
 
-export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x: number; y: number; yaw: number }> {
-  return decodeFlatTuples(flatCoordinates, 3, 'flat coordinates', (values, offset) => ({
-    x: values[offset],
-    y: values[offset + 1],
-    yaw: values[offset + 2],
-  }));
-}
+export const decodeFlatCoordinates = createFlatTupleDecoder(3, 'flat coordinates', (values, offset) => ({
+  x: values[offset],
+  y: values[offset + 1],
+  yaw: values[offset + 2],
+}));
 
 export function flattenTrajectoryPoints(points: Array<{ x: number; y: number; yaw: number; direction: number }>) {
   return encodeFlatTuples(points, (point) => [point.x, point.y, point.yaw, point.direction]);
 }
 
-export function decodePredictedStateQuads(flatValues: number[] | Float64Array): LocalPlannerPathPoint[] {
-  return decodeFlatTuples(flatValues, 4, 'predicted state values', (values, offset) => ({
+export const decodePredictedStateQuads = createFlatTupleDecoder<LocalPlannerPathPoint>(
+  4,
+  'predicted state values',
+  (values, offset) => ({
     x: values[offset],
     y: values[offset + 1],
     yaw: values[offset + 3],
-  }));
-}
+  }),
+);
 
-export function decodePlannerStateQuads(flatValues: number[] | Float64Array): LocalPlannerReferencePoint[] {
-  return decodeFlatTuples(flatValues, 4, 'planner state values', (values, offset) => ({
+export const decodePlannerStateQuads = createFlatTupleDecoder<LocalPlannerReferencePoint>(
+  4,
+  'planner state values',
+  (values, offset) => ({
     x: values[offset],
     y: values[offset + 1],
     yaw: values[offset + 2],
     velocity: values[offset + 3],
-  }));
-}
+  }),
+);
 
 export function decodeControlPairs(
   flatValues: number[] | Float64Array,
@@ -89,42 +90,47 @@ export function runLocalPlannerUpdate(
   state: WasmCarState,
   timestamp: number,
 ): Promise<LocalPlannerUpdateResult | null> {
-  return Promise.resolve(
-    usingWasmPair(new MpcConfig(), new CarConfig(), (mpcConfig, carConfig) => {
-      const dt = MPC_DT;
-      return usingWasmResource(tracker.update(state.x, state.y, state.yaw, state.velocity, dt), (referenceResult) => {
-        const referenceStates = referenceResult.reference_states;
-        if (referenceStates.length === 0) {
-          return null;
-        }
+  return ensureWasmRuntime().then(({ carConfig, mpcConfig }) => {
+    const dt = MPC_DT;
+    const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
 
-        const brakeTrajectory = referenceResult.brake_trajectory;
-        return usingWasmResource(
-          mpc_control_preview(
-            mpcConfig,
-            carConfig,
-            dt,
-            referenceResult.model_reference_states,
-            state.x,
-            state.y,
-            state.velocity,
-            state.yaw,
-            state.steer,
-          ),
-          (controlResult) => ({
-            controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),
-            localTrajectory: decodePredictedStateQuads(controlResult.predicted_states).map((point) => ({
-              x: point.x,
-              y: point.y,
-              yaw: point.yaw,
-            })),
-            referencePoints: decodePlannerStateQuads(referenceStates),
-            brakeTrajectory: decodePlannerStateQuads(brakeTrajectory),
-          }),
-        );
-      });
-    }),
-  );
+    try {
+      const referenceStates = referenceResult.reference_states;
+      if (referenceStates.length === 0) {
+        return null;
+      }
+
+      const brakeTrajectory = referenceResult.brake_trajectory;
+      const controlResult = mpc_control_preview(
+        mpcConfig,
+        carConfig,
+        dt,
+        referenceResult.model_reference_states,
+        state.x,
+        state.y,
+        state.velocity,
+        state.yaw,
+        state.steer,
+      );
+
+      try {
+        return {
+          controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),
+          localTrajectory: decodePredictedStateQuads(controlResult.predicted_states).map((point) => ({
+            x: point.x,
+            y: point.y,
+            yaw: point.yaw,
+          })),
+          referencePoints: decodePlannerStateQuads(referenceStates),
+          brakeTrajectory: decodePlannerStateQuads(brakeTrajectory),
+        };
+      } finally {
+        controlResult.free();
+      }
+    } finally {
+      referenceResult.free();
+    }
+  });
 }
 
 export function decodeHybridResult(result: {
@@ -191,11 +197,9 @@ export function flattenHybridSeedPoints(seed: { x: number; y: number; yaw: numbe
   return encodeFlatTuples(seed, (point) => [point.x, point.y, point.yaw, point.velocity]);
 }
 
-export function decodeExploredSegments(flatSegments: Float64Array | number[]) {
-  return decodeFlatTuples(flatSegments, 4, 'explored segments', (values, offset) => ({
-    x1: values[offset],
-    y1: values[offset + 1],
-    x2: values[offset + 2],
-    y2: values[offset + 3],
-  }));
-}
+export const decodeExploredSegments = createFlatTupleDecoder(4, 'explored segments', (values, offset) => ({
+  x1: values[offset],
+  y1: values[offset + 1],
+  x2: values[offset + 2],
+  y2: values[offset + 3],
+}));

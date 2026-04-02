@@ -3,6 +3,10 @@ export const MS_TO_KMH = 3.6;
 export const KMH_TO_MS = 1 / MS_TO_KMH;
 export const RAD_TO_DEG = 180 / Math.PI;
 export const DEG_TO_RAD = Math.PI / 180;
+export const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
+export const REPLAN_MAX_SPEED_KMH = 5;
+export const REPLAN_MAX_SPEED_MS = REPLAN_MAX_SPEED_KMH * KMH_TO_MS;
+export const MAX_GLOBAL_PLANNER_DISPLAY_BATCHES = 32;
 
 // Chart rendering constants
 export const CHART_MARGIN_LEFT = 42;
