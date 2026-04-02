@@ -5,6 +5,8 @@ use wasm_bindgen::prelude::JsValue;
 
 use crate::car::CarConfig;
 
+use super::config::HybridAStarConfig;
+
 pub(crate) struct HeuristicGrid {
     pub(crate) min_x: f64,
     pub(crate) min_y: f64,
@@ -22,13 +24,14 @@ impl HeuristicGrid {
         obstacle_coordinates: &[f64],
         goal_x: f64,
         goal_y: f64,
-        config: &CarConfig,
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<Self, JsValue> {
         if obstacle_coordinates.len() < 4 {
             return Err(JsValue::from_str("Need boundary obstacles before planning"));
         }
 
-        let resolution = super::XY_GRID_RESOLUTION;
+        let resolution = ha_config.xy_grid_resolution;
         let half_res = resolution / 2.0;
         let mut min_x = f64::INFINITY;
         let mut max_x = f64::NEG_INFINITY;
@@ -52,7 +55,7 @@ impl HeuristicGrid {
         let max_x = min_x + width as f64 * resolution;
         let max_y = min_y + height as f64 * resolution;
         let cell_count = width * height;
-        let collision_radius = config.collision_length().min(config.collision_width()) / 2.0;
+        let collision_radius = car_config.collision_length().min(car_config.collision_width()) / 2.0;
         let query_radius_sq = (collision_radius + resolution).powi(2);
         let collision_radius_sq = collision_radius.powi(2);
 

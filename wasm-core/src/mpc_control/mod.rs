@@ -1,17 +1,19 @@
 mod builder;
+pub(crate) mod config;
 mod control;
 mod matrix_utils;
 pub mod mpc_prep;
 mod types;
 
-pub(crate) use types::HORIZON_LENGTH;
+pub(crate) use config::MpcConfig;
 pub use types::MpcControlResult;
 
 #[cfg(test)]
 mod tests {
     use super::builder::linear_mpc_control;
+    use super::config::MpcConfig;
     use super::control::{mpc_control_preview, predict_motion};
-    use super::types::{MAX_ACCEL, MAX_STEER, RollingCarState};
+    use super::types::RollingCarState;
 
     fn assert_close(actual: &[f64], expected: &[f64], tolerance: f64) {
         assert_eq!(actual.len(), expected.len());
@@ -45,12 +47,13 @@ mod tests {
 
         let result = mpc_control_preview(xref, 0.0, 0.0, 3.0, 0.02, last_steer, 0.1).expect("preview");
         let controls = result.controls();
+        let config = MpcConfig::default();
 
         assert!((controls[1] - last_steer).abs() < 1e-6);
 
         for pair in controls.chunks_exact(2) {
-            assert!(pair[0].abs() <= MAX_ACCEL + 1e-6);
-            assert!(pair[1].abs() <= MAX_STEER + 1e-6);
+            assert!(pair[0].abs() <= config.max_accel + 1e-6);
+            assert!(pair[1].abs() <= config.max_steer + 1e-6);
         }
     }
 
@@ -174,6 +177,7 @@ mod tests {
             [4.0, 0.0, 4.0, 0.0],
             [5.0, 0.0, 0.0, 0.0],
         ];
+        let config = MpcConfig::default();
         let xbar = predict_motion(
             RollingCarState {
                 x: 0.0,
@@ -183,9 +187,10 @@ mod tests {
                 steer: 0.0,
             },
             &[[0.0, 0.0]; 5],
+            &config,
             0.07,
         );
-        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, 0.07).expect("solver result");
+        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, &config, 0.07).expect("solver result");
 
         assert_eq!(controls.len(), 5);
         assert!(controls.iter().all(|pair| pair[0].is_finite() && pair[1].is_finite()));

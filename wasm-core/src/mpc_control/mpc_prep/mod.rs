@@ -1,7 +1,10 @@
+mod config;
 mod tracker;
 mod trajectory;
 mod types;
 
+#[cfg(test)]
+pub(crate) use config::MpcPrepConfig;
 pub use tracker::MpcReferenceTracker;
 pub use types::MpcReferenceResult;
 
@@ -12,7 +15,7 @@ pub(crate) use trajectory::{process_reference_trajectory, smooth_yaws};
 
 #[cfg(test)]
 mod tests {
-    use super::{MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws};
+    use super::{MpcPrepConfig, MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws};
 
     #[test]
     fn prepares_reference_and_brake_preview() {
@@ -82,7 +85,8 @@ mod tests {
 
     #[test]
     fn rejects_zero_direction_input_like_python_assertion() {
-        let error = process_reference_trajectory(vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]])
+        let config = MpcPrepConfig::default();
+        let error = process_reference_trajectory(vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]], &config)
             .err()
             .expect("zero direction must fail");
 
@@ -94,12 +98,16 @@ mod tests {
 
     #[test]
     fn removes_only_exact_adjacent_duplicate_xy_points() {
-        let prepared = process_reference_trajectory(vec![
-            [0.0, 0.0, 0.1, 1.0],
-            [0.0, 0.0, 0.2, 1.0],
-            [1e-12, 0.0, 0.3, 1.0],
-            [1.0, 0.0, 0.4, 1.0],
-        ])
+        let config = MpcPrepConfig::default();
+        let prepared = process_reference_trajectory(
+            vec![
+                [0.0, 0.0, 0.1, 1.0],
+                [0.0, 0.0, 0.2, 1.0],
+                [1e-12, 0.0, 0.3, 1.0],
+                [1.0, 0.0, 0.4, 1.0],
+            ],
+            &config,
+        )
         .expect("prepared trajectory");
 
         assert_eq!(prepared.points.len(), 3);

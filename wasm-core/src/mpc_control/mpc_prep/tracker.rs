@@ -1,13 +1,12 @@
 use wasm_bindgen::prelude::*;
 
+use super::config::MpcPrepConfig;
 use super::trajectory::{decode_trajectory, linspace, process_reference_trajectory};
-use super::types::{
-    DESIRED_MAX_ACCEL_RATIO, DIRECTION_CHANGE_DIST, HORIZON_LENGTH, MAX_ACCEL, MIN_HORIZON_DISTANCE, MOTION_RESOLUTION,
-    MpcReferenceResult, PreparedTrajectory, distance, lerp,
-};
+use super::types::{MpcReferenceResult, PreparedTrajectory, distance, lerp};
 
 #[wasm_bindgen]
 pub struct MpcReferenceTracker {
+    config: MpcPrepConfig,
     pub(crate) prepared: PreparedTrajectory,
     cur_u: f64,
     u_limit: f64,
@@ -20,10 +19,12 @@ pub struct MpcReferenceTracker {
 impl MpcReferenceTracker {
     #[wasm_bindgen(constructor)]
     pub fn new(flat_trajectory: Vec<f64>) -> Result<MpcReferenceTracker, JsValue> {
+        let config = MpcPrepConfig::default();
         let trajectory = decode_trajectory(&flat_trajectory)?;
-        let prepared = process_reference_trajectory(trajectory).map_err(JsValue::from_str)?;
+        let prepared = process_reference_trajectory(trajectory, &config).map_err(JsValue::from_str)?;
         let u_limit = *prepared.us.last().unwrap_or(&0.0);
         Ok(MpcReferenceTracker {
+            config,
             prepared,
             cur_u: 0.0,
             u_limit,
@@ -113,13 +114,13 @@ impl MpcReferenceTracker {
     }
 
     fn update_brake_trajectory(&mut self, state_velocity: f64, changing_point: f64) {
-        let brake_length = state_velocity.powi(2) / (2.0 * MAX_ACCEL * DESIRED_MAX_ACCEL_RATIO);
+        let brake_length = state_velocity.powi(2) / (2.0 * self.config.max_accel * self.config.desired_max_accel_ratio);
         let brake_limit = self.u_limit.min(self.cur_u + brake_length).min(changing_point);
         let mut brake_us = Vec::new();
         let mut u = self.cur_u;
-        while u <= brake_limit + MOTION_RESOLUTION / 2.0 {
+        while u <= brake_limit + self.config.motion_resolution / 2.0 {
             brake_us.push(u.min(brake_limit));
-            u += MOTION_RESOLUTION;
+            u += self.config.motion_resolution;
         }
         self.brake_trajectory = brake_us
             .into_iter()
@@ -141,24 +142,25 @@ impl MpcReferenceTracker {
             self.find_nearest_point(state_x, state_y);
 
             let signed_velocity = sample_state(&self.prepared, self.cur_u)[2].signum() * state_velocity;
-            let length = MIN_HORIZON_DISTANCE.max(signed_velocity.max(0.0) * dt * HORIZON_LENGTH as f64);
-            let mut ref_us = linspace(self.cur_u, self.cur_u + length, HORIZON_LENGTH + 1);
+            let length =
+                self.config.min_horizon_distance.max(signed_velocity.max(0.0) * dt * self.config.horizon_length as f64);
+            let mut ref_us = linspace(self.cur_u, self.cur_u + length, self.config.horizon_length + 1);
             for value in &mut ref_us {
                 *value = value.min(self.u_limit);
             }
 
             let changing_point = self.next_direction_change();
             if ref_us.last().copied().unwrap_or(self.cur_u) >= changing_point {
-                if self.cur_u + DIRECTION_CHANGE_DIST >= changing_point {
+                if self.cur_u + self.config.direction_change_dist >= changing_point {
                     self.cur_u = changing_point;
                     continue;
                 }
 
                 let cutoff = ref_us.partition_point(|&value| value <= changing_point);
                 ref_us.truncate(cutoff);
-                if ref_us.len() < HORIZON_LENGTH + 1 {
+                if ref_us.len() < self.config.horizon_length + 1 {
                     ref_us.push(changing_point);
-                    while ref_us.len() < HORIZON_LENGTH + 1 {
+                    while ref_us.len() < self.config.horizon_length + 1 {
                         ref_us.push(changing_point);
                     }
                 }

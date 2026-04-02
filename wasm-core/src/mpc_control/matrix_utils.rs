@@ -1,13 +1,14 @@
-use super::types::{Control, HORIZON_LENGTH, ModelState, NU, NX, Q_V, Q_X, Q_Y, Q_YAW, QF_SCALE, WHEEL_BASE};
+use super::config::MpcConfig;
+use super::types::{Control, ModelState, NU, NX};
 
-pub(super) fn decode_controls(solution: &[f64]) -> Vec<Control> {
-    (0..HORIZON_LENGTH)
-        .map(|t| [solution[control_index(t, 0)], solution[control_index(t, 1)]])
+pub(super) fn decode_controls(solution: &[f64], horizon_length: usize) -> Vec<Control> {
+    (0..horizon_length)
+        .map(|t| [solution[control_index(t, 0, horizon_length)], solution[control_index(t, 1, horizon_length)]])
         .collect()
 }
 
-pub(super) fn decode_states(solution: &[f64]) -> Vec<ModelState> {
-    (0..=HORIZON_LENGTH)
+pub(super) fn decode_states(solution: &[f64], horizon_length: usize) -> Vec<ModelState> {
+    (0..=horizon_length)
         .map(|t| {
             [
                 solution[state_index(t, 0)],
@@ -23,6 +24,7 @@ pub(super) fn get_linear_model_matrix(
     velocity: f64,
     yaw: f64,
     steer: f64,
+    wheel_base: f64,
     dt: f64,
 ) -> ([[f64; NX]; NX], [[f64; NU]; NX], [f64; NX]) {
     let sy = yaw.sin();
@@ -38,16 +40,16 @@ pub(super) fn get_linear_model_matrix(
     a[0][3] = -dt * velocity * sy;
     a[1][2] = dt * sy;
     a[1][3] = dt * velocity * cy;
-    a[3][2] = dt * steer.tan() / WHEEL_BASE;
+    a[3][2] = dt * steer.tan() / wheel_base;
 
     let mut b = [[0.0; NU]; NX];
     b[2][0] = dt;
-    b[3][1] = dt * velocity / (WHEEL_BASE * cs * cs);
+    b[3][1] = dt * velocity / (wheel_base * cs * cs);
 
     let mut c = [0.0; NX];
     c[0] = dt * velocity * sy * yaw;
     c[1] = -dt * velocity * cy * yaw;
-    c[3] = -dt * velocity * steer / (WHEEL_BASE * cs * cs);
+    c[3] = -dt * velocity * steer / (wheel_base * cs * cs);
 
     (a, b, c)
 }
@@ -56,22 +58,22 @@ pub(super) fn state_index(step: usize, component: usize) -> usize {
     step * NX + component
 }
 
-pub(super) fn control_index(step: usize, component: usize) -> usize {
-    NX * (HORIZON_LENGTH + 1) + step * NU + component
+pub(super) fn control_index(step: usize, component: usize, horizon_length: usize) -> usize {
+    NX * (horizon_length + 1) + step * NU + component
 }
 
-pub(super) fn state_weight(component: usize) -> f64 {
+pub(super) fn state_weight(component: usize, config: &MpcConfig) -> f64 {
     match component {
-        0 => Q_X,
-        1 => Q_Y,
-        2 => Q_V,
-        3 => Q_YAW,
+        0 => config.q_x,
+        1 => config.q_y,
+        2 => config.q_v,
+        3 => config.q_yaw,
         _ => 0.0,
     }
 }
 
-pub(super) fn final_state_weight(component: usize) -> f64 {
-    QF_SCALE * state_weight(component)
+pub(super) fn final_state_weight(component: usize, config: &MpcConfig) -> f64 {
+    config.qf_scale * state_weight(component, config)
 }
 
 pub(super) fn push_entry(

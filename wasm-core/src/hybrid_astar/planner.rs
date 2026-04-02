@@ -1,18 +1,19 @@
 use crate::car::CarConfig;
 use crate::car::CarState;
 
+use super::config::HybridAStarConfig;
 use super::heuristic::HeuristicGrid;
 use super::search::{generate_neighbour, generate_rspath, push_explored_segment, traceback_path};
 use super::types::{QueueEntry, SearchNode, StartSeedPoint};
 use super::utils::{build_point_start_node, build_seed_start_node, decode_start_seed, steer_commands};
-use super::{H_DIST_COST, REEDS_SHEPP_MAX_DISTANCE};
 
 use std::collections::{BinaryHeap, HashMap};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct HybridAStarPlanner {
-    pub(crate) config: CarConfig,
+    pub(crate) car_config: CarConfig,
+    pub(crate) ha_config: HybridAStarConfig,
     pub(crate) heuristic: HeuristicGrid,
     pub(crate) goal: [f64; 3],
     pub(crate) obstacle_coordinates: Vec<f64>,
@@ -107,8 +108,9 @@ impl HybridAStarPlanner {
             ]);
 
             let tail_dist = (tail[0] - self.goal[0]).hypot(tail[1] - self.goal[1]);
-            if tail_dist <= REEDS_SHEPP_MAX_DISTANCE
-                && let Some(goal_node) = generate_rspath(&current, &self.goal, &self.config, &self.obstacle_coordinates)
+            if tail_dist <= self.ha_config.reeds_shepp_max_distance
+                && let Some(goal_node) =
+                    generate_rspath(&current, &self.goal, &self.car_config, &self.ha_config, &self.obstacle_coordinates)
             {
                 self.analytic_expansions += 1;
                 self.solved_result = Some(traceback_path(goal_node));
@@ -123,7 +125,8 @@ impl HybridAStarPlanner {
                         direction,
                         steer,
                         &self.goal,
-                        &self.config,
+                        &self.car_config,
+                        &self.ha_config,
                         &self.heuristic,
                         &self.obstacle_coordinates,
                         self.start_collided,
@@ -184,13 +187,15 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let config = CarConfig::new();
-        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &config)?;
+        let car_config = CarConfig::new();
+        let ha_config = HybridAStarConfig::default();
+        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
         let start_state = [start_x, start_y, start_yaw];
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&config, obstacle_coordinates.clone()) {
+        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone()) {
             return Ok(Self::finished_without_path(
-                config,
+                car_config,
+                ha_config,
                 heuristic,
                 start_state,
                 [goal_x, goal_y, goal_yaw],
@@ -198,11 +203,12 @@ impl HybridAStarPlanner {
             ));
         }
 
-        let start_node = build_point_start_node(start_x, start_y, start_yaw, &heuristic);
+        let start_node = build_point_start_node(start_x, start_y, start_yaw, &heuristic, &ha_config);
         let start_collided =
-            CarState::new(start_x, start_y, start_yaw, 0.0, 0.0).check_collision(&config, obstacle_coordinates.clone());
+            CarState::new(start_x, start_y, start_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone());
         Self::from_start_node(
-            config,
+            car_config,
+            ha_config,
             heuristic,
             start_state,
             start_node,
@@ -221,16 +227,18 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let config = CarConfig::new();
-        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &config)?;
+        let car_config = CarConfig::new();
+        let ha_config = HybridAStarConfig::default();
+        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&config, obstacle_coordinates.clone()) {
+        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone()) {
             let start_state = start_seed
                 .last()
                 .map(|last| [last.x, last.y, last.yaw])
                 .unwrap_or([0.0, 0.0, 0.0]);
             return Ok(Self::finished_without_path(
-                config,
+                car_config,
+                ha_config,
                 heuristic,
                 start_state,
                 [goal_x, goal_y, goal_yaw],
@@ -238,13 +246,14 @@ impl HybridAStarPlanner {
             ));
         }
 
-        let start_node = build_seed_start_node(start_seed, &heuristic, &config)?;
+        let start_node = build_seed_start_node(start_seed, &heuristic, &car_config, &ha_config)?;
         let last = start_seed
             .last()
             .ok_or_else(|| JsValue::from_str("Start trajectory seed cannot be empty"))?;
         let start_state = [last.x, last.y, last.yaw];
         Self::from_start_node(
-            config,
+            car_config,
+            ha_config,
             heuristic,
             start_state,
             start_node,
@@ -258,7 +267,8 @@ impl HybridAStarPlanner {
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn from_start_node(
-        config: CarConfig,
+        car_config: CarConfig,
+        ha_config: HybridAStarConfig,
         heuristic: HeuristicGrid,
         start_state: [f64; 3],
         start_node: SearchNode,
@@ -270,7 +280,7 @@ impl HybridAStarPlanner {
     ) -> Result<HybridAStarPlanner, JsValue> {
         let start_ijk = start_node.ijk;
         let start_node = SearchNode {
-            h_cost: H_DIST_COST * heuristic.distance_at(start_ijk.0, start_ijk.1),
+            h_cost: ha_config.h_dist_cost * heuristic.distance_at(start_ijk.0, start_ijk.1),
             ..start_node
         };
 
@@ -285,7 +295,9 @@ impl HybridAStarPlanner {
         nodes.insert(start_ijk, start_node);
 
         Ok(Self {
-            config,
+            steer_commands: steer_commands(car_config.target_max_steer(), ha_config.num_steer_commands),
+            car_config,
+            ha_config,
             heuristic,
             goal: [goal_x, goal_y, goal_yaw],
             obstacle_coordinates,
@@ -293,7 +305,6 @@ impl HybridAStarPlanner {
             nodes,
             explored_segments: Vec::new(),
             analytic_expansions: 0,
-            steer_commands: steer_commands(config.target_max_steer()),
             start_state,
             start_collided,
             solved_result: None,
@@ -302,14 +313,16 @@ impl HybridAStarPlanner {
     }
 
     pub(super) fn finished_without_path(
-        config: CarConfig,
+        car_config: CarConfig,
+        ha_config: HybridAStarConfig,
         heuristic: HeuristicGrid,
         start_state: [f64; 3],
         goal: [f64; 3],
         obstacle_coordinates: Vec<f64>,
     ) -> HybridAStarPlanner {
         Self {
-            config,
+            car_config,
+            ha_config,
             heuristic,
             goal,
             obstacle_coordinates,

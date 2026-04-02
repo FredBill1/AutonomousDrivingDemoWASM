@@ -1,14 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-pub(crate) use crate::car::constants::{
-    MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MIN_SPEED, MOTION_RESOLUTION, TARGET_SPEED,
-};
 pub(crate) use crate::geometry::{clamp, distance, wrap_angle};
-pub(crate) use crate::mpc_control::HORIZON_LENGTH;
-
-pub(crate) const DESIRED_MAX_ACCEL_RATIO: f64 = 0.7;
-pub(crate) const MIN_HORIZON_DISTANCE: f64 = 0.3;
-pub(crate) const DIRECTION_CHANGE_DIST: f64 = 0.1;
 
 #[wasm_bindgen]
 pub struct MpcReferenceResult {
