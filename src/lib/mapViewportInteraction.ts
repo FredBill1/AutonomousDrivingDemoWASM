@@ -232,7 +232,11 @@ export function createPointerHandlers(params: PointerHandlersParams) {
     const screenY = event.clientY - rect.top;
     const worldPoint = viewport.toWorld(screenX, screenY);
     const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
-    const nextScale = clamp(viewport.scale.x * scaleFactor, Math.max(MIN_ZOOM, fitScaleRef.current * MIN_ZOOM_RELATIVE_TO_FIT), MAX_ZOOM);
+    const nextScale = clamp(
+      viewport.scale.x * scaleFactor,
+      Math.max(MIN_ZOOM, fitScaleRef.current * MIN_ZOOM_RELATIVE_TO_FIT),
+      MAX_ZOOM,
+    );
     setViewportTransform(viewport, screenX, screenY, nextScale, worldPoint);
   };
 

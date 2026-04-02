@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 
 import { Application, Container, Graphics, Text } from 'pixi.js';
 
-import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
 import {
   CHART_AXIS_ALPHA,
   CHART_GRID_ALPHA,
@@ -17,6 +16,7 @@ import {
   CHART_Y_TICK_DIVISOR,
   MIN_RANGE_VALUE,
 } from '../lib/constants';
+import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
 
 type HistoryPoint = {
   t: number;

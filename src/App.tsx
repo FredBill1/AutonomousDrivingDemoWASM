@@ -7,7 +7,6 @@ import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
-import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
 import {
   FALLBACK_MAP_BOUNDING_BOX,
   STACKED_LAYOUT_GAP_PX,
@@ -21,6 +20,7 @@ import {
   type MapServerSnapshot,
   type MotionLimits,
 } from './lib/appTypes';
+import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
 import { MapServerNode } from './lib/mapServerNode';
 import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
 import {
