@@ -5,7 +5,7 @@ type PendingRequest = {
 
 type RpcMethodMap = Record<string, { payload: unknown; result: unknown }>;
 type EventMap = Record<string, unknown>;
-type PayloadArgs<Payload> = undefined extends Payload ? [] | [payload: Payload] : [payload: Payload];
+type PayloadParameters<Payload> = undefined extends Payload ? [] | [payload: Payload] : [payload: Payload];
 
 type RpcResponse<Methods extends RpcMethodMap> = {
   [Key in keyof Methods]:
@@ -85,7 +85,7 @@ export function createWorkerRpc<Methods extends RpcMethodMap, Events extends Eve
   };
 
   return {
-    call<Key extends keyof Methods & string>(type: Key, ...args: PayloadArgs<Methods[Key]['payload']>) {
+    call<Key extends keyof Methods & string>(type: Key, ...args: PayloadParameters<Methods[Key]['payload']>) {
       const activeWorker = ensureWorker();
       const id = nextId;
       nextId += 1;

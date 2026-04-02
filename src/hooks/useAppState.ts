@@ -54,8 +54,12 @@ function reduceAppState(state: AppState, action: AppStateAction) {
   return action.apply(state);
 }
 
+function isUpdaterFunction<T>(updater: StateUpdater<T>): updater is (value: T) => T {
+  return typeof updater === 'function';
+}
+
 function resolveUpdater<T>(current: T, updater: StateUpdater<T>): T {
-  return typeof updater === 'function' ? (updater as (value: T) => T)(current) : updater;
+  return isUpdaterFunction(updater) ? updater(current) : updater;
 }
 
 function buildStateAction<Key extends keyof AppState>(key: Key, updater: StateUpdater<AppState[Key]>): AppStateAction {

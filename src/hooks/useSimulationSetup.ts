@@ -110,9 +110,15 @@ function createMapServerNode(snapshot: WasmConfigSnapshot) {
   });
 }
 
-async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpdater) {
+async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpdater, isActive: () => boolean) {
   await ensureWasmCore();
+  if (!isActive()) {
+    return;
+  }
   const configSnapshot = await getCarConfigSnapshot();
+  if (!isActive()) {
+    return;
+  }
 
   updateState('carShape', createCarShape(configSnapshot));
   updateState('motionLimits', createMotionLimits(configSnapshot));
@@ -129,11 +135,17 @@ async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpd
   }
 
   const snapshot = mapServerNode.init();
+  if (!isActive()) {
+    return;
+  }
   refs.mapSnapshotRef.current = snapshot;
   syncKnownObstacles(refs, snapshot.knownObstacles);
   updateState('mapSnapshot', snapshot);
 
   const initialCar = await mapServerNode.generateRandomInitialState();
+  if (!isActive()) {
+    return;
+  }
   refs.carRef.current = initialCar;
   refs.timestampRef.current = INITIAL_TIMESTAMP;
   updateState('car', initialCar);
@@ -172,7 +184,7 @@ export function useSimulationSetup({
       handleSimulationState(event, refs, updateState, historyLimit, localPlannerUpdateIntervalMs);
     });
 
-    void initializeSimulationState(refs, updateState).catch((error) => {
+    void initializeSimulationState(refs, updateState, () => active).catch((error) => {
       if (active) {
         console.error('Failed to initialize app state', error);
       }

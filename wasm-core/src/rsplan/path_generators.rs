@@ -95,16 +95,16 @@ fn create_segment(segment_param: f64, kind: SegmentKind, direction: i8, turn_rad
     }
 }
 
-fn collect_paths<F>(
+fn collect_paths<BuildSegments>(
     params: PathParameters,
     start_pose: Pose,
     end_pose: Pose,
     step_size: f64,
     turn_radius: f64,
-    build_segments: F,
+    build_segments: BuildSegments,
 ) -> Vec<ReedsSheppPath>
 where
-    F: Fn(usize, f64, f64, f64) -> Vec<f64>,
+    BuildSegments: Fn(usize, f64, f64, f64) -> Vec<f64>,
 {
     params
         .iter()
