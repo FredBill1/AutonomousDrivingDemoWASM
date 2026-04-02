@@ -1,5 +1,9 @@
 use wasm_bindgen::prelude::*;
 
+use super::constants::{
+    MAX_ACCEL, MAX_CENTRIPETAL_ACCEL, MAX_SPEED, MAX_STEER, MAX_STEER_SPEED, MIN_SPEED, TARGET_SPEED, WHEEL_BASE,
+};
+
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug)]
 pub struct CarConfig {
@@ -134,18 +138,18 @@ impl CarConfig {
 impl Default for CarConfig {
     fn default() -> Self {
         Self {
-            wheel_base: 2.5,
+            wheel_base: WHEEL_BASE,
             length: 4.5,
             width: 2.0,
             back_to_wheel: 1.0,
             target_max_steer: 35.0_f64.to_radians(),
-            max_steer: 40.0_f64.to_radians(),
-            max_steer_speed: 360.0_f64.to_radians(),
-            max_speed: 55.0 / 3.6,
-            min_speed: -30.0 / 3.6,
-            max_accel: 15.0,
-            max_centripetal_accel: 16.0,
-            target_speed: 40.0 / 3.6,
+            max_steer: MAX_STEER,
+            max_steer_speed: MAX_STEER_SPEED,
+            max_speed: MAX_SPEED,
+            min_speed: MIN_SPEED,
+            max_accel: MAX_ACCEL,
+            max_centripetal_accel: MAX_CENTRIPETAL_ACCEL,
+            target_speed: TARGET_SPEED,
             scan_radius: 15.0,
         }
     }

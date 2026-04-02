@@ -7,6 +7,7 @@ import {
     DEFAULT_PUBLISH_INTERVAL_MS,
     DEFAULT_SIM_DELTA_TIME,
     DEFAULT_SIM_INTERVAL_MS,
+    type LocalPlannerControlPoint,
     type LocalPlannerSession,
     type PlannerSession,
     type SimulationSession,
@@ -52,9 +53,7 @@ export function applySimulationStop(session: SimulationSession) {
     session.stateVersion += 1;
 }
 
-export function cloneControlSequence(
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>,
-) {
+export function cloneControlSequence(controlSequence: LocalPlannerControlPoint[]): LocalPlannerControlPoint[] {
     return controlSequence.map((point) => ({
         timestamp: point.timestamp,
         targetVelocity: point.targetVelocity,
@@ -62,9 +61,7 @@ export function cloneControlSequence(
     }));
 }
 
-export function assertValidControlSequence(
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>,
-) {
+export function assertValidControlSequence(controlSequence: LocalPlannerControlPoint[]) {
     if (controlSequence.length < 2) {
         throw new Error('Control sequence must contain at least two control points');
     }
@@ -86,7 +83,7 @@ export function assertValidControlSequence(
 
 export function setSimulationControlSequenceInternal(
     session: SimulationSession,
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }> | null,
+    controlSequence: LocalPlannerControlPoint[] | null,
 ) {
     if (session.stopped) {
         return;
@@ -103,10 +100,7 @@ export function setSimulationControlSequenceInternal(
     session.stateVersion += 1;
 }
 
-export function sampleControl(
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }> | null,
-    timestamp: number,
-) {
+export function sampleControl(controlSequence: LocalPlannerControlPoint[] | null, timestamp: number) {
     if (!controlSequence || controlSequence.length === 0) {
         return null;
     }

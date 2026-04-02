@@ -25,7 +25,7 @@ pub use result::HybridAStarResult;
 const XY_GRID_RESOLUTION: f64 = 1.0;
 pub(crate) const YAW_GRID_RESOLUTION: f64 = 15.0_f64.to_radians();
 const MOTION_DISTANCE: f64 = XY_GRID_RESOLUTION * 1.5;
-pub(crate) const MOTION_RESOLUTION: f64 = 0.5;
+pub(crate) use crate::car::constants::MOTION_RESOLUTION;
 pub(crate) const NUM_STEER_COMMANDS: usize = 10;
 pub(crate) const REEDS_SHEPP_MAX_DISTANCE: f64 = 10.0;
 

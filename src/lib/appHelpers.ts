@@ -30,7 +30,7 @@ export function isPointInBounds(point: { x: number; y: number }, bounds: MapBoun
 }
 
 export function toTrajectoryPath(points: LocalPlannerTrajectoryPoint[]) {
-    return points.map((point) => ({ x: point.x, y: point.y }));
+    return points.map((point) => ({ x: point.x, y: point.y, yaw: point.yaw }));
 }
 
 export function toHybridAStarStartSeed(points: LocalPlannerReferencePoint[]): HybridAStarStartSeedPoint[] {

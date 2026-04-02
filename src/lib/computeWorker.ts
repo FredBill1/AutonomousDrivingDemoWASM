@@ -15,7 +15,12 @@ import {
     DEFAULT_SIM_INTERVAL_MS,
     DEFAULT_PUBLISH_INTERVAL_MS,
 } from './workerHelpers';
-import { type WasmCarState, type WorkerRequest, type WorkerResponse } from './workerTypes';
+import {
+    type WasmCarState,
+    type LocalPlannerControlPoint,
+    type WorkerRequest,
+    type WorkerResponse,
+} from './workerTypes';
 import { solveHybridAStar } from './workerHandlers';
 
 const handlers = {
@@ -104,9 +109,7 @@ const handlers = {
         return null;
     },
 
-    setSimulationControlSequence(payload: {
-        controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>;
-    }) {
+    setSimulationControlSequence(payload: { controlSequence: LocalPlannerControlPoint[] }) {
         if (!workerState.simulationSession) {
             return Promise.reject(new Error('Simulation not initialized'));
         }

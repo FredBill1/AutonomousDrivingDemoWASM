@@ -24,17 +24,6 @@ pub(crate) fn calc_ijk(x: f64, y: f64, yaw: f64, heuristic: &HeuristicGrid) -> (
     (i, j, k)
 }
 
-pub(crate) fn wrap_angle(angle: f64) -> f64 {
-    let mut value = angle;
-    while value >= std::f64::consts::PI {
-        value -= 2.0 * std::f64::consts::PI;
-    }
-    while value < -std::f64::consts::PI {
-        value += 2.0 * std::f64::consts::PI;
-    }
-    value
-}
-
 fn wrap_zero_to_two_pi(angle: f64) -> f64 {
     let mut value = angle % (2.0 * std::f64::consts::PI);
     if value < 0.0 {

@@ -1,15 +1,13 @@
 import { useLayoutEffect, useRef } from 'react';
 
+import { clamp } from '../lib/mapViewportDraw';
+
 type AutoShrinkHeadingProps = {
     text: string;
 };
 
 const AUTO_HEADING_MAX_FONT_SIZE_PX = 28;
 const AUTO_HEADING_MIN_FONT_SIZE_PX = 11;
-
-function clamp(value: number, minValue: number, maxValue: number) {
-    return Math.min(maxValue, Math.max(minValue, value));
-}
 
 export function AutoShrinkHeading({ text }: AutoShrinkHeadingProps) {
     const headingRef = useRef<HTMLHeadingElement | null>(null);

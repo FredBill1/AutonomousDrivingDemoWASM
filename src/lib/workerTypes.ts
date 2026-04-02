@@ -37,7 +37,7 @@ export type SimulationSession = {
     state: WasmCarState;
     timestamp: number;
     simDeltaTime: number;
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }> | null;
+    controlSequence: LocalPlannerControlPoint[] | null;
     stopped: boolean;
     simulationTimerId: ReturnType<typeof setTimeout> | null;
     publishTimerId: ReturnType<typeof setInterval> | null;
@@ -63,8 +63,14 @@ export type LocalPlannerReferencePoint = {
     yaw: number;
 };
 
+export type LocalPlannerControlPoint = {
+    timestamp: number;
+    targetVelocity: number;
+    targetSteer: number;
+};
+
 export type LocalPlannerUpdateResult = {
-    controlSequence: Array<{ timestamp: number; targetVelocity: number; targetSteer: number }>;
+    controlSequence: LocalPlannerControlPoint[];
     localTrajectory: LocalPlannerPathPoint[];
     referencePoints: LocalPlannerReferencePoint[];
     brakeTrajectory: LocalPlannerReferencePoint[];

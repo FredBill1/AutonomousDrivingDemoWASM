@@ -1,5 +1,6 @@
 mod collision;
 mod config;
+pub(crate) mod constants;
 mod state;
 
 pub use collision::{path_check_collision, trajectory_check_collision};
