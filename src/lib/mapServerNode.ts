@@ -1,4 +1,5 @@
 import type { CarState, Obstacle } from './appModel';
+import { encodeFlatTuplesToFloat64 } from './flatCodec';
 import { KNOWN_OBSTACLE_COORDINATES } from './generatedMapCoordinates';
 
 type CollisionCheckFn = (state: CarState, obstacleCoordinates: Float64Array) => Promise<boolean>;
@@ -43,7 +44,7 @@ function createKnownObstacleTemplate(): Obstacle[] {
 }
 
 export function flattenObstacleCoordinates(obstacles: Obstacle[]) {
-  return Float64Array.from(obstacles.flatMap((obstacle) => [obstacle.x, obstacle.y]));
+  return encodeFlatTuplesToFloat64(obstacles, (obstacle) => [obstacle.x, obstacle.y]);
 }
 
 function buildBoundingBox(obstacles: Obstacle[]): MapBoundingBox {

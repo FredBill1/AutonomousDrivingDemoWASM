@@ -1,5 +1,6 @@
 import { HybridAStarPlanner } from '../../wasm-core/pkg/wasm_core';
 
+import { disposeWasmResource } from './wasmResource';
 import { decodeExploredSegments, flattenHybridSeedPoints, snapshotHybridResult } from './workerCodecs';
 import { ensureWasmCore, postEvent, workerState } from './workerHelpers';
 import {
@@ -19,7 +20,7 @@ export async function solveHybridAStar(payload: {
 }) {
   await ensureWasmCore();
 
-  workerState.activePlanner?.planner.free();
+  disposeWasmResource(workerState.activePlanner?.planner);
   const planner = payload.startIsTrajectorySeed
     ? HybridAStarPlanner.from_trajectory_seed(
         Float64Array.from(flattenHybridSeedPoints(payload.start as HybridSeedPoint[])),
@@ -67,7 +68,7 @@ export async function solveHybridAStar(payload: {
 
     if (finished) {
       const result = plannerSession.planner.take_result();
-      plannerSession.planner.free();
+      disposeWasmResource(plannerSession.planner);
       workerState.activePlanner = null;
       if (!result) {
         return null;
@@ -78,7 +79,7 @@ export async function solveHybridAStar(payload: {
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
 
-  plannerSession.planner.free();
+  disposeWasmResource(plannerSession.planner);
   workerState.activePlanner = null;
   throw new Error('Hybrid A* search cancelled');
 }

@@ -183,6 +183,28 @@ impl HybridAStarPlanner {
 }
 
 impl HybridAStarPlanner {
+    fn build_shared_components(
+        goal_x: f64,
+        goal_y: f64,
+        obstacle_coordinates: &[f64],
+    ) -> Result<(CarConfig, HybridAStarConfig, HeuristicGrid), JsValue> {
+        let car_config = CarConfig::new();
+        let ha_config = HybridAStarConfig::default();
+        let heuristic = HeuristicGrid::from_obstacles(obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
+        Ok((car_config, ha_config, heuristic))
+    }
+
+    fn goal_collides(car_config: &CarConfig, goal: [f64; 3], obstacle_coordinates: &[f64]) -> bool {
+        CarState::new(goal[0], goal[1], goal[2], 0.0, 0.0).check_collision(car_config, obstacle_coordinates.to_vec())
+    }
+
+    fn last_seed_state(start_seed: &[StartSeedPoint]) -> Result<[f64; 3], JsValue> {
+        start_seed
+            .last()
+            .map(|last| [last.x, last.y, last.yaw])
+            .ok_or_else(|| JsValue::from_str("Start trajectory seed cannot be empty"))
+    }
+
     pub(super) fn from_point_start(
         start_x: f64,
         start_y: f64,
@@ -192,19 +214,17 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let car_config = CarConfig::new();
-        let ha_config = HybridAStarConfig::default();
-        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
+        let (car_config, ha_config, heuristic) = Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates)?;
         let start_state = [start_x, start_y, start_yaw];
+        let goal = [goal_x, goal_y, goal_yaw];
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone())
-        {
+        if Self::goal_collides(&car_config, goal, &obstacle_coordinates) {
             return Ok(Self::finished_without_path(
                 car_config,
                 ha_config,
                 heuristic,
                 start_state,
-                [goal_x, goal_y, goal_yaw],
+                goal,
                 obstacle_coordinates,
             ));
         }
@@ -233,31 +253,25 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let car_config = CarConfig::new();
-        let ha_config = HybridAStarConfig::default();
-        let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
+        let (car_config, ha_config, heuristic) = Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates)?;
+        let goal = [goal_x, goal_y, goal_yaw];
+        let start_state = start_seed
+            .last()
+            .map_or([0.0, 0.0, 0.0], |last| [last.x, last.y, last.yaw]);
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone())
-        {
-            let start_state = start_seed
-                .last()
-                .map(|last| [last.x, last.y, last.yaw])
-                .unwrap_or([0.0, 0.0, 0.0]);
+        if Self::goal_collides(&car_config, goal, &obstacle_coordinates) {
             return Ok(Self::finished_without_path(
                 car_config,
                 ha_config,
                 heuristic,
                 start_state,
-                [goal_x, goal_y, goal_yaw],
+                goal,
                 obstacle_coordinates,
             ));
         }
 
         let start_node = build_seed_start_node(start_seed, &heuristic, &car_config, &ha_config)?;
-        let last = start_seed
-            .last()
-            .ok_or_else(|| JsValue::from_str("Start trajectory seed cannot be empty"))?;
-        let start_state = [last.x, last.y, last.yaw];
+        let start_state = Self::last_seed_state(start_seed)?;
         Self::from_start_node(
             car_config,
             ha_config,

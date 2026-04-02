@@ -6,6 +6,8 @@ import {
   trajectory_check_collision,
 } from '../../wasm-core/pkg/wasm_core';
 
+import { decodeFlatTuples, encodeFlatTuples, encodeFlatTuplesToFloat64 } from './flatCodec';
+import { usingWasmPair, usingWasmResource } from './wasmResource';
 import type {
   LocalPlannerPathPoint,
   LocalPlannerReferencePoint,
@@ -19,7 +21,7 @@ export function buildTrajectoryCollisionInput(plan: TrackingPlan | null) {
   if (!plan || plan.path.length === 0) {
     return null;
   }
-  return Float64Array.from(plan.path.flatMap((point) => [point.x, point.y, point.yaw]));
+  return encodeFlatTuplesToFloat64(plan.path, (point) => [point.x, point.y, point.yaw]);
 }
 
 export function checkTrajectoryCollision(
@@ -35,44 +37,32 @@ export function checkTrajectoryCollision(
 }
 
 export function decodeFlatCoordinates(flatCoordinates: Float64Array): Array<{ x: number; y: number; yaw: number }> {
-  const points = [];
-  for (let index = 0; index < flatCoordinates.length; index += 3) {
-    points.push({
-      x: flatCoordinates[index],
-      y: flatCoordinates[index + 1],
-      yaw: flatCoordinates[index + 2],
-    });
-  }
-  return points;
+  return decodeFlatTuples(flatCoordinates, 3, 'flat coordinates', (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 2],
+  }));
 }
 
 export function flattenTrajectoryPoints(points: Array<{ x: number; y: number; yaw: number; direction: number }>) {
-  return points.flatMap((point) => [point.x, point.y, point.yaw, point.direction]);
+  return encodeFlatTuples(points, (point) => [point.x, point.y, point.yaw, point.direction]);
 }
 
 export function decodePredictedStateQuads(flatValues: number[] | Float64Array): LocalPlannerPathPoint[] {
-  const points: LocalPlannerPathPoint[] = [];
-  for (let index = 0; index < flatValues.length; index += 4) {
-    points.push({
-      x: flatValues[index],
-      y: flatValues[index + 1],
-      yaw: flatValues[index + 3],
-    });
-  }
-  return points;
+  return decodeFlatTuples(flatValues, 4, 'predicted state values', (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 3],
+  }));
 }
 
 export function decodePlannerStateQuads(flatValues: number[] | Float64Array): LocalPlannerReferencePoint[] {
-  const points: LocalPlannerReferencePoint[] = [];
-  for (let index = 0; index < flatValues.length; index += 4) {
-    points.push({
-      x: flatValues[index],
-      y: flatValues[index + 1],
-      yaw: flatValues[index + 2],
-      velocity: flatValues[index + 3],
-    });
-  }
-  return points;
+  return decodeFlatTuples(flatValues, 4, 'planner state values', (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 2],
+    velocity: values[offset + 3],
+  }));
 }
 
 export function decodeControlPairs(
@@ -99,48 +89,42 @@ export function runLocalPlannerUpdate(
   state: WasmCarState,
   timestamp: number,
 ): Promise<LocalPlannerUpdateResult | null> {
-  const mpcConfig = new MpcConfig();
-  const carConfig = new CarConfig();
-  const dt = MPC_DT;
-  const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
-  const referenceStates = referenceResult.reference_states;
-  const modelReferenceStates = referenceResult.model_reference_states;
-  if (referenceStates.length === 0) {
-    referenceResult.free();
-    mpcConfig.free();
-    carConfig.free();
-    return Promise.resolve(null);
-  }
+  return Promise.resolve(
+    usingWasmPair(new MpcConfig(), new CarConfig(), (mpcConfig, carConfig) => {
+      const dt = MPC_DT;
+      return usingWasmResource(tracker.update(state.x, state.y, state.yaw, state.velocity, dt), (referenceResult) => {
+        const referenceStates = referenceResult.reference_states;
+        if (referenceStates.length === 0) {
+          return null;
+        }
 
-  const brakeTrajectory = referenceResult.brake_trajectory;
-  const controlResult = mpc_control_preview(
-    mpcConfig,
-    carConfig,
-    dt,
-    modelReferenceStates,
-    state.x,
-    state.y,
-    state.velocity,
-    state.yaw,
-    state.steer,
+        const brakeTrajectory = referenceResult.brake_trajectory;
+        return usingWasmResource(
+          mpc_control_preview(
+            mpcConfig,
+            carConfig,
+            dt,
+            referenceResult.model_reference_states,
+            state.x,
+            state.y,
+            state.velocity,
+            state.yaw,
+            state.steer,
+          ),
+          (controlResult) => ({
+            controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),
+            localTrajectory: decodePredictedStateQuads(controlResult.predicted_states).map((point) => ({
+              x: point.x,
+              y: point.y,
+              yaw: point.yaw,
+            })),
+            referencePoints: decodePlannerStateQuads(referenceStates),
+            brakeTrajectory: decodePlannerStateQuads(brakeTrajectory),
+          }),
+        );
+      });
+    }),
   );
-  mpcConfig.free();
-  carConfig.free();
-  try {
-    return Promise.resolve({
-      controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),
-      localTrajectory: decodePredictedStateQuads(controlResult.predicted_states).map((point) => ({
-        x: point.x,
-        y: point.y,
-        yaw: point.yaw,
-      })),
-      referencePoints: decodePlannerStateQuads(referenceStates),
-      brakeTrajectory: decodePlannerStateQuads(brakeTrajectory),
-    });
-  } finally {
-    controlResult.free();
-    referenceResult.free();
-  }
 }
 
 export function decodeHybridResult(result: {
@@ -158,22 +142,15 @@ export function decodeHybridResult(result: {
   const pathValues = result.flat_path;
   const exploredValues = result.explored_segments;
 
-  const path: Array<{ x: number; y: number; yaw: number }> = [];
-  const directions: number[] = [];
-  for (let index = 0; index < pathValues.length; index += 4) {
-    path.push({ x: pathValues[index], y: pathValues[index + 1], yaw: pathValues[index + 2] });
-    directions.push(pathValues[index + 3]);
-  }
-
-  const exploredSegments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-  for (let index = 0; index < exploredValues.length; index += 4) {
-    exploredSegments.push({
-      x1: exploredValues[index],
-      y1: exploredValues[index + 1],
-      x2: exploredValues[index + 2],
-      y2: exploredValues[index + 3],
-    });
-  }
+  const pathWithDirections = decodeFlatTuples(pathValues, 4, 'hybrid path values', (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 2],
+    direction: values[offset + 3],
+  }));
+  const path = pathWithDirections.map(({ x, y, yaw }) => ({ x, y, yaw }));
+  const directions = pathWithDirections.map((point) => point.direction);
+  const exploredSegments = decodeExploredSegments(exploredValues);
 
   return {
     token: result.token,
@@ -211,18 +188,14 @@ export function snapshotHybridResult(
 }
 
 export function flattenHybridSeedPoints(seed: { x: number; y: number; yaw: number; velocity: number }[]) {
-  return seed.flatMap((point) => [point.x, point.y, point.yaw, point.velocity]);
+  return encodeFlatTuples(seed, (point) => [point.x, point.y, point.yaw, point.velocity]);
 }
 
 export function decodeExploredSegments(flatSegments: Float64Array | number[]) {
-  const segments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-  for (let index = 0; index < flatSegments.length; index += 4) {
-    segments.push({
-      x1: flatSegments[index],
-      y1: flatSegments[index + 1],
-      x2: flatSegments[index + 2],
-      y2: flatSegments[index + 3],
-    });
-  }
-  return segments;
+  return decodeFlatTuples(flatSegments, 4, 'explored segments', (values, offset) => ({
+    x1: values[offset],
+    y1: values[offset + 1],
+    x2: values[offset + 2],
+    y2: values[offset + 3],
+  }));
 }
