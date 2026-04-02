@@ -8,13 +8,17 @@ import {
   setSimulationState,
   stopSimulationMotion,
 } from '../lib/wasmCore';
-import { resetPlanningInteractionState, type UsePlanningCallbacksParams } from './planningHelpers';
+import { hideGoalUnreachable, resetPlanningInteractionState, type PlanningControllerParams } from './planningHelpers';
 
-type UsePlanningCommandsParams = Pick<UsePlanningCallbacksParams, 'refs' | 'setters'> & {
+type UsePlanningCommandsParams = Pick<PlanningControllerParams, 'refs' | 'updateState'> & {
   clearGlobalPlannerDisplaySegments: () => void;
 };
 
-export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySegments }: UsePlanningCommandsParams) {
+export function usePlanningCommands({
+  refs,
+  updateState,
+  clearGlobalPlannerDisplaySegments,
+}: UsePlanningCommandsParams) {
   const {
     brakeTrajectoryRef,
     carRef,
@@ -29,10 +33,10 @@ export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySe
 
   const handleCancel = useCallback(async () => {
     planningRequestRef.current += 1;
-    resetPlanningInteractionState(refs, setters);
+    resetPlanningInteractionState(refs, updateState);
     clearGlobalPlannerDisplaySegments();
-    setters.setLocalTrajectory([]);
-    setters.setReferencePoints([]);
+    updateState('localTrajectory', []);
+    updateState('referencePoints', []);
     localPlanningRef.current = false;
     brakeTrajectoryRef.current = null;
     trajectoryCollisionCheckingNodeRef.current?.cancel();
@@ -48,13 +52,13 @@ export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySe
     localPlanningRef,
     planningRequestRef,
     refs,
-    setters,
     trajectoryCollisionCheckingNodeRef,
+    updateState,
   ]);
 
   const handleBrake = useCallback(async () => {
     planningRequestRef.current += 1;
-    setters.setGoalUnreachable((current) => ({ ...current, visible: false }));
+    hideGoalUnreachable(updateState);
     clearGlobalPlannerDisplaySegments();
     trajectoryCollisionCheckingNodeRef.current?.cancel();
 
@@ -63,17 +67,17 @@ export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySe
     } catch (error) {
       console.error('Failed to brake current execution', error);
     }
-  }, [clearGlobalPlannerDisplaySegments, planningRequestRef, setters, trajectoryCollisionCheckingNodeRef]);
+  }, [clearGlobalPlannerDisplaySegments, planningRequestRef, trajectoryCollisionCheckingNodeRef, updateState]);
 
   const handleRestart = useCallback(async () => {
     await handleCancel();
     goalRef.current = null;
     globalTrajectoryRef.current = null;
     brakeTrajectoryRef.current = null;
-    setters.setGoal(null);
-    setters.setPressedPose(null);
-    setters.setGlobalTrajectory(null);
-    setters.setGoalUnreachable((current) => ({ ...current, visible: false }));
+    updateState('goal', null);
+    updateState('pressedPose', null);
+    updateState('globalTrajectory', null);
+    hideGoalUnreachable(updateState);
 
     try {
       const mapServerNode = mapServerNodeRef.current;
@@ -86,11 +90,11 @@ export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySe
       trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
         flattenObstacleCoordinates(nextSnapshot.knownObstacles),
       );
-      setters.setMapSnapshot(nextSnapshot);
+      updateState('mapSnapshot', nextSnapshot);
 
       const nextCar = await mapServerNode.generateRandomInitialState();
       carRef.current = nextCar;
-      setters.setCar(nextCar);
+      updateState('car', nextCar);
       await setSimulationState(nextCar);
     } catch (error) {
       console.error('Failed to restart simulation state', error);
@@ -103,8 +107,8 @@ export function usePlanningCommands({ refs, setters, clearGlobalPlannerDisplaySe
     handleCancel,
     mapServerNodeRef,
     mapSnapshotRef,
-    setters,
     trajectoryCollisionCheckingNodeRef,
+    updateState,
   ]);
 
   return {

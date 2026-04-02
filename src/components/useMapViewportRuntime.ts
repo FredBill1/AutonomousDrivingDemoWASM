@@ -6,14 +6,14 @@ import { Application, Graphics, Text } from 'pixi.js';
 import { type DrawLayers, performDraw, syncCanvasElementSize, worldHeight, worldWidth } from '../lib/mapViewportDraw';
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction';
 import { setupPixiCanvas, setupResizeListeners } from '../lib/pixiAppInit';
-import type { MapViewportProps } from './mapViewportTypes';
+import type { MapViewportInteractionHandlers, MapViewportProps, MapViewportScene } from './mapViewportTypes';
 
-function useLatestCallbacks({
+function useLatestInteractions({
   onPrimaryDragStart,
   onPrimaryDragMove,
   onPrimaryDragEnd,
   onPrimaryDragCancel,
-}: Pick<MapViewportProps, 'onPrimaryDragStart' | 'onPrimaryDragMove' | 'onPrimaryDragEnd' | 'onPrimaryDragCancel'>) {
+}: MapViewportInteractionHandlers) {
   const onPrimaryDragStartRef = useRef(onPrimaryDragStart);
   const onPrimaryDragMoveRef = useRef(onPrimaryDragMove);
   const onPrimaryDragEndRef = useRef(onPrimaryDragEnd);
@@ -84,7 +84,7 @@ function createDrawLayers(viewport: Viewport, app: Application) {
   } satisfies DrawLayers;
 }
 
-function fitViewportToBounds(viewport: Viewport, bounds: MapViewportProps['bounds'], fitScaleRef: { current: number }) {
+function fitViewportToBounds(viewport: Viewport, bounds: MapViewportScene['bounds'], fitScaleRef: { current: number }) {
   const width = worldWidth(bounds);
   const height = worldHeight(bounds);
   const scale = Math.min(viewport.screenWidth / Math.max(width, 1), viewport.screenHeight / Math.max(height, 1));
@@ -93,39 +93,15 @@ function fitViewportToBounds(viewport: Viewport, bounds: MapViewportProps['bound
   viewport.position.set((viewport.screenWidth - width * scale) / 2, (viewport.screenHeight - height * scale) / 2);
 }
 
-export function useMapViewportRuntime({
-  bounds,
-  mode,
-  carShape,
-  motionLimits,
-  knownObstacles,
-  unknownObstacles,
-  car,
-  goal,
-  pressedPose,
-  goalUnreachable,
-  globalTrajectory,
-  localTrajectory,
-  referencePoints,
-  globalPlannerSegments,
-  onPrimaryDragStart,
-  onPrimaryDragMove,
-  onPrimaryDragEnd,
-  onPrimaryDragCancel,
-}: MapViewportProps) {
+export function useMapViewportRuntime({ scene, interaction }: MapViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewportRef = useRef<Viewport | null>(null);
   const layersRef = useRef<DrawLayers | null>(null);
-  const boundsRef = useRef(bounds);
+  const boundsRef = useRef(scene.bounds);
   const { onPrimaryDragStartRef, onPrimaryDragMoveRef, onPrimaryDragEndRef, onPrimaryDragCancelRef } =
-    useLatestCallbacks({
-      onPrimaryDragStart,
-      onPrimaryDragMove,
-      onPrimaryDragEnd,
-      onPrimaryDragCancel,
-    });
+    useLatestInteractions(interaction);
   const middlePanRef = useRef<{ pointerId: number; lastX: number; lastY: number } | null>(null);
   const primaryDragRef = useRef<{ pointerId: number; pointerType: string } | null>(null);
   const touchStateRef = useRef<TouchState>({ points: new Map(), gesture: null });
@@ -134,8 +110,8 @@ export function useMapViewportRuntime({
   const drawRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    boundsRef.current = bounds;
-  }, [bounds]);
+    boundsRef.current = scene.bounds;
+  }, [scene.bounds]);
 
   useEffect(() => {
     let disposed = false;
@@ -269,13 +245,13 @@ export function useMapViewportRuntime({
       return;
     }
 
-    const key = `${bounds.minX}:${bounds.minY}:${bounds.maxX}:${bounds.maxY}`;
-    viewport.resize(viewport.screenWidth, viewport.screenHeight, worldWidth(bounds), worldHeight(bounds));
+    const key = `${scene.bounds.minX}:${scene.bounds.minY}:${scene.bounds.maxX}:${scene.bounds.maxY}`;
+    viewport.resize(viewport.screenWidth, viewport.screenHeight, worldWidth(scene.bounds), worldHeight(scene.bounds));
     if (fittedBoundsKeyRef.current !== key) {
-      fitViewportToBounds(viewport, bounds, fitScaleRef);
+      fitViewportToBounds(viewport, scene.bounds, fitScaleRef);
       fittedBoundsKeyRef.current = key;
     }
-  }, [bounds]);
+  }, [scene.bounds]);
 
   useEffect(() => {
     drawRef.current = () => {
@@ -284,41 +260,11 @@ export function useMapViewportRuntime({
         return;
       }
 
-      performDraw(layers, viewportRef, {
-        bounds,
-        globalPlannerSegments,
-        unknownObstacles,
-        knownObstacles,
-        globalTrajectory,
-        localTrajectory,
-        referencePoints,
-        car,
-        carShape,
-        goal,
-        motionLimits,
-        pressedPose,
-        mode,
-        goalUnreachable,
-      });
+      performDraw(layers, viewportRef, scene);
     };
 
     drawRef.current();
-  }, [
-    bounds,
-    car,
-    carShape,
-    globalPlannerSegments,
-    globalTrajectory,
-    goal,
-    goalUnreachable,
-    knownObstacles,
-    localTrajectory,
-    mode,
-    motionLimits,
-    pressedPose,
-    referencePoints,
-    unknownObstacles,
-  ]);
+  }, [scene]);
 
   return hostRef;
 }

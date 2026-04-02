@@ -2,9 +2,9 @@ import { useCallback } from 'react';
 
 import type { CarState } from '../lib/appModel';
 import { setSimulationState } from '../lib/wasmCore';
-import type { UsePlanningCallbacksParams } from './planningHelpers';
+import { hideGoalUnreachable, type PlanningControllerParams } from './planningHelpers';
 
-type UsePlanningDragParams = Pick<UsePlanningCallbacksParams, 'mode' | 'refs' | 'setters'> & {
+type UsePlanningDragParams = Pick<PlanningControllerParams, 'mode' | 'refs' | 'updateState'> & {
   handleBrake: () => Promise<void>;
   handleCancel: () => Promise<void>;
   runGlobalPlan: () => Promise<void>;
@@ -13,7 +13,7 @@ type UsePlanningDragParams = Pick<UsePlanningCallbacksParams, 'mode' | 'refs' | 
 export function usePlanningDrag({
   mode,
   refs,
-  setters,
+  updateState,
   handleBrake,
   handleCancel,
   runGlobalPlan,
@@ -30,12 +30,12 @@ export function usePlanningDrag({
         steer: 0,
       };
 
-      setters.setPressedPose(null);
-      setters.setGlobalTrajectory(null);
+      updateState('pressedPose', null);
+      updateState('globalTrajectory', null);
       globalTrajectoryRef.current = null;
 
       if (mode === 'pose') {
-        setters.setGoal(null);
+        updateState('goal', null);
         goalRef.current = null;
         await handleCancel();
         try {
@@ -46,13 +46,13 @@ export function usePlanningDrag({
         return;
       }
 
-      setters.setGoal(state);
+      updateState('goal', state);
       goalRef.current = state;
-      setters.setGoalUnreachable({ visible: false, x: startX, y: startY });
+      updateState('goalUnreachable', { visible: false, x: startX, y: startY });
       await handleBrake();
       await runGlobalPlan();
     },
-    [globalTrajectoryRef, goalRef, handleBrake, handleCancel, mode, runGlobalPlan, setters],
+    [globalTrajectoryRef, goalRef, handleBrake, handleCancel, mode, runGlobalPlan, updateState],
   );
 
   const handleMapPrimaryDragStart = useCallback(
@@ -62,12 +62,12 @@ export function usePlanningDrag({
         return false;
       }
 
-      setters.setGoalUnreachable((current) => ({ ...current, visible: false }));
+      hideGoalUnreachable(updateState);
       dragStartRef.current = { startX: world.x, startY: world.y };
-      setters.setPressedPose({ x: world.x, y: world.y, yaw: 0, velocity: 0, steer: 0 });
+      updateState('pressedPose', { x: world.x, y: world.y, yaw: 0, velocity: 0, steer: 0 });
       return true;
     },
-    [dragStartRef, mapSnapshotRef, setters],
+    [dragStartRef, mapSnapshotRef, updateState],
   );
 
   const handleMapPrimaryDragMove = useCallback(
@@ -77,7 +77,7 @@ export function usePlanningDrag({
         return;
       }
 
-      setters.setPressedPose({
+      updateState('pressedPose', {
         x: start.startX,
         y: start.startY,
         yaw: Math.atan2(world.y - start.startY, world.x - start.startX),
@@ -85,7 +85,7 @@ export function usePlanningDrag({
         steer: 0,
       });
     },
-    [dragStartRef, setters],
+    [dragStartRef, updateState],
   );
 
   const handleMapPrimaryDragEnd = useCallback(
@@ -96,16 +96,16 @@ export function usePlanningDrag({
       }
 
       dragStartRef.current = null;
-      setters.setPressedPose(null);
+      updateState('pressedPose', null);
       void commitDrag(world.x, world.y, currentDrag.startX, currentDrag.startY);
     },
-    [commitDrag, dragStartRef, setters],
+    [commitDrag, dragStartRef, updateState],
   );
 
   const handleMapPrimaryDragCancel = useCallback(() => {
     dragStartRef.current = null;
-    setters.setPressedPose(null);
-  }, [dragStartRef, setters]);
+    updateState('pressedPose', null);
+  }, [dragStartRef, updateState]);
 
   return {
     commitDrag,

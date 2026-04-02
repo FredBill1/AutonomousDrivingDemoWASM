@@ -6,12 +6,12 @@ import { ensureWasmRuntime, postEvent, workerState } from './workerRuntime';
 import {
   HYBRID_ASTAR_STEP_BUDGET,
   HYBRID_SEGMENT_BATCH_SIZE,
-  type HybridSeedPoint,
+  type HybridAStarStartSeedPoint,
   type WasmCarState,
 } from './workerTypes';
 
 export async function solveHybridAStar(payload: {
-  start: WasmCarState | HybridSeedPoint[];
+  start: WasmCarState | HybridAStarStartSeedPoint[];
   startIsTrajectorySeed?: boolean;
   goal: WasmCarState;
   obstacleCoordinates: number[];
@@ -23,7 +23,7 @@ export async function solveHybridAStar(payload: {
   disposeWasmResource(workerState.activePlanner?.planner);
   const planner = payload.startIsTrajectorySeed
     ? HybridAStarPlanner.from_trajectory_seed(
-        Float64Array.from(flattenHybridSeedPoints(payload.start as HybridSeedPoint[])),
+        Float64Array.from(flattenHybridSeedPoints(payload.start as HybridAStarStartSeedPoint[])),
         payload.goal.x,
         payload.goal.y,
         payload.goal.yaw,

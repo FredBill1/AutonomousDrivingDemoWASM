@@ -3,8 +3,10 @@ import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
 import { useAppState } from './hooks/useAppState';
 import { useDashboardLayout } from './hooks/useDashboardLayout';
+import { useGlobalPlanning } from './hooks/useGlobalPlanning';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
+import { usePlanningCommands } from './hooks/usePlanningCommands';
+import { usePlanningDrag } from './hooks/usePlanningDrag';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT } from './lib/appModel';
@@ -39,35 +41,40 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
 }
 
 function App() {
-  const { state, refs, setters, dashboardGridRef } = useAppState();
+  const { state, refs, updateState, dashboardGridRef } = useAppState();
   const dashboardLayout = useDashboardLayout(dashboardGridRef);
 
   useSimulationSetup({
     refs,
-    setters,
+    updateState,
     historyLimit: HISTORY_LIMIT,
     localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
   });
 
-  const {
-    handleCancel,
-    handleBrake,
-    handleRestart,
-    handleMapPrimaryDragStart,
-    handleMapPrimaryDragMove,
-    handleMapPrimaryDragEnd,
-    handleMapPrimaryDragCancel,
-  } = usePlanningCallbacks({
-    mode: state.mode,
+  const { clearGlobalPlannerDisplaySegments, runGlobalPlan } = useGlobalPlanning({
     refs,
-    setters,
+    updateState,
     replanMaxSpeed: REPLAN_MAX_SPEED_MS,
     toHybridAStarStartSeed,
   });
+  const { handleCancel, handleBrake, handleRestart } = usePlanningCommands({
+    refs,
+    updateState,
+    clearGlobalPlannerDisplaySegments,
+  });
+  const { handleMapPrimaryDragStart, handleMapPrimaryDragMove, handleMapPrimaryDragEnd, handleMapPrimaryDragCancel } =
+    usePlanningDrag({
+      mode: state.mode,
+      refs,
+      updateState,
+      handleBrake,
+      handleCancel,
+      runGlobalPlan,
+    });
 
   useKeyboardShortcuts({
-    setMode: setters.setMode,
+    setMode: (mode) => updateState('mode', mode),
     handleBrake,
     handleCancel,
     handleRestart,
@@ -83,24 +90,28 @@ function App() {
           </div>
 
           <MapViewport
-            bounds={state.mapSnapshot.boundingBox}
-            mode={state.mode}
-            carShape={state.carShape}
-            motionLimits={state.motionLimits}
-            knownObstacles={state.mapSnapshot.knownObstacles}
-            unknownObstacles={state.mapSnapshot.unknownObstacles}
-            car={state.car}
-            goal={state.goal}
-            pressedPose={state.pressedPose}
-            goalUnreachable={state.goalUnreachable}
-            globalTrajectory={state.globalTrajectory ? toTrajectoryPath(state.globalTrajectory) : null}
-            localTrajectory={state.localTrajectory}
-            referencePoints={state.referencePoints}
-            globalPlannerSegments={state.globalPlannerSegments}
-            onPrimaryDragStart={handleMapPrimaryDragStart}
-            onPrimaryDragMove={handleMapPrimaryDragMove}
-            onPrimaryDragEnd={handleMapPrimaryDragEnd}
-            onPrimaryDragCancel={handleMapPrimaryDragCancel}
+            scene={{
+              bounds: state.mapSnapshot.boundingBox,
+              mode: state.mode,
+              carShape: state.carShape,
+              motionLimits: state.motionLimits,
+              knownObstacles: state.mapSnapshot.knownObstacles,
+              unknownObstacles: state.mapSnapshot.unknownObstacles,
+              car: state.car,
+              goal: state.goal,
+              pressedPose: state.pressedPose,
+              goalUnreachable: state.goalUnreachable,
+              globalTrajectory: state.globalTrajectory ? toTrajectoryPath(state.globalTrajectory) : null,
+              localTrajectory: state.localTrajectory,
+              referencePoints: state.referencePoints,
+              globalPlannerSegments: state.globalPlannerSegments,
+            }}
+            interaction={{
+              onPrimaryDragStart: handleMapPrimaryDragStart,
+              onPrimaryDragMove: handleMapPrimaryDragMove,
+              onPrimaryDragEnd: handleMapPrimaryDragEnd,
+              onPrimaryDragCancel: handleMapPrimaryDragCancel,
+            }}
           />
         </section>
 
@@ -125,10 +136,10 @@ function App() {
 
       <section className="control-ribbon">
         <div className="segmented-control">
-          <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => setters.setMode('goal')}>
+          <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
             Set Goal(A)
           </button>
-          <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => setters.setMode('pose')}>
+          <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
             Set Pose(S)
           </button>
         </div>
@@ -145,4 +156,5 @@ function App() {
     </div>
   );
 }
+
 export default App;

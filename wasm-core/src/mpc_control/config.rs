@@ -27,87 +27,26 @@ impl MpcConfig {
     pub fn new() -> Self {
         Self::default()
     }
-
-    #[wasm_bindgen(getter)]
-    pub fn horizon_length(&self) -> u32 {
-        self.horizon_length
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn max_iter(&self) -> u32 {
-        self.max_iter
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn du_th(&self) -> f64 {
-        self.du_th
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn r_accel(&self) -> f64 {
-        self.r_accel
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn r_steer(&self) -> f64 {
-        self.r_steer
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn rd_accel(&self) -> f64 {
-        self.rd_accel
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn rd_steer(&self) -> f64 {
-        self.rd_steer
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn q_x(&self) -> f64 {
-        self.q_x
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn q_y(&self) -> f64 {
-        self.q_y
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn q_v(&self) -> f64 {
-        self.q_v
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn q_yaw(&self) -> f64 {
-        self.q_yaw
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn qf_scale(&self) -> f64 {
-        self.qf_scale
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn desired_max_accel_ratio(&self) -> f64 {
-        self.desired_max_accel_ratio
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn min_horizon_distance(&self) -> f64 {
-        self.min_horizon_distance
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn direction_change_dist(&self) -> f64 {
-        self.direction_change_dist
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn motion_resolution(&self) -> f64 {
-        self.motion_resolution
-    }
 }
+
+wasm_getters!(MpcConfig {
+    horizon_length(this) -> u32 => this.horizon_length;
+    max_iter(this) -> u32 => this.max_iter;
+    du_th(this) -> f64 => this.du_th;
+    r_accel(this) -> f64 => this.r_accel;
+    r_steer(this) -> f64 => this.r_steer;
+    rd_accel(this) -> f64 => this.rd_accel;
+    rd_steer(this) -> f64 => this.rd_steer;
+    q_x(this) -> f64 => this.q_x;
+    q_y(this) -> f64 => this.q_y;
+    q_v(this) -> f64 => this.q_v;
+    q_yaw(this) -> f64 => this.q_yaw;
+    qf_scale(this) -> f64 => this.qf_scale;
+    desired_max_accel_ratio(this) -> f64 => this.desired_max_accel_ratio;
+    min_horizon_distance(this) -> f64 => this.min_horizon_distance;
+    direction_change_dist(this) -> f64 => this.direction_change_dist;
+    motion_resolution(this) -> f64 => this.motion_resolution;
+});
 
 impl Default for MpcConfig {
     fn default() -> Self {
