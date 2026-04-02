@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { Application } from 'pixi.js';
+import { useEffect } from 'react';
 
 import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
 

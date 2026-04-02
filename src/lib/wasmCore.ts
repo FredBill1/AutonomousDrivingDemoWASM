@@ -1,7 +1,7 @@
 import type { PathPoint } from './appModel';
+import type { CarShape } from './appTypes';
 import { createWorkerRpc } from './workerRpc';
 import { type LocalPlannerControlPoint, type LocalPlannerUpdateResult, type WasmCarState } from './workerTypes';
-import type { CarShape } from './appTypes';
 
 export type {
   LocalPlannerControlPoint,
@@ -94,9 +94,7 @@ type WorkerMethod = Parameters<typeof computeRpc.call>[0];
 function callWorker<T>(method: WorkerMethod): Promise<T>;
 function callWorker<T, P>(method: WorkerMethod, payload: P): Promise<T>;
 function callWorker<T, P>(method: WorkerMethod, payload?: P) {
-  return payload === undefined
-    ? computeRpc.call<T>(method)
-    : computeRpc.call<T>(method, payload as never);
+  return payload === undefined ? computeRpc.call<T>(method) : computeRpc.call<T>(method, payload as never);
 }
 
 const callWorkerVoid = (method: WorkerMethod) => callWorker<null>(method);

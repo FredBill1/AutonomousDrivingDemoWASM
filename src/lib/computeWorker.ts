@@ -236,8 +236,10 @@ const handlers = {
     });
   },
 
-  checkPathCollision: (payload: { path: Array<{ x: number; y: number; yaw: number }>; obstacleCoordinates: number[] }) =>
-    withCarConfigFor(payload, handlePathCollision),
+  checkPathCollision: (payload: {
+    path: Array<{ x: number; y: number; yaw: number }>;
+    obstacleCoordinates: number[];
+  }) => withCarConfigFor(payload, handlePathCollision),
 
   checkTrajectoryCollision: (payload: {
     path: Array<{ x: number; y: number; yaw: number }>;

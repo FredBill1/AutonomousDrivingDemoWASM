@@ -87,7 +87,14 @@ where
         .iter()
         .map(|(ix, t, u, v, path_ix)| {
             let segment_params = build_segments(ix, t, u, v);
-            create_path(start_pose, end_pose, step_size, &segment_params, PATHS[path_ix], turn_radius)
+            create_path(
+                start_pose,
+                end_pose,
+                step_size,
+                &segment_params,
+                PATHS[path_ix],
+                turn_radius,
+            )
         })
         .collect()
 }

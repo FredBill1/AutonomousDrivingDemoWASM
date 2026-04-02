@@ -3,9 +3,8 @@ import { useEffect } from 'react';
 
 import { createCarShape, createMotionLimits } from '../lib/appHelpers';
 import type { CarState } from '../lib/appModel';
-import type { CarShape, MapServerSnapshot, MotionLimits } from '../lib/appTypes';
+import type { CarShape, MotionLimits } from '../lib/appTypes';
 import { MapServerNode, flattenObstacleCoordinates } from '../lib/mapServerNode';
-import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import {
   checkCollision,
   ensureWasmCore,
@@ -17,25 +16,22 @@ import {
   setLocalPlannerUpdateListener,
   setSimulationStateListener,
   stopSimulation,
-  type HybridAStarProgress,
-  type LocalPlannerPathPoint,
-  type LocalPlannerReferencePoint,
 } from '../lib/wasmCore';
 import type { PlanningRefs, PlanningSetters } from './planningTypes';
 
 type UseSimulationSetupParams = PlanningRefs &
   PlanningSetters & {
-  timestampRef: React.RefObject<number>;
-  setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
-  setTimestamp: React.Dispatch<React.SetStateAction<number>>;
-  setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
-  setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
-  setCarShape: React.Dispatch<React.SetStateAction<CarShape | null>>;
-  setMotionLimits: React.Dispatch<React.SetStateAction<MotionLimits | null>>;
-  historyLimit: number;
-  localPlannerUpdateIntervalMs: number;
-  maxGlobalPlannerDisplayBatches: number;
-};
+    timestampRef: React.RefObject<number>;
+    setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
+    setTimestamp: React.Dispatch<React.SetStateAction<number>>;
+    setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
+    setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
+    setCarShape: React.Dispatch<React.SetStateAction<CarShape | null>>;
+    setMotionLimits: React.Dispatch<React.SetStateAction<MotionLimits | null>>;
+    historyLimit: number;
+    localPlannerUpdateIntervalMs: number;
+    maxGlobalPlannerDisplayBatches: number;
+  };
 
 export function useSimulationSetup({
   planningRequestRef,

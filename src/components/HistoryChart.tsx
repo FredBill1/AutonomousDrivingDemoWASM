@@ -96,34 +96,31 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
 
   usePixiLifecycle(
     hostRef,
-    useCallback(
-      ({ app }: { app: Application }) => {
-        const frame = new Graphics();
-        const line = new Graphics();
-        const labels = new Container();
-        app.stage.addChild(frame);
-        app.stage.addChild(line);
-        app.stage.addChild(labels);
+    useCallback(({ app }: { app: Application }) => {
+      const frame = new Graphics();
+      const line = new Graphics();
+      const labels = new Container();
+      app.stage.addChild(frame);
+      app.stage.addChild(line);
+      app.stage.addChild(labels);
 
-        appRef.current = app;
-        frameRef.current = frame;
-        lineRef.current = line;
-        labelsRef.current = labels;
+      appRef.current = app;
+      frameRef.current = frame;
+      lineRef.current = line;
+      labelsRef.current = labels;
 
-        return {
-          handleResize: () => {
-            drawRef.current();
-          },
-          cleanup: () => {
-            lineRef.current = null;
-            frameRef.current = null;
-            labelsRef.current = null;
-            appRef.current = null;
-          },
-        };
-      },
-      [],
-    ),
+      return {
+        handleResize: () => {
+          drawRef.current();
+        },
+        cleanup: () => {
+          lineRef.current = null;
+          frameRef.current = null;
+          labelsRef.current = null;
+          appRef.current = null;
+        },
+      };
+    }, []),
   );
 
   useEffect(() => {
