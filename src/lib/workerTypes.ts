@@ -1,88 +1,88 @@
 import type { HybridAStarPlanner, MpcReferenceTracker } from '../../wasm-core/pkg/wasm_core';
 
 export type WasmCarState = {
-    x: number;
-    y: number;
-    yaw: number;
-    velocity: number;
-    steer: number;
+  x: number;
+  y: number;
+  yaw: number;
+  velocity: number;
+  steer: number;
 };
 
 export type WorkerRequest = {
-    id: number;
-    type: string;
-    payload?: unknown;
+  id: number;
+  type: string;
+  payload?: unknown;
 };
 
 export type WorkerResponse = { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string };
 
 export type WorkerEvent = {
-    type: string;
-    payload?: unknown;
+  type: string;
+  payload?: unknown;
 };
 
 export type PlannerSession = {
-    planner: HybridAStarPlanner;
-    cancelled: boolean;
+  planner: HybridAStarPlanner;
+  cancelled: boolean;
 };
 
 export type HybridSeedPoint = {
-    x: number;
-    y: number;
-    yaw: number;
-    velocity: number;
+  x: number;
+  y: number;
+  yaw: number;
+  velocity: number;
 };
 
 export type SimulationSession = {
-    state: WasmCarState;
-    timestamp: number;
-    simDeltaTime: number;
-    controlSequence: LocalPlannerControlPoint[] | null;
-    stopped: boolean;
-    simulationTimerId: ReturnType<typeof setTimeout> | null;
-    publishTimerId: ReturnType<typeof setInterval> | null;
-    loopToken: number;
-    stateVersion: number;
+  state: WasmCarState;
+  timestamp: number;
+  simDeltaTime: number;
+  controlSequence: LocalPlannerControlPoint[] | null;
+  stopped: boolean;
+  simulationTimerId: ReturnType<typeof setTimeout> | null;
+  publishTimerId: ReturnType<typeof setInterval> | null;
+  loopToken: number;
+  stateVersion: number;
 };
 
 export type TrackingPlan = {
-    path: Array<{ x: number; y: number; yaw: number }>;
-    directions: number[];
+  path: Array<{ x: number; y: number; yaw: number }>;
+  directions: number[];
 };
 
 export type LocalPlannerPathPoint = {
-    x: number;
-    y: number;
-    yaw: number;
+  x: number;
+  y: number;
+  yaw: number;
 };
 
 export type LocalPlannerReferencePoint = {
-    x: number;
-    y: number;
-    velocity: number;
-    yaw: number;
+  x: number;
+  y: number;
+  velocity: number;
+  yaw: number;
 };
 
 export type LocalPlannerControlPoint = {
-    timestamp: number;
-    targetVelocity: number;
-    targetSteer: number;
+  timestamp: number;
+  targetVelocity: number;
+  targetSteer: number;
 };
 
 export type LocalPlannerUpdateResult = {
-    controlSequence: LocalPlannerControlPoint[];
-    localTrajectory: LocalPlannerPathPoint[];
-    referencePoints: LocalPlannerReferencePoint[];
-    brakeTrajectory: LocalPlannerReferencePoint[];
+  controlSequence: LocalPlannerControlPoint[];
+  localTrajectory: LocalPlannerPathPoint[];
+  referencePoints: LocalPlannerReferencePoint[];
+  brakeTrajectory: LocalPlannerReferencePoint[];
 };
 
 export type LocalPlannerSession = {
-    tracker: MpcReferenceTracker | null;
-    latestState: { state: WasmCarState; timestamp: number } | null;
-    simDeltaTime: number;
-    updateIntervalMs: number;
-    updateTimerId: number | null;
-    updateInFlight: boolean;
+  tracker: MpcReferenceTracker | null;
+  latestState: { state: WasmCarState; timestamp: number } | null;
+  simDeltaTime: number;
+  updateIntervalMs: number;
+  updateTimerId: number | null;
+  updateInFlight: boolean;
 };
 
 export const HYBRID_STEP_BUDGET = 96;

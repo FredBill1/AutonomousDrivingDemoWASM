@@ -60,7 +60,7 @@ Ported from the original Python repo at [FredBill1/AutonomousDrivingDemo](https:
    - 快捷键 `A/S/D/F/R`。
    - Visualization / Velocity / Steer 三类显示内容。
    - global trajectory / local trajectory / reference points / explored segments / unreachable text 的显示条件。
-   - 出于网页端性能考虑，Hybrid A*算法在执行时的已探索节点只显示最近的32个batch，而不是像 Python 实现中的显示全部已探索节点。
+   - 出于网页端性能考虑，Hybrid A\*算法在执行时的已探索节点只显示最近的32个batch，而不是像 Python 实现中的显示全部已探索节点。
 
 7. `web` 中使用PixiJS进行绘图。为了适配浏览器操作，鼠标和触控的交互逻辑与Python实现略有不同：
    - 桌面端使用鼠标操作时：
@@ -76,11 +76,12 @@ Ported from the original Python repo at [FredBill1/AutonomousDrivingDemo](https:
    - `npm run check:wasm`
    - 然后进行 git commit
 
-9.  每次提交前必须自查：
-   - 本次改动是否能明确对应到某个 Python 文件中的真实行为。
-   - 是否删除了至少一个已确认不一致的 web 逻辑，补齐了至少一个确实缺失的 Python 行为。
-   - 是否引入了新的 UI 文案、状态变量、fallback 逻辑、控制逻辑；若有，原则上应删除。
-   - 若发现 Python 与 web 行为不一致，默认选择 Python，不做折中。
+9. 每次提交前必须自查：
+
+- 本次改动是否能明确对应到某个 Python 文件中的真实行为。
+- 是否删除了至少一个已确认不一致的 web 逻辑，补齐了至少一个确实缺失的 Python 行为。
+- 是否引入了新的 UI 文案、状态变量、fallback 逻辑、控制逻辑；若有，原则上应删除。
+- 若发现 Python 与 web 行为不一致，默认选择 Python，不做折中。
 ```
 
 </details>

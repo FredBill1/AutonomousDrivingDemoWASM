@@ -1,8 +1,8 @@
 // @ts-check
-import eslint from '@eslint/js'
-import reactHooks from 'eslint-plugin-react-hooks'
-import tseslint from 'typescript-eslint'
-import { defineConfig } from 'eslint/config'
+import eslint from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   eslint.configs.recommended,
@@ -30,4 +30,4 @@ export default defineConfig(
   {
     ignores: ['dist/**', 'wasm-core/pkg/**', 'node_modules/**'],
   },
-)
+);

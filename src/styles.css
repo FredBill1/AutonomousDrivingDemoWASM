@@ -1,298 +1,298 @@
 :root {
-    color-scheme: dark;
-    --bg: #07111a;
-    --bg-soft: #0f1c28;
-    --panel: rgba(8, 17, 27, 0.86);
-    --panel-border: rgba(143, 188, 187, 0.2);
-    --text: #edf6f4;
-    --muted: #9db4b8;
-    --accent: #9fe870;
-    --accent-deep: #3b8f58;
-    --cyan: #57d8ff;
-    --danger: #ff7b7b;
-    --goal: #9fe870;
-    --preview: #ffffff;
-    --known: #ff6f6f;
-    --unknown: #57d8ff;
-    --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
-    font-family: Bahnschrift, 'Trebuchet MS', 'Segoe UI', sans-serif;
+  color-scheme: dark;
+  --bg: #07111a;
+  --bg-soft: #0f1c28;
+  --panel: rgba(8, 17, 27, 0.86);
+  --panel-border: rgba(143, 188, 187, 0.2);
+  --text: #edf6f4;
+  --muted: #9db4b8;
+  --accent: #9fe870;
+  --accent-deep: #3b8f58;
+  --cyan: #57d8ff;
+  --danger: #ff7b7b;
+  --goal: #9fe870;
+  --preview: #ffffff;
+  --known: #ff6f6f;
+  --unknown: #57d8ff;
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+  font-family: Bahnschrift, 'Trebuchet MS', 'Segoe UI', sans-serif;
 }
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-    margin: 0;
-    width: 100%;
-    height: 100%;
+  margin: 0;
+  width: 100%;
+  height: 100%;
 }
 
 body {
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at top left, rgba(87, 216, 255, 0.14), transparent 32%),
-        radial-gradient(circle at bottom right, rgba(159, 232, 112, 0.16), transparent 28%),
-        linear-gradient(160deg, #081018 0%, #0d1724 45%, #050c14 100%);
-    color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(87, 216, 255, 0.14), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(159, 232, 112, 0.16), transparent 28%),
+    linear-gradient(160deg, #081018 0%, #0d1724 45%, #050c14 100%);
+  color: var(--text);
 }
 
 button {
-    border: 0;
-    cursor: pointer;
-    font: inherit;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .app-shell {
-    width: calc(100vw - 24px);
-    height: 100vh;
-    height: 100dvh;
-    max-height: 100vh;
-    max-height: 100dvh;
-    margin: 0 auto;
-    padding: 16px 0;
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 16px;
+  width: calc(100vw - 24px);
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  margin: 0 auto;
+  padding: 16px 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
 }
 
 .panel-heading h2 {
-    margin: 0;
-    font-weight: 700;
+  margin: 0;
+  font-weight: 700;
 }
 
 .panel,
 .control-ribbon {
-    border: 1px solid var(--panel-border);
-    background: var(--panel);
-    backdrop-filter: blur(18px);
-    box-shadow: var(--shadow);
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
 }
 
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: minmax(320px, 2.1fr) minmax(220px, 0.95fr);
-    gap: 18px;
-    min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 2.1fr) minmax(220px, 0.95fr);
+  gap: 18px;
+  min-height: 0;
 }
 
 .dashboard-grid.dashboard-grid--stacked {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(220px, 1fr) minmax(110px, 0.44fr);
-    gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(220px, 1fr) minmax(110px, 0.44fr);
+  gap: 8px;
 }
 
 .side-stack {
-    display: grid;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    min-height: 0;
-    min-width: 0;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  min-height: 0;
+  min-width: 0;
 }
 
 .side-stack.side-stack--stacked {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: 1fr;
-    gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  gap: 8px;
 }
 
 .panel {
-    border-radius: 24px;
-    padding: 18px;
-    min-height: 0;
-    overflow: hidden;
+  border-radius: 24px;
+  padding: 18px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .panel-map,
 .chart-panel {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-map {
-    min-width: 0;
-    min-height: clamp(180px, 40vh, 100%);
+  min-width: 0;
+  min-height: clamp(180px, 40vh, 100%);
 }
 
 .chart-panel {
-    min-width: 0;
-    min-height: 0;
+  min-width: 0;
+  min-height: 0;
 }
 
 .panel-heading {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 16px;
-    min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  min-width: 0;
 }
 
 .panel-status {
-    color: var(--muted);
-    font-size: 0.92rem;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .panel-heading.compact {
-    margin-bottom: 14px;
+  margin-bottom: 14px;
 }
 
 .panel-heading.compact h2 {
-    flex: 1;
-    min-width: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .auto-shrink-heading {
-    min-width: 0;
+  min-width: 0;
 }
 
 .auto-shrink-heading__text {
-    display: block;
-    white-space: nowrap;
-    line-height: 1.1;
+  display: block;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .map-view,
 .chart-view {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    border-radius: 18px;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 50% 50%, rgba(87, 216, 255, 0.08), transparent 44%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(87, 216, 255, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
 }
 
 .map-view {
-    flex: 1;
-    touch-action: none;
+  flex: 1;
+  touch-action: none;
 }
 
 .chart-view {
-    flex: 1;
+  flex: 1;
 }
 
 .pixi-surface {
-    display: block;
-    width: 100%;
-    height: 100%;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .control-ribbon {
-    border-radius: 24px;
-    padding: 14px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+  border-radius: 24px;
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .segmented-control {
-    display: inline-flex;
-    gap: 6px;
-    padding: 6px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .segmented-control button,
 .ghost-button,
 .accent-button {
-    min-height: 44px;
-    padding: 0 18px;
-    border-radius: 999px;
-    color: var(--text);
-    transition:
-        transform 140ms ease,
-        background 140ms ease,
-        color 140ms ease;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--text);
+  transition:
+    transform 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
 }
 
 .segmented-control button,
 .ghost-button {
-    background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .segmented-control button.active {
-    background: linear-gradient(135deg, rgba(159, 232, 112, 0.24), rgba(87, 216, 255, 0.12));
-    color: white;
+  background: linear-gradient(135deg, rgba(159, 232, 112, 0.24), rgba(87, 216, 255, 0.12));
+  color: white;
 }
 
 .accent-button {
-    background: linear-gradient(135deg, rgba(159, 232, 112, 0.9), rgba(96, 178, 118, 0.84));
-    color: #06110c;
-    font-weight: 700;
+  background: linear-gradient(135deg, rgba(159, 232, 112, 0.9), rgba(96, 178, 118, 0.84));
+  color: #06110c;
+  font-weight: 700;
 }
 
 .segmented-control button:hover,
 .ghost-button:hover,
 .accent-button:hover {
-    transform: translateY(-1px);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1080px) {
-    .dashboard-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
-    }
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
+  }
 
-    .side-stack {
-        gap: 12px;
-    }
+  .side-stack {
+    gap: 12px;
+  }
 }
 
 @media (max-width: 720px) {
-    .app-shell {
-        width: 100vw - 16px;
-        padding: 8px 0;
-        gap: 8px;
-    }
+  .app-shell {
+    width: 100vw - 16px;
+    padding: 8px 0;
+    gap: 8px;
+  }
 
-    .panel,
-    .control-ribbon {
-        border-radius: 18px;
-    }
+  .panel,
+  .control-ribbon {
+    border-radius: 18px;
+  }
 
-    .panel {
-        padding: 12px;
-    }
+  .panel {
+    padding: 12px;
+  }
 
-    .panel-heading {
-        flex-direction: column;
-        margin-bottom: 10px;
-    }
+  .panel-heading {
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
 
-    .panel-heading.compact {
-        flex-direction: row;
-        align-items: center;
-    }
+  .panel-heading.compact {
+    flex-direction: row;
+    align-items: center;
+  }
 
-    .control-ribbon {
-        justify-content: stretch;
-        padding: 10px;
-    }
+  .control-ribbon {
+    justify-content: stretch;
+    padding: 10px;
+  }
 
-    .segmented-control,
-    .ghost-button,
-    .accent-button {
-        width: 100%;
-    }
+  .segmented-control,
+  .ghost-button,
+  .accent-button {
+    width: 100%;
+  }
 
-    .segmented-control button {
-        flex: 1;
-    }
+  .segmented-control button {
+    flex: 1;
+  }
 
-    .dashboard-grid {
-        gap: 8px;
-        grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr);
-    }
+  .dashboard-grid {
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr);
+  }
 
-    .side-stack {
-        gap: 8px;
-    }
+  .side-stack {
+    gap: 8px;
+  }
 }
