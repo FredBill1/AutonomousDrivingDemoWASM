@@ -3,6 +3,20 @@ import { useEffect, useRef } from 'react';
 import { Application, Container, Graphics, Text } from 'pixi.js';
 
 import { setupPixiCanvas, setupResizeListeners, syncCanvasElementSize } from '../lib/pixiAppInit';
+import {
+  CHART_AXIS_ALPHA,
+  CHART_GRID_ALPHA,
+  CHART_GRID_COLOR,
+  CHART_LABEL_COLOR,
+  CHART_MARGIN_BOTTOM,
+  CHART_MARGIN_LEFT,
+  CHART_MARGIN_RIGHT,
+  CHART_MARGIN_TOP,
+  CHART_TICK_SIZE,
+  CHART_X_TICK_DIVISOR,
+  CHART_Y_TICK_DIVISOR,
+  MIN_RANGE_VALUE,
+} from '../lib/constants';
 
 type HistoryPoint = {
   t: number;
@@ -16,22 +30,12 @@ type HistoryChartProps = {
   lineColor: number;
 };
 
-const MARGIN_LEFT = 42;
-const MARGIN_RIGHT = 12;
-const MARGIN_TOP = 10;
-const MARGIN_BOTTOM = 26;
-const TICK_SIZE = 4;
-const LABEL_COLOR = 0xc7d6da;
-const GRID_COLOR = 0xffffff;
-const GRID_ALPHA = 0.08;
-const AXIS_ALPHA = 0.18;
-
 function destroyContainerChildren(container: Container) {
   container.removeChildren().forEach((child) => child.destroy());
 }
 
 function clampRange(value: number) {
-  return Math.max(value, 0.001);
+  return Math.max(value, MIN_RANGE_VALUE);
 }
 
 function getNiceStep(rawStep: number) {
@@ -180,16 +184,16 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
 
       const width = app.renderer.width;
       const height = app.renderer.height;
-      const plotWidth = Math.max(1, width - MARGIN_LEFT - MARGIN_RIGHT);
-      const plotHeight = Math.max(1, height - MARGIN_TOP - MARGIN_BOTTOM);
+      const plotWidth = Math.max(1, width - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT);
+      const plotHeight = Math.max(1, height - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM);
       const minT = points[0]?.t ?? 0;
       const maxT = points[points.length - 1]?.t ?? minT + 1;
       const tRange = clampRange(maxT - minT);
       const valueRange = clampRange(maxValue - minValue);
-      const baseX = MARGIN_LEFT;
-      const baseY = MARGIN_TOP;
-      const yTicks = buildTicks(minValue, maxValue, Math.max(3, Math.floor(plotHeight / 32)));
-      const xTicks = buildTicks(minT, maxT, Math.max(3, Math.floor(plotWidth / 70)));
+      const baseX = CHART_MARGIN_LEFT;
+      const baseY = CHART_MARGIN_TOP;
+      const yTicks = buildTicks(minValue, maxValue, Math.max(3, Math.floor(plotHeight / CHART_Y_TICK_DIVISOR)));
+      const xTicks = buildTicks(minT, maxT, Math.max(3, Math.floor(plotWidth / CHART_X_TICK_DIVISOR)));
 
       frame.clear();
       destroyContainerChildren(labels);
@@ -200,7 +204,7 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
           style: {
             fontFamily: 'Bahnschrift, Trebuchet MS, Segoe UI, sans-serif',
             fontSize: 10,
-            fill: LABEL_COLOR,
+            fill: CHART_LABEL_COLOR,
           },
         });
 
@@ -209,12 +213,12 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
         frame
           .moveTo(baseX, y)
           .lineTo(baseX + plotWidth, y)
-          .moveTo(baseX - TICK_SIZE, y)
+          .moveTo(baseX - CHART_TICK_SIZE, y)
           .lineTo(baseX, y);
 
         const label = createTickLabel(tick.label);
         label.anchor.set(1, 0.5);
-        label.position.set(baseX - TICK_SIZE - 4, y);
+        label.position.set(baseX - CHART_TICK_SIZE - 4, y);
         labels.addChild(label);
       });
 
@@ -224,11 +228,11 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
           .moveTo(x, baseY)
           .lineTo(x, baseY + plotHeight)
           .moveTo(x, baseY + plotHeight)
-          .lineTo(x, baseY + plotHeight + TICK_SIZE);
+          .lineTo(x, baseY + plotHeight + CHART_TICK_SIZE);
 
         const label = createTickLabel(tick.label);
         label.anchor.set(0.5, 0);
-        label.position.set(x, baseY + plotHeight + TICK_SIZE + 2);
+        label.position.set(x, baseY + plotHeight + CHART_TICK_SIZE + 2);
         labels.addChild(label);
       });
 
@@ -237,11 +241,11 @@ export function HistoryChart({ points, minValue, maxValue, lineColor }: HistoryC
           .moveTo(baseX, baseY)
           .lineTo(baseX, baseY + plotHeight)
           .lineTo(baseX + plotWidth, baseY + plotHeight)
-          .stroke({ width: strokeWidth, color: GRID_COLOR, alpha });
+          .stroke({ width: strokeWidth, color: CHART_GRID_COLOR, alpha });
       };
 
-      strokeFrame(1, GRID_ALPHA);
-      strokeFrame(1.2, AXIS_ALPHA);
+      strokeFrame(1, CHART_GRID_ALPHA);
+      strokeFrame(1.2, CHART_AXIS_ALPHA);
 
       line.clear();
       if (points.length < 2) {
