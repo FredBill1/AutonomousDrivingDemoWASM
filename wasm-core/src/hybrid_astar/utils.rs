@@ -16,7 +16,13 @@ pub(crate) fn steer_commands(max_steer: f64, num_steer_commands: usize) -> Vec<f
     commands
 }
 
-pub(crate) fn calc_ijk(x: f64, y: f64, yaw: f64, heuristic: &HeuristicGrid, yaw_grid_resolution: f64) -> (i32, i32, i32) {
+pub(crate) fn calc_ijk(
+    x: f64,
+    y: f64,
+    yaw: f64,
+    heuristic: &HeuristicGrid,
+    yaw_grid_resolution: f64,
+) -> (i32, i32, i32) {
     let (i, j) = heuristic.calc_index(x, y);
     let yaw_bins = (2.0 * std::f64::consts::PI / yaw_grid_resolution).round() as i32;
     let wrapped = wrap_zero_to_two_pi(yaw);

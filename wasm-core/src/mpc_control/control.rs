@@ -18,7 +18,16 @@ pub fn mpc_control_preview(
     dt: f64,
 ) -> Result<super::types::MpcControlResult, JsValue> {
     let config = MpcConfig::default();
-    mpc_control_preview_with_config(&config, flat_reference_states, state_x, state_y, state_velocity, state_yaw, last_steer, dt)
+    mpc_control_preview_with_config(
+        &config,
+        flat_reference_states,
+        state_x,
+        state_y,
+        state_velocity,
+        state_yaw,
+        last_steer,
+        dt,
+    )
 }
 
 pub(crate) fn mpc_control_preview_with_config(
@@ -83,7 +92,12 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     Ok(states)
 }
 
-pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], config: &MpcConfig, dt: f64) -> Vec<ModelState> {
+pub(crate) fn predict_motion(
+    initial: RollingCarState,
+    controls: &[Control],
+    config: &MpcConfig,
+    dt: f64,
+) -> Vec<ModelState> {
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {
@@ -94,7 +108,13 @@ pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], con
     out
 }
 
-fn step_state(mut state: RollingCarState, target_velocity: f64, target_steer: f64, config: &MpcConfig, dt: f64) -> RollingCarState {
+fn step_state(
+    mut state: RollingCarState,
+    target_velocity: f64,
+    target_steer: f64,
+    config: &MpcConfig,
+    dt: f64,
+) -> RollingCarState {
     state.x += state.velocity * state.yaw.cos() * dt;
     state.y += state.velocity * state.yaw.sin() * dt;
     state.yaw += state.velocity / config.wheel_base * state.steer.tan() * dt;

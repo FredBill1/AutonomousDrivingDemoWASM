@@ -48,7 +48,13 @@ struct MpcProblem {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, config: &MpcConfig, dt: f64) -> MpcProblem {
+fn build_mpc_problem(
+    xref: &[ModelState],
+    xbar: &[ModelState],
+    last_steer: f64,
+    config: &MpcConfig,
+    dt: f64,
+) -> MpcProblem {
     let horizon = config.horizon_length;
     let nvars = NX * (horizon + 1) + NU * horizon;
     let mut q = vec![0.0; nvars];
@@ -191,7 +197,14 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
         row += 1;
     }
 
-    push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, control_index(0, 1, horizon), 1.0);
+    push_entry(
+        &mut a_rows,
+        &mut a_cols,
+        &mut a_vals,
+        row,
+        control_index(0, 1, horizon),
+        1.0,
+    );
     b.push(last_steer);
     row += 1;
 

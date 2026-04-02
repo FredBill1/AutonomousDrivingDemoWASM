@@ -161,7 +161,17 @@ fn neighbour_acceptance_does_not_prune_blocked_heuristic_cells() {
     let goal = [7.0, 7.0, 0.0];
     let obstacles = box_obstacles(8.0, 8.0);
 
-    let neighbour = generate_neighbour(&current, 1, 0.0, &goal, &car_config, &ha_config, &heuristic, &obstacles, false);
+    let neighbour = generate_neighbour(
+        &current,
+        1,
+        0.0,
+        &goal,
+        &car_config,
+        &ha_config,
+        &heuristic,
+        &obstacles,
+        false,
+    );
 
     assert!(neighbour.is_some());
 }

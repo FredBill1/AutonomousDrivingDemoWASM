@@ -51,8 +51,8 @@ pub(crate) fn generate_neighbour(
     let steer_cost = ha_config.steer_cost * steer.abs() * ha_config.motion_distance;
     let cost = current.cost + distance_cost + switch_direction_cost + steer_change_cost + steer_cost;
 
-    let h_cost =
-        ha_config.h_dist_cost * heuristic.distance_at(ijk.0, ijk.1) + ha_config.h_yaw_cost * wrap_angle(goal[2] - car.yaw()).abs();
+    let h_cost = ha_config.h_dist_cost * heuristic.distance_at(ijk.0, ijk.1)
+        + ha_config.h_yaw_cost * wrap_angle(goal[2] - car.yaw()).abs();
 
     Some(SearchNode {
         ijk,

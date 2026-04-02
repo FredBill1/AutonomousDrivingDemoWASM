@@ -3,7 +3,12 @@ use super::types::{Control, ModelState, NU, NX};
 
 pub(super) fn decode_controls(solution: &[f64], horizon_length: usize) -> Vec<Control> {
     (0..horizon_length)
-        .map(|t| [solution[control_index(t, 0, horizon_length)], solution[control_index(t, 1, horizon_length)]])
+        .map(|t| {
+            [
+                solution[control_index(t, 0, horizon_length)],
+                solution[control_index(t, 1, horizon_length)],
+            ]
+        })
         .collect()
 }
 

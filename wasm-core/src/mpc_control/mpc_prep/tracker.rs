@@ -142,8 +142,10 @@ impl MpcReferenceTracker {
             self.find_nearest_point(state_x, state_y);
 
             let signed_velocity = sample_state(&self.prepared, self.cur_u)[2].signum() * state_velocity;
-            let length =
-                self.config.min_horizon_distance.max(signed_velocity.max(0.0) * dt * self.config.horizon_length as f64);
+            let length = self
+                .config
+                .min_horizon_distance
+                .max(signed_velocity.max(0.0) * dt * self.config.horizon_length as f64);
             let mut ref_us = linspace(self.cur_u, self.cur_u + length, self.config.horizon_length + 1);
             for value in &mut ref_us {
                 *value = value.min(self.u_limit);

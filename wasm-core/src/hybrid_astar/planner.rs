@@ -109,8 +109,13 @@ impl HybridAStarPlanner {
 
             let tail_dist = (tail[0] - self.goal[0]).hypot(tail[1] - self.goal[1]);
             if tail_dist <= self.ha_config.reeds_shepp_max_distance
-                && let Some(goal_node) =
-                    generate_rspath(&current, &self.goal, &self.car_config, &self.ha_config, &self.obstacle_coordinates)
+                && let Some(goal_node) = generate_rspath(
+                    &current,
+                    &self.goal,
+                    &self.car_config,
+                    &self.ha_config,
+                    &self.obstacle_coordinates,
+                )
             {
                 self.analytic_expansions += 1;
                 self.solved_result = Some(traceback_path(goal_node));
@@ -192,7 +197,8 @@ impl HybridAStarPlanner {
         let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
         let start_state = [start_x, start_y, start_yaw];
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone()) {
+        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone())
+        {
             return Ok(Self::finished_without_path(
                 car_config,
                 ha_config,
@@ -204,8 +210,8 @@ impl HybridAStarPlanner {
         }
 
         let start_node = build_point_start_node(start_x, start_y, start_yaw, &heuristic, &ha_config);
-        let start_collided =
-            CarState::new(start_x, start_y, start_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone());
+        let start_collided = CarState::new(start_x, start_y, start_yaw, 0.0, 0.0)
+            .check_collision(&car_config, obstacle_coordinates.clone());
         Self::from_start_node(
             car_config,
             ha_config,
@@ -231,7 +237,8 @@ impl HybridAStarPlanner {
         let ha_config = HybridAStarConfig::default();
         let heuristic = HeuristicGrid::from_obstacles(&obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
 
-        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone()) {
+        if CarState::new(goal_x, goal_y, goal_yaw, 0.0, 0.0).check_collision(&car_config, obstacle_coordinates.clone())
+        {
             let start_state = start_seed
                 .last()
                 .map(|last| [last.x, last.y, last.yaw])
