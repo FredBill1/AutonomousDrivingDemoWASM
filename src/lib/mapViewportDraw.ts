@@ -1,11 +1,11 @@
-import type { Graphics, Text } from 'pixi.js';
 import type { Viewport } from 'pixi-viewport';
+import type { Graphics, Text } from 'pixi.js';
 import type React from 'react';
 
 import type { CarState, Mode, Obstacle, PathPoint } from './appModel';
+import type { CarShape, GoalUnreachableState, MotionLimits } from './appTypes';
 import type { MapBoundingBox } from './mapServerNode';
 import type { HybridAStarProgress, LocalPlannerPathPoint, LocalPlannerReferencePoint } from './wasmCore';
-import type { CarShape, GoalUnreachableState, MotionLimits } from './appTypes';
 
 export type { PathPoint } from './appModel';
 

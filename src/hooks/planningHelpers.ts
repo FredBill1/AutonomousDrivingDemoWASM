@@ -1,8 +1,8 @@
 import type React from 'react';
 
 import type { CarState, Mode } from '../lib/appModel';
+import type { DragStartState, GoalUnreachableState, MapServerSnapshot } from '../lib/appTypes';
 import type { MapServerNode } from '../lib/mapServerNode';
-import type { MapServerSnapshot, DragStartState, GoalUnreachableState } from '../lib/appTypes';
 import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import type {
     HybridAStarProgress,

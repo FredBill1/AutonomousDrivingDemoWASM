@@ -1,7 +1,11 @@
-import type { WasmConfigSnapshot } from './wasmCore';
 import type { CarShape, MotionLimits } from './appTypes';
 import type { MapBoundingBox } from './mapServerNode';
-import type { HybridAStarStartSeedPoint, LocalPlannerReferencePoint, LocalPlannerTrajectoryPoint } from './wasmCore';
+import type {
+    HybridAStarStartSeedPoint,
+    LocalPlannerReferencePoint,
+    LocalPlannerTrajectoryPoint,
+    WasmConfigSnapshot,
+} from './wasmCore';
 
 export function createCarShape(snapshot: WasmConfigSnapshot): CarShape {
     return {

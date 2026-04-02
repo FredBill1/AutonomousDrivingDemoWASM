@@ -3,8 +3,33 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
+import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
+import { useSimulationSetup } from './hooks/useSimulationSetup';
+import {
+    createCarShape,
+    createMotionLimits,
+    formatFixedWithoutNegativeZero,
+    toHybridAStarStartSeed,
+    toTrajectoryPath,
+} from './lib/appHelpers';
 import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
+import {
+    DEFAULT_CAR_SHAPE,
+    DEFAULT_MOTION_LIMITS,
+    FALLBACK_MAP_BOUNDING_BOX,
+    STACKED_LAYOUT_GAP_PX,
+    STACKED_LAYOUT_MAX_WIDTH_PX,
+    STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX,
+    STACKED_LAYOUT_MIN_MAP_HEIGHT_PX,
+    type CarShape,
+    type DashboardLayout,
+    type DragStartState,
+    type GoalUnreachableState,
+    type MapServerSnapshot,
+    type MotionLimits,
+} from './lib/appTypes';
 import { MapServerNode } from './lib/mapServerNode';
+import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
 import {
     checkCollision,
     checkTrajectoryCollision,
@@ -15,33 +40,8 @@ import {
     type LocalPlannerReferencePoint,
     type LocalPlannerTrajectoryPoint,
 } from './lib/wasmCore';
-import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
-import {
-    FALLBACK_MAP_BOUNDING_BOX,
-    DEFAULT_CAR_SHAPE,
-    DEFAULT_MOTION_LIMITS,
-    STACKED_LAYOUT_MAX_WIDTH_PX,
-    STACKED_LAYOUT_MIN_MAP_HEIGHT_PX,
-    STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX,
-    STACKED_LAYOUT_GAP_PX,
-    type CarShape,
-    type DashboardLayout,
-    type DragStartState,
-    type GoalUnreachableState,
-    type MapServerSnapshot,
-    type MotionLimits,
-} from './lib/appTypes';
-import {
-    createCarShape,
-    createMotionLimits,
-    formatFixedWithoutNegativeZero,
-    toHybridAStarStartSeed,
-    toTrajectoryPath,
-} from './lib/appHelpers';
-import { useSimulationSetup } from './hooks/useSimulationSetup';
-import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 
-export type { CarShape, MotionLimits, GoalUnreachableState };
+export type { CarShape, GoalUnreachableState, MotionLimits };
 
 type ChartPanelProps = {
     heading: string;

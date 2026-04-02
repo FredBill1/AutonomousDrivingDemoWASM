@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
 import type React from 'react';
+import { useEffect } from 'react';
 
 import type { CarState } from '../lib/appModel';
-import { flattenObstacleCoordinates, type MapServerNode } from '../lib/mapServerNode';
 import type { MapServerSnapshot } from '../lib/appTypes';
+import { flattenObstacleCoordinates, type MapServerNode } from '../lib/mapServerNode';
+import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import {
     initSimulation,
     resetComputeWorker,
@@ -16,7 +17,6 @@ import {
     type LocalPlannerPathPoint,
     type LocalPlannerReferencePoint,
 } from '../lib/wasmCore';
-import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 
 type UseSimulationSetupParams = {
     planningRequestRef: React.MutableRefObject<number>;

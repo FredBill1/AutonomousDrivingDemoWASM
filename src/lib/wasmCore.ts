@@ -1,6 +1,6 @@
 import type { PathPoint } from './appModel';
-import { type LocalPlannerControlPoint, type LocalPlannerUpdateResult, type WasmCarState } from './workerTypes';
 import { createWorkerRpc } from './workerRpc';
+import { type LocalPlannerControlPoint, type LocalPlannerUpdateResult, type WasmCarState } from './workerTypes';
 
 export type {
     LocalPlannerControlPoint,

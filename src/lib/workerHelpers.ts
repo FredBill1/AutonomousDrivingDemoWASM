@@ -304,4 +304,4 @@ export function clearLocalPlannerTimer() {
     workerState.localPlannerSession.updateTimerId = null;
 }
 
-export { DEFAULT_SIM_DELTA_TIME, DEFAULT_SIM_INTERVAL_MS, DEFAULT_PUBLISH_INTERVAL_MS };
+export { DEFAULT_PUBLISH_INTERVAL_MS, DEFAULT_SIM_DELTA_TIME, DEFAULT_SIM_INTERVAL_MS };

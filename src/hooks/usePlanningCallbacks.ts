@@ -2,7 +2,6 @@ import { useCallback, useEffect } from 'react';
 
 import type { CarState } from '../lib/appModel';
 import { flattenObstacleCoordinates } from '../lib/mapServerNode';
-import type { UsePlanningCallbacksParams } from './planningHelpers';
 import {
     brakeLocalPlanner,
     cancelHybridAStar,
@@ -13,6 +12,7 @@ import {
     solveHybridAStar,
     stopSimulationMotion,
 } from '../lib/wasmCore';
+import type { UsePlanningCallbacksParams } from './planningHelpers';
 
 export function usePlanningCallbacks({
     mode,
