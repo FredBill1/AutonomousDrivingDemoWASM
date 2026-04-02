@@ -19,6 +19,14 @@ export function decodeFlatTuples<T>(
   return tuples;
 }
 
+export function createFlatTupleDecoder<T>(
+  stride: number,
+  label: string,
+  decode: (values: ArrayLike<number>, offset: number) => T,
+) {
+  return (values: ArrayLike<number>) => decodeFlatTuples(values, stride, label, decode);
+}
+
 export function encodeFlatTuples<T>(items: T[], encode: (item: T) => readonly number[]) {
   const values: number[] = [];
   for (const item of items) {

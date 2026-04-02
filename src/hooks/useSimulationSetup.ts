@@ -2,10 +2,7 @@ import type React from 'react';
 import { useEffect } from 'react';
 
 import { createCarShape, createMotionLimits } from '../lib/appHelpers';
-import type { CarState } from '../lib/appModel';
-import type { CarShape, MapServerSnapshot, MotionLimits } from '../lib/appTypes';
 import { MapServerNode, flattenObstacleCoordinates } from '../lib/mapServerNode';
-import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import {
   checkCollision,
   ensureWasmCore,
@@ -21,60 +18,29 @@ import {
   type LocalPlannerPathPoint,
   type LocalPlannerReferencePoint,
 } from '../lib/wasmCore';
+import type { AppRefs, AppSetters } from './appRuntimeTypes';
 
 type UseSimulationSetupParams = {
-  planningRequestRef: React.RefObject<number>;
-  mapServerNodeRef: React.RefObject<MapServerNode | null>;
-  trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-  carRef: React.RefObject<CarState | null>;
-  timestampRef: React.RefObject<number>;
-  localPlanningRef: React.RefObject<boolean>;
-  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
-  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
-  setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
-  setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
-  setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
-  setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>;
-  setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
-  setTimestamp: React.Dispatch<React.SetStateAction<number>>;
-  setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
-  setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
-  setCarShape: React.Dispatch<React.SetStateAction<CarShape | null>>;
-  setMotionLimits: React.Dispatch<React.SetStateAction<MotionLimits | null>>;
+  refs: AppRefs;
+  setters: AppSetters;
   historyLimit: number;
   localPlannerUpdateIntervalMs: number;
   maxGlobalPlannerDisplayBatches: number;
 };
 
 export function useSimulationSetup({
-  planningRequestRef,
-  mapServerNodeRef,
-  trajectoryCollisionCheckingNodeRef,
-  carRef,
-  timestampRef,
-  localPlanningRef,
-  brakeTrajectoryRef,
-  mapSnapshotRef,
-  setGlobalPlannerSegments,
-  setLocalTrajectory,
-  setReferencePoints,
-  setMapSnapshot,
-  setCar,
-  setTimestamp,
-  setVelocityHistory,
-  setSteerHistory,
-  setCarShape,
-  setMotionLimits,
+  refs,
+  setters,
   historyLimit,
   localPlannerUpdateIntervalMs,
   maxGlobalPlannerDisplayBatches,
 }: UseSimulationSetupParams): void {
   useEffect(() => {
     setHybridAStarProgressListener((progress) => {
-      if (progress.token !== planningRequestRef.current) {
+      if (progress.token !== refs.planningRequestRef.current) {
         return;
       }
-      setGlobalPlannerSegments((segments) => {
+      setters.setGlobalPlannerSegments((segments) => {
         const nextSegments = [...segments, progress.segments];
         return nextSegments.length > maxGlobalPlannerDisplayBatches
           ? nextSegments.slice(-maxGlobalPlannerDisplayBatches)
@@ -82,19 +48,19 @@ export function useSimulationSetup({
       });
     });
     return () => setHybridAStarProgressListener(null);
-  }, [planningRequestRef, setGlobalPlannerSegments, maxGlobalPlannerDisplayBatches]);
+  }, [maxGlobalPlannerDisplayBatches, refs, setters]);
 
   useEffect(() => {
     let active = true;
 
     setLocalPlannerUpdateListener((result) => {
-      if (!active || !localPlanningRef.current) {
+      if (!active || !refs.localPlanningRef.current) {
         return;
       }
 
-      brakeTrajectoryRef.current = result.brakeTrajectory;
-      setLocalTrajectory(result.localTrajectory);
-      setReferencePoints(result.referencePoints);
+      refs.brakeTrajectoryRef.current = result.brakeTrajectory;
+      setters.setLocalTrajectory(result.localTrajectory);
+      setters.setReferencePoints(result.referencePoints);
     });
 
     setSimulationStateListener((event) => {
@@ -106,34 +72,27 @@ export function useSimulationSetup({
         console.error('Failed to update local planner state', error);
       });
 
-      carRef.current = event.state;
-      timestampRef.current = event.timestamp;
-      setTimestamp(event.timestamp);
-      setCar(event.state);
+      refs.carRef.current = event.state;
+      refs.timestampRef.current = event.timestamp;
+      setters.setTimestamp(event.timestamp);
+      setters.setCar(event.state);
 
-      setVelocityHistory((history) => [
+      setters.setVelocityHistory((history) => [
         ...history.slice(-historyLimit + 1),
         { t: event.timestamp, value: event.state.velocity * 3.6 },
       ]);
-      setSteerHistory((history) => [
+      setters.setSteerHistory((history) => [
         ...history.slice(-historyLimit + 1),
         { t: event.timestamp, value: (event.state.steer * 180) / Math.PI },
       ]);
 
-      const mapUpdate = mapServerNodeRef.current?.update(event.state);
+      const mapUpdate = refs.mapServerNodeRef.current?.update(event.state);
       if (mapUpdate && mapUpdate.newObstacles.length > 0) {
-        mapSnapshotRef.current = mapUpdate;
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
-          flattenObstacleCoordinates(mapUpdate.knownObstacles),
-        );
-        setMapSnapshot(mapUpdate);
-        void trajectoryCollisionCheckingNodeRef.current
+        refs.mapSnapshotRef.current = mapUpdate;
+        refs.trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(mapUpdate.knownObstacles));
+        setters.setMapSnapshot(mapUpdate);
+        void refs.trajectoryCollisionCheckingNodeRef.current
           ?.checkCollision(flattenObstacleCoordinates(mapUpdate.newObstacles))
-          .then((collided) => {
-            if (!collided) {
-              return;
-            }
-          })
           .catch((error) => {
             console.error('Failed to check trajectory collision', error);
           });
@@ -152,16 +111,16 @@ export function useSimulationSetup({
           return;
         }
 
-        setCarShape(createCarShape(configSnapshot));
-        setMotionLimits(createMotionLimits(configSnapshot));
+        setters.setCarShape(createCarShape(configSnapshot));
+        setters.setMotionLimits(createMotionLimits(configSnapshot));
 
-        let mapServerNode = mapServerNodeRef.current;
+        let mapServerNode = refs.mapServerNodeRef.current;
         if (mapServerNode === null) {
           mapServerNode = new MapServerNode(checkCollision, {
             backToCenter: configSnapshot.backToCenter,
             scanRadius: configSnapshot.scanRadius,
           });
-          mapServerNodeRef.current = mapServerNode;
+          refs.mapServerNodeRef.current = mapServerNode;
         } else {
           mapServerNode.setConfig({
             backToCenter: configSnapshot.backToCenter,
@@ -173,20 +132,18 @@ export function useSimulationSetup({
         if (!active) {
           return;
         }
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
-          flattenObstacleCoordinates(snapshot.knownObstacles),
-        );
-        setMapSnapshot(snapshot);
+        refs.trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(snapshot.knownObstacles));
+        setters.setMapSnapshot(snapshot);
 
         const initialCar = await mapServerNode.generateRandomInitialState();
         if (!active) {
           return;
         }
 
-        carRef.current = initialCar;
-        timestampRef.current = 0;
-        setCar(initialCar);
-        setTimestamp(0);
+        refs.carRef.current = initialCar;
+        refs.timestampRef.current = 0;
+        setters.setCar(initialCar);
+        setters.setTimestamp(0);
 
         await initSimulation(initialCar, 0);
       } catch (error) {
@@ -204,23 +161,9 @@ export function useSimulationSetup({
       resetComputeWorker('App unmounted');
     };
   }, [
-    localPlanningRef,
-    brakeTrajectoryRef,
-    setLocalTrajectory,
-    setReferencePoints,
+    refs,
+    setters,
     localPlannerUpdateIntervalMs,
-    carRef,
-    timestampRef,
-    setTimestamp,
-    setCar,
-    setCarShape,
-    setMotionLimits,
-    setVelocityHistory,
-    setSteerHistory,
     historyLimit,
-    mapServerNodeRef,
-    mapSnapshotRef,
-    trajectoryCollisionCheckingNodeRef,
-    setMapSnapshot,
   ]);
 }

@@ -1,4 +1,4 @@
-import type { HybridAStarPlanner, MpcReferenceTracker } from '../../wasm-core/pkg/wasm_core';
+import type { CarConfig, HybridAStarPlanner, MpcConfig, MpcReferenceTracker } from '../../wasm-core/pkg/wasm_core';
 
 export type WasmCarState = {
   x: number;
@@ -19,6 +19,11 @@ export type WorkerResponse = { id: number; ok: true; result: unknown } | { id: n
 export type WorkerEvent = {
   type: string;
   payload?: unknown;
+};
+
+export type WasmRuntime = {
+  carConfig: CarConfig;
+  mpcConfig: MpcConfig;
 };
 
 export type PlannerSession = {
@@ -80,7 +85,7 @@ export type LocalPlannerSession = {
   tracker: MpcReferenceTracker | null;
   latestState: { state: WasmCarState; timestamp: number } | null;
   updateIntervalMs: number;
-  updateTimerId: number | null;
+  updateTimerId: ReturnType<typeof setInterval> | null;
   updateInFlight: boolean;
 };
 

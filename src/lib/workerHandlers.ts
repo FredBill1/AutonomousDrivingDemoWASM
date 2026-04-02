@@ -2,7 +2,7 @@ import { HybridAStarPlanner } from '../../wasm-core/pkg/wasm_core';
 
 import { disposeWasmResource } from './wasmResource';
 import { decodeExploredSegments, flattenHybridSeedPoints, snapshotHybridResult } from './workerCodecs';
-import { ensureWasmCore, postEvent, workerState } from './workerHelpers';
+import { postEvent, workerState, ensureWasmRuntime } from './workerRuntime';
 import {
   HYBRID_ASTAR_STEP_BUDGET,
   HYBRID_SEGMENT_BATCH_SIZE,
@@ -18,7 +18,7 @@ export async function solveHybridAStar(payload: {
   maxIterations: number;
   requestToken?: number;
 }) {
-  await ensureWasmCore();
+  await ensureWasmRuntime();
 
   disposeWasmResource(workerState.activePlanner?.planner);
   const planner = payload.startIsTrajectorySeed

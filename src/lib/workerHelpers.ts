@@ -1,38 +1,17 @@
-import initWasm, { CarConfig, CarState } from '../../wasm-core/pkg/wasm_core';
+import { CarState } from '../../wasm-core/pkg/wasm_core';
 
-import { usingWasmResource } from './wasmResource';
 import { runLocalPlannerUpdate } from './workerCodecs';
+import { disposeWasmResource } from './wasmResource';
+import { ensureCarConfig, postEvent, workerState } from './workerRuntime';
 import {
   DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS,
   DEFAULT_PUBLISH_INTERVAL_MS,
   DEFAULT_SIM_DELTA_TIME,
   DEFAULT_SIM_INTERVAL_MS,
   type LocalPlannerControlPoint,
-  type LocalPlannerSession,
-  type PlannerSession,
   type SimulationSession,
   type WasmCarState,
-  type WorkerEvent,
 } from './workerTypes';
-
-export const workerState = {
-  initPromise: null as Promise<CarConfig> | null,
-  nextPlannerToken: 1,
-  activePlanner: null as PlannerSession | null,
-  simulationSession: null as SimulationSession | null,
-  localPlannerSession: null as LocalPlannerSession | null,
-};
-
-export async function ensureWasmCore() {
-  if (!workerState.initPromise) {
-    workerState.initPromise = initWasm().then(() => new CarConfig());
-  }
-  return workerState.initPromise;
-}
-
-export function postEvent(type: string, payload?: unknown) {
-  self.postMessage({ type, payload } satisfies WorkerEvent);
-}
 
 export function emitSimulationState() {
   if (!workerState.simulationSession) return;
@@ -150,16 +129,25 @@ export async function computeStepCarState(
   targetSteer: number,
   dt: number,
 ) {
-  const config = await ensureWasmCore();
-  return usingWasmResource(new CarState(current.x, current.y, current.yaw, current.velocity, current.steer), (state) =>
-    usingWasmResource(state.stepped(config, targetVelocity, targetSteer, dt), (next) => ({
-      x: next.x,
-      y: next.y,
-      yaw: next.yaw,
-      velocity: next.velocity,
-      steer: next.steer,
-    })),
-  );
+  const config = await ensureCarConfig();
+  const state = new CarState(current.x, current.y, current.yaw, current.velocity, current.steer);
+
+  try {
+    const next = state.stepped(config, targetVelocity, targetSteer, dt);
+    try {
+      return {
+        x: next.x,
+        y: next.y,
+        yaw: next.yaw,
+        velocity: next.velocity,
+        steer: next.steer,
+      };
+    } finally {
+      next.free();
+    }
+  } finally {
+    state.free();
+  }
 }
 
 export async function computeOpenLoopStepCarState(current: WasmCarState, dt: number) {
@@ -289,6 +277,12 @@ export function clearLocalPlannerTimer() {
   }
   clearInterval(workerState.localPlannerSession.updateTimerId);
   workerState.localPlannerSession.updateTimerId = null;
+}
+
+export function resetLocalPlannerSession() {
+  clearLocalPlannerTimer();
+  disposeWasmResource(workerState.localPlannerSession?.tracker);
+  workerState.localPlannerSession = null;
 }
 
 export { DEFAULT_PUBLISH_INTERVAL_MS, DEFAULT_SIM_DELTA_TIME, DEFAULT_SIM_INTERVAL_MS };

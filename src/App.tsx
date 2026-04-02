@@ -1,35 +1,25 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-
 import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
 import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
+import { useAppState } from './hooks/useAppState';
+import { useDashboardLayout } from './hooks/useDashboardLayout';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
-import { HISTORY_LIMIT, type CarState, type Mode } from './lib/appModel';
+import { HISTORY_LIMIT } from './lib/appModel';
 import {
-  FALLBACK_MAP_BOUNDING_BOX,
-  STACKED_LAYOUT_GAP_PX,
-  STACKED_LAYOUT_MAX_WIDTH_PX,
-  STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX,
-  STACKED_LAYOUT_MIN_MAP_HEIGHT_PX,
   type CarShape,
-  type DashboardLayout,
-  type DragStartState,
   type GoalUnreachableState,
-  type MapServerSnapshot,
   type MotionLimits,
 } from './lib/appTypes';
-import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
-import { MapServerNode } from './lib/mapServerNode';
-import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
 import {
-  checkTrajectoryCollision,
-  type HybridAStarProgress,
-  type LocalPlannerPathPoint,
-  type LocalPlannerReferencePoint,
-  type LocalPlannerTrajectoryPoint,
-} from './lib/wasmCore';
+  LOCAL_PLANNER_UPDATE_INTERVAL_MS,
+  MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
+  MS_TO_KMH,
+  RAD_TO_DEG,
+  REPLAN_MAX_SPEED_MS,
+} from './lib/constants';
 
 export type { CarShape, GoalUnreachableState, MotionLimits };
 
@@ -52,108 +42,13 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
   );
 }
 
-const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
-const REPLAN_MAX_SPEED_KMH = 5;
-const REPLAN_MAX_SPEED = REPLAN_MAX_SPEED_KMH * KMH_TO_MS;
-const MAX_GLOBAL_PLANNER_DISPLAY_BATCHES = 32;
-
 function App() {
-  const [mode, setMode] = useState<Mode>('goal');
-  const [timestamp, setTimestamp] = useState(0);
-  const [mapSnapshot, setMapSnapshot] = useState<MapServerSnapshot>({
-    boundingBox: FALLBACK_MAP_BOUNDING_BOX,
-    knownObstacles: [],
-    unknownObstacles: [],
-  });
-  const [carShape, setCarShape] = useState<CarShape | null>(null);
-  const [motionLimits, setMotionLimits] = useState<MotionLimits | null>(null);
-  const [car, setCar] = useState<CarState | null>(null);
-  const [goal, setGoal] = useState<CarState | null>(null);
-  const [pressedPose, setPressedPose] = useState<CarState | null>(null);
-  const [goalUnreachable, setGoalUnreachable] = useState<GoalUnreachableState>({
-    visible: false,
-    x: 0,
-    y: 0,
-  });
-  const [globalTrajectory, setGlobalTrajectory] = useState<LocalPlannerTrajectoryPoint[] | null>(null);
-  const [localTrajectory, setLocalTrajectory] = useState<LocalPlannerPathPoint[]>([]);
-  const [referencePoints, setReferencePoints] = useState<LocalPlannerReferencePoint[]>([]);
-  const [globalPlannerSegments, setGlobalPlannerSegments] = useState<HybridAStarProgress['segments'][]>([]);
-  const [velocityHistory, setVelocityHistory] = useState([{ t: 0, value: 0 }]);
-  const [steerHistory, setSteerHistory] = useState([{ t: 0, value: 0 }]);
-  const [dashboardLayout, setDashboardLayout] = useState<DashboardLayout>('split');
-
-  const mapServerNodeRef = useRef<MapServerNode | null>(null);
-  const carRef = useRef<CarState | null>(car);
-  const timestampRef = useRef(timestamp);
-  const goalRef = useRef<CarState | null>(goal);
-  const mapSnapshotRef = useRef(mapSnapshot);
-  const globalTrajectoryRef = useRef<LocalPlannerTrajectoryPoint[] | null>(globalTrajectory);
-  const localPlanningRef = useRef(false);
-  const brakeTrajectoryRef = useRef<LocalPlannerReferencePoint[] | null>(null);
-  const planningRequestRef = useRef(0);
-  const dragStartRef = useRef<DragStartState | null>(null);
-  const trajectoryCollisionCheckingNodeRef = useRef<TrajectoryCollisionCheckingNode | null>(null);
-  const dashboardGridRef = useRef<HTMLElement | null>(null);
-
-  if (trajectoryCollisionCheckingNodeRef.current === null) {
-    trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision);
-  }
-
-  // Sync state to refs for use in async callbacks
-  useEffect(() => {
-    carRef.current = car;
-    timestampRef.current = timestamp;
-    goalRef.current = goal;
-    mapSnapshotRef.current = mapSnapshot;
-    globalTrajectoryRef.current = globalTrajectory;
-  }, [car, timestamp, goal, mapSnapshot, globalTrajectory]);
-
-  useLayoutEffect(() => {
-    const host = dashboardGridRef.current;
-    if (!host) {
-      return;
-    }
-
-    const updateLayout = () => {
-      const width = host.clientWidth;
-      const height = host.clientHeight;
-      const canStack =
-        width <= STACKED_LAYOUT_MAX_WIDTH_PX &&
-        height >= STACKED_LAYOUT_MIN_MAP_HEIGHT_PX + STACKED_LAYOUT_MIN_CHART_ROW_HEIGHT_PX + STACKED_LAYOUT_GAP_PX;
-
-      setDashboardLayout(canStack ? 'stacked' : 'split');
-    };
-
-    updateLayout();
-
-    const resizeObserver = new ResizeObserver(updateLayout);
-    resizeObserver.observe(host);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
+  const { state, refs, setters, dashboardGridRef } = useAppState();
+  const dashboardLayout = useDashboardLayout(dashboardGridRef);
 
   useSimulationSetup({
-    planningRequestRef,
-    mapServerNodeRef,
-    trajectoryCollisionCheckingNodeRef,
-    carRef,
-    timestampRef,
-    localPlanningRef,
-    brakeTrajectoryRef,
-    mapSnapshotRef,
-    setGlobalPlannerSegments,
-    setLocalTrajectory,
-    setReferencePoints,
-    setMapSnapshot,
-    setCar,
-    setTimestamp,
-    setVelocityHistory,
-    setSteerHistory,
-    setCarShape,
-    setMotionLimits,
+    refs,
+    setters,
     historyLimit: HISTORY_LIMIT,
     localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
@@ -168,65 +63,19 @@ function App() {
     handleMapPrimaryDragEnd,
     handleMapPrimaryDragCancel,
   } = usePlanningCallbacks({
-    mode,
-    carRef,
-    goalRef,
-    mapSnapshotRef,
-    globalTrajectoryRef,
-    brakeTrajectoryRef,
-    dragStartRef,
-    planningRequestRef,
-    localPlanningRef,
-    trajectoryCollisionCheckingNodeRef,
-    mapServerNodeRef,
-    setCar,
-    setGoal,
-    setPressedPose,
-    setGoalUnreachable,
-    setGlobalTrajectory,
-    setGlobalPlannerSegments,
-    setLocalTrajectory,
-    setReferencePoints,
-    setMapSnapshot,
-    replanMaxSpeed: REPLAN_MAX_SPEED,
+    mode: state.mode,
+    refs,
+    setters,
+    replanMaxSpeed: REPLAN_MAX_SPEED_MS,
     toHybridAStarStartSeed,
   });
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) {
-        return;
-      }
-
-      switch (event.key.toLowerCase()) {
-        case 'a':
-          event.preventDefault();
-          setMode('goal');
-          break;
-        case 's':
-          event.preventDefault();
-          setMode('pose');
-          break;
-        case 'd':
-          event.preventDefault();
-          void handleBrake();
-          break;
-        case 'f':
-          event.preventDefault();
-          void handleCancel();
-          break;
-        case 'r':
-          event.preventDefault();
-          void handleRestart();
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleBrake, handleCancel, handleRestart]);
+  useKeyboardShortcuts({
+    setMode: setters.setMode,
+    handleBrake,
+    handleCancel,
+    handleRestart,
+  });
 
   return (
     <div className="app-shell">
@@ -234,24 +83,24 @@ function App() {
         <section className="panel panel-map">
           <div className="panel-heading">
             <h2>Visualization</h2>
-            <span className="panel-status">Timestamp: {timestamp.toFixed(1)}s</span>
+            <span className="panel-status">Timestamp: {state.timestamp.toFixed(1)}s</span>
           </div>
 
           <MapViewport
-            bounds={mapSnapshot.boundingBox}
-            mode={mode}
-            carShape={carShape}
-            motionLimits={motionLimits}
-            knownObstacles={mapSnapshot.knownObstacles}
-            unknownObstacles={mapSnapshot.unknownObstacles}
-            car={car}
-            goal={goal}
-            pressedPose={pressedPose}
-            goalUnreachable={goalUnreachable}
-            globalTrajectory={globalTrajectory ? toTrajectoryPath(globalTrajectory) : null}
-            localTrajectory={localTrajectory}
-            referencePoints={referencePoints}
-            globalPlannerSegments={globalPlannerSegments}
+            bounds={state.mapSnapshot.boundingBox}
+            mode={state.mode}
+            carShape={state.carShape}
+            motionLimits={state.motionLimits}
+            knownObstacles={state.mapSnapshot.knownObstacles}
+            unknownObstacles={state.mapSnapshot.unknownObstacles}
+            car={state.car}
+            goal={state.goal}
+            pressedPose={state.pressedPose}
+            goalUnreachable={state.goalUnreachable}
+            globalTrajectory={state.globalTrajectory ? toTrajectoryPath(state.globalTrajectory) : null}
+            localTrajectory={state.localTrajectory}
+            referencePoints={state.referencePoints}
+            globalPlannerSegments={state.globalPlannerSegments}
             onPrimaryDragStart={handleMapPrimaryDragStart}
             onPrimaryDragMove={handleMapPrimaryDragMove}
             onPrimaryDragEnd={handleMapPrimaryDragEnd}
@@ -261,18 +110,18 @@ function App() {
 
         <div className={`side-stack side-stack--${dashboardLayout}`}>
           <ChartPanel
-            heading={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * MS_TO_KMH, 1)}km/h`}
-            points={velocityHistory}
-            minValue={motionLimits?.minSpeedKmh ?? 0}
-            maxValue={motionLimits?.maxSpeedKmh ?? 0}
+            heading={`Velocity: ${formatFixedWithoutNegativeZero((state.car?.velocity ?? 0) * MS_TO_KMH, 1)}km/h`}
+            points={state.velocityHistory}
+            minValue={state.motionLimits?.minSpeedKmh ?? 0}
+            maxValue={state.motionLimits?.maxSpeedKmh ?? 0}
             lineColor={0x9fe870}
           />
 
           <ChartPanel
-            heading={`Steer: ${formatFixedWithoutNegativeZero((car?.steer ?? 0) * RAD_TO_DEG, 1)}°`}
-            points={steerHistory}
-            minValue={-(motionLimits?.maxSteerDeg ?? 0)}
-            maxValue={motionLimits?.maxSteerDeg ?? 0}
+            heading={`Steer: ${formatFixedWithoutNegativeZero((state.car?.steer ?? 0) * RAD_TO_DEG, 1)}°`}
+            points={state.steerHistory}
+            minValue={-(state.motionLimits?.maxSteerDeg ?? 0)}
+            maxValue={state.motionLimits?.maxSteerDeg ?? 0}
             lineColor={0x57d8ff}
           />
         </div>
@@ -280,10 +129,10 @@ function App() {
 
       <section className="control-ribbon">
         <div className="segmented-control">
-          <button className={mode === 'goal' ? 'active' : ''} onClick={() => setMode('goal')}>
+          <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => setters.setMode('goal')}>
             Set Goal(A)
           </button>
-          <button className={mode === 'pose' ? 'active' : ''} onClick={() => setMode('pose')}>
+          <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => setters.setMode('pose')}>
             Set Pose(S)
           </button>
         </div>
