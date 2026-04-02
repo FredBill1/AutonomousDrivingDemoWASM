@@ -48,12 +48,7 @@ struct MpcProblem {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn build_mpc_problem(
-    xref: &[ModelState],
-    xbar: &[ModelState],
-    last_steer: f64,
-    config: &MpcConfig,
-) -> MpcProblem {
+fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, config: &MpcConfig) -> MpcProblem {
     let dt = config.dt;
     let horizon = config.horizon_length as usize;
     let nvars = NX * (horizon + 1) + NU * horizon;

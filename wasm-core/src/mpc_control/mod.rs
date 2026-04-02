@@ -26,7 +26,10 @@ mod tests {
     }
 
     fn config_with_dt(dt: f64) -> MpcConfig {
-        MpcConfig { dt, ..MpcConfig::default() }
+        MpcConfig {
+            dt,
+            ..MpcConfig::default()
+        }
     }
 
     #[test]
@@ -92,8 +95,8 @@ mod tests {
         ];
 
         let config = config_with_dt(0.1);
-        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 2.5, -std::f64::consts::PI + 0.01, 0.0)
-            .expect("preview");
+        let result =
+            mpc_control_preview(&config, xref, 0.0, 0.0, 2.5, -std::f64::consts::PI + 0.01, 0.0).expect("preview");
         let predicted = result.predicted_states();
         let initial_yaw = predicted[3];
 
@@ -107,8 +110,8 @@ mod tests {
             0.0, 0.0, 0.0,
         ];
         let config = config_with_dt(0.07);
-        let straight = mpc_control_preview(&config, straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0)
-            .expect("straight fixture preview");
+        let straight =
+            mpc_control_preview(&config, straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0).expect("straight fixture preview");
 
         let expected_controls = vec![
             14.999998614949373,
@@ -160,8 +163,8 @@ mod tests {
             0.41, 2.45, 2.2, 0.0, 0.46,
         ];
         let config = config_with_dt(0.07);
-        let turning = mpc_control_preview(&config, turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08)
-            .expect("turning fixture preview");
+        let turning =
+            mpc_control_preview(&config, turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08).expect("turning fixture preview");
 
         let expected_controls = vec![
             8.750088, 0.08, 5.475858, 0.519823, 2.239496, 0.698132, -0.308206, 0.698132, -1.910972, 0.698131,

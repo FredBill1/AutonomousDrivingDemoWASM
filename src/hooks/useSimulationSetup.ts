@@ -94,11 +94,9 @@ export function useSimulationSetup({
         return;
       }
 
-      void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch(
-        (error) => {
-          console.error('Failed to update local planner state', error);
-        },
-      );
+      void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch((error) => {
+        console.error('Failed to update local planner state', error);
+      });
 
       carRef.current = event.state;
       timestampRef.current = event.timestamp;

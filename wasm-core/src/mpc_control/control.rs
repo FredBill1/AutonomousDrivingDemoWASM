@@ -66,11 +66,7 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
     Ok(states)
 }
 
-pub(crate) fn predict_motion(
-    initial: RollingCarState,
-    controls: &[Control],
-    config: &MpcConfig,
-) -> Vec<ModelState> {
+pub(crate) fn predict_motion(initial: RollingCarState, controls: &[Control], config: &MpcConfig) -> Vec<ModelState> {
     let dt = config.dt;
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];

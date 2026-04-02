@@ -1,4 +1,4 @@
-import { HybridAStarPlanner, HybridAStarConfig } from '../../wasm-core/pkg/wasm_core';
+import { HybridAStarConfig, HybridAStarPlanner } from '../../wasm-core/pkg/wasm_core';
 
 import { decodeExploredSegments, flattenHybridSeedPoints, snapshotHybridResult } from './workerCodecs';
 import { ensureWasmCore, postEvent, workerState } from './workerHelpers';

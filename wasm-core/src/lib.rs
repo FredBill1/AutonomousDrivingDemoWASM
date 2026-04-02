@@ -8,8 +8,8 @@ use wasm_bindgen::prelude::*;
 
 pub use car::{CarConfig, CarState, path_check_collision, trajectory_check_collision};
 pub use hybrid_astar::{HybridAStarConfig, HybridAStarPlanner, HybridAStarResult};
-pub use mpc_control::{MpcConfig, MpcControlResult};
 pub use mpc_control::mpc_prep::{MpcReferenceResult, MpcReferenceTracker};
+pub use mpc_control::{MpcConfig, MpcControlResult};
 pub use rsplan::{ReedsSheppPath, ReedsSheppSegment, SegmentKind};
 
 #[wasm_bindgen(start)]
