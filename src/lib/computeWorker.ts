@@ -184,7 +184,7 @@ const handlers = {
     session.tracker = usingWasmPair(new MpcConfig(), new CarConfig(), (mpcConfig, carConfig) => {
       disposeWasmResource(session.tracker);
       return new MpcReferenceTracker(
-        Float64Array.from(flattenTrajectoryPoints(payload.trajectory)),
+        Float64Array.from(flattenTrajectoryPoints(payload.trajectory!)),
         mpcConfig,
         carConfig,
       );
