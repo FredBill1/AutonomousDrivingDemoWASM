@@ -2,7 +2,6 @@ mod car;
 mod geometry;
 mod hybrid_astar;
 mod mpc_control;
-mod mpc_prep;
 mod rsplan;
 
 use wasm_bindgen::prelude::*;
@@ -10,7 +9,7 @@ use wasm_bindgen::prelude::*;
 pub use car::{CarConfig, CarState, path_check_collision, trajectory_check_collision};
 pub use hybrid_astar::{HybridAStarPlanner, HybridAStarResult};
 pub use mpc_control::MpcControlResult;
-pub use mpc_prep::{MpcReferenceResult, MpcReferenceTracker};
+pub use mpc_control::mpc_prep::{MpcReferenceResult, MpcReferenceTracker};
 pub use rsplan::{ReedsSheppPath, ReedsSheppSegment, SegmentKind};
 
 #[wasm_bindgen(start)]

@@ -1,6 +1,7 @@
 mod builder;
 mod control;
 mod matrix_utils;
+pub mod mpc_prep;
 mod types;
 
 pub(crate) use types::HORIZON_LENGTH;
