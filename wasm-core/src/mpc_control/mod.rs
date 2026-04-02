@@ -10,6 +10,8 @@ pub use types::MpcControlResult;
 
 #[cfg(test)]
 mod tests {
+    use crate::car::CarConfig;
+
     use super::builder::linear_mpc_control;
     use super::config::MpcConfig;
     use super::control::{mpc_control_preview, predict_motion};
@@ -39,7 +41,8 @@ mod tests {
             0.0, 0.0, 0.0,
         ];
         let config = config_with_dt(0.07);
-        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 5.0, 0.0, 0.0).expect("preview");
+        let car_config = CarConfig::default();
+        let result = mpc_control_preview(&config, &car_config, xref, 0.0, 0.0, 5.0, 0.0, 0.0).expect("preview");
         assert_eq!(result.controls().len(), 10);
         assert_eq!(result.predicted_states().len(), 24);
         assert!(result.iterations() >= 1);
@@ -53,15 +56,17 @@ mod tests {
         ];
         let last_steer = 0.12;
         let config = config_with_dt(0.1);
+        let car_config = CarConfig::default();
 
-        let result = mpc_control_preview(&config, xref, 0.0, 0.0, 3.0, 0.02, last_steer).expect("preview");
+        let result =
+            mpc_control_preview(&config, &car_config, xref, 0.0, 0.0, 3.0, 0.02, last_steer).expect("preview");
         let controls = result.controls();
 
         assert!((controls[1] - last_steer).abs() < 1e-6);
 
         for pair in controls.chunks_exact(2) {
-            assert!(pair[0].abs() <= config.max_accel + 1e-6);
-            assert!(pair[1].abs() <= config.max_steer + 1e-6);
+            assert!(pair[0].abs() <= car_config.max_accel() + 1e-6);
+            assert!(pair[1].abs() <= car_config.max_steer() + 1e-6);
         }
     }
 
@@ -95,8 +100,18 @@ mod tests {
         ];
 
         let config = config_with_dt(0.1);
-        let result =
-            mpc_control_preview(&config, xref, 0.0, 0.0, 2.5, -std::f64::consts::PI + 0.01, 0.0).expect("preview");
+        let car_config = CarConfig::default();
+        let result = mpc_control_preview(
+            &config,
+            &car_config,
+            xref,
+            0.0,
+            0.0,
+            2.5,
+            -std::f64::consts::PI + 0.01,
+            0.0,
+        )
+        .expect("preview");
         let predicted = result.predicted_states();
         let initial_yaw = predicted[3];
 
@@ -110,8 +125,9 @@ mod tests {
             0.0, 0.0, 0.0,
         ];
         let config = config_with_dt(0.07);
-        let straight =
-            mpc_control_preview(&config, straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0).expect("straight fixture preview");
+        let car_config = CarConfig::default();
+        let straight = mpc_control_preview(&config, &car_config, straight_xref, 0.0, 0.0, 3.0, 0.0, 0.0)
+            .expect("straight fixture preview");
 
         let expected_controls = vec![
             14.999998614949373,
@@ -163,8 +179,9 @@ mod tests {
             0.41, 2.45, 2.2, 0.0, 0.46,
         ];
         let config = config_with_dt(0.07);
-        let turning =
-            mpc_control_preview(&config, turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08).expect("turning fixture preview");
+        let car_config = CarConfig::default();
+        let turning = mpc_control_preview(&config, &car_config, turning_xref, 0.1, -0.05, 2.2, 0.12, 0.08)
+            .expect("turning fixture preview");
 
         let expected_controls = vec![
             8.750088, 0.08, 5.475858, 0.519823, 2.239496, 0.698132, -0.308206, 0.698132, -1.910972, 0.698131,
@@ -189,7 +206,8 @@ mod tests {
             [4.0, 0.0, 4.0, 0.0],
             [5.0, 0.0, 0.0, 0.0],
         ];
-        let config = MpcConfig::default();
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
         let xbar = predict_motion(
             RollingCarState {
                 x: 0.0,
@@ -199,9 +217,11 @@ mod tests {
                 steer: 0.0,
             },
             &[[0.0, 0.0]; 5],
-            &config,
+            &mpc_config,
+            &car_config,
         );
-        let (controls, _) = linear_mpc_control(&xref, &xbar, 0.0, &config).expect("solver result");
+        let (controls, _) =
+            linear_mpc_control(&xref, &xbar, 0.0, &mpc_config, &car_config).expect("solver result");
 
         assert_eq!(controls.len(), 5);
         assert!(controls.iter().all(|pair| pair[0].is_finite() && pair[1].is_finite()));

@@ -4,15 +4,17 @@ use super::matrix_utils::{
     get_linear_model_matrix, push_difference_bound, push_entry, push_symmetric_bound, state_index, state_weight,
 };
 use super::types::{Control, ModelState, NU, NX};
+use crate::car::CarConfig;
 use clarabel::{algebra::*, solver::*};
 
 pub(crate) fn linear_mpc_control(
     xref: &[ModelState],
     xbar: &[ModelState],
     last_steer: f64,
-    config: &MpcConfig,
+    mpc_config: &MpcConfig,
+    car_config: &CarConfig,
 ) -> Option<(Vec<Control>, Vec<ModelState>)> {
-    let problem = build_mpc_problem(xref, xbar, last_steer, config);
+    let problem = build_mpc_problem(xref, xbar, last_steer, mpc_config, car_config);
 
     let settings = DefaultSettings::<f64> {
         verbose: false,
@@ -32,7 +34,7 @@ pub(crate) fn linear_mpc_control(
         return None;
     }
 
-    let horizon = config.horizon_length as usize;
+    let horizon = mpc_config.horizon_length as usize;
     Some((
         decode_controls(&solver.solution.x, horizon),
         decode_states(&solver.solution.x, horizon),
@@ -48,9 +50,15 @@ struct MpcProblem {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, config: &MpcConfig) -> MpcProblem {
-    let dt = config.dt;
-    let horizon = config.horizon_length as usize;
+fn build_mpc_problem(
+    xref: &[ModelState],
+    xbar: &[ModelState],
+    last_steer: f64,
+    mpc_config: &MpcConfig,
+    car_config: &CarConfig,
+) -> MpcProblem {
+    let dt = mpc_config.dt;
+    let horizon = mpc_config.horizon_length as usize;
     let nvars = NX * (horizon + 1) + NU * horizon;
     let mut q = vec![0.0; nvars];
     let mut p_rows = Vec::new();
@@ -64,7 +72,7 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
             &mut p_vals,
             &mut q,
             control_index(t, 0, horizon),
-            config.r_accel,
+            mpc_config.r_accel,
             0.0,
         );
         add_quadratic_term(
@@ -73,7 +81,7 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
             &mut p_vals,
             &mut q,
             control_index(t, 1, horizon),
-            config.r_steer,
+            mpc_config.r_steer,
             0.0,
         );
     }
@@ -86,7 +94,7 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
                 &mut p_vals,
                 &mut q,
                 state_index(t, k),
-                state_weight(k, config),
+                state_weight(k, mpc_config),
                 xref[t][k],
             );
         }
@@ -99,13 +107,13 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
             &mut p_vals,
             &mut q,
             state_index(horizon, k),
-            final_state_weight(k, config),
+            final_state_weight(k, mpc_config),
             xref[horizon][k],
         );
     }
 
-    let accel_diff_weight = config.rd_accel / (dt * dt);
-    let steer_diff_weight = config.rd_steer / (dt * dt);
+    let accel_diff_weight = mpc_config.rd_accel / (dt * dt);
+    let steer_diff_weight = mpc_config.rd_steer / (dt * dt);
     for t in 1..horizon {
         add_difference_penalty(
             &mut p_rows,
@@ -138,7 +146,8 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
     let mut row = 0;
 
     for t in 0..horizon {
-        let (a_t, b_t, c_t) = get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, config.wheel_base, dt);
+        let (a_t, b_t, c_t) =
+            get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
         for state_dim in 0..NX {
             push_entry(
                 &mut a_rows,
@@ -205,11 +214,11 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
 
     for t in 0..=horizon {
         push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, state_index(t, 2), 1.0);
-        b.push(config.max_speed);
+        b.push(car_config.max_speed());
         row += 1;
 
         push_entry(&mut a_rows, &mut a_cols, &mut a_vals, row, state_index(t, 2), -1.0);
-        b.push(-config.min_speed);
+        b.push(-car_config.min_speed());
         row += 1;
     }
 
@@ -221,7 +230,7 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
             &mut b,
             &mut row,
             control_index(t, 0, horizon),
-            config.max_accel,
+            car_config.max_accel(),
         );
         push_symmetric_bound(
             &mut a_rows,
@@ -230,11 +239,11 @@ fn build_mpc_problem(xref: &[ModelState], xbar: &[ModelState], last_steer: f64, 
             &mut b,
             &mut row,
             control_index(t, 1, horizon),
-            config.max_steer,
+            car_config.max_steer(),
         );
     }
 
-    let steer_delta_limit = config.max_steer_speed * dt;
+    let steer_delta_limit = car_config.max_steer_speed() * dt;
     for t in 1..horizon {
         push_difference_bound(
             &mut a_rows,

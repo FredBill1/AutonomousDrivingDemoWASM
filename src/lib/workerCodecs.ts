@@ -98,20 +98,23 @@ export function runLocalPlannerUpdate(
   state: WasmCarState,
   timestamp: number,
 ): Promise<LocalPlannerUpdateResult | null> {
-  const config = new MpcConfig();
-  const dt = config.dt;
+  const mpcConfig = new MpcConfig();
+  const carConfig = new CarConfig();
+  const dt = mpcConfig.dt;
   const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
   const referenceStates = referenceResult.reference_states;
   const modelReferenceStates = referenceResult.model_reference_states;
   if (referenceStates.length === 0) {
     referenceResult.free();
-    config.free();
+    mpcConfig.free();
+    carConfig.free();
     return Promise.resolve(null);
   }
 
   const brakeTrajectory = referenceResult.brake_trajectory;
   const controlResult = mpc_control_preview(
-    config,
+    mpcConfig,
+    carConfig,
     modelReferenceStates,
     state.x,
     state.y,
@@ -119,7 +122,8 @@ export function runLocalPlannerUpdate(
     state.yaw,
     state.steer,
   );
-  config.free();
+  mpcConfig.free();
+  carConfig.free();
   try {
     return Promise.resolve({
       controlSequence: decodeControlPairs(controlResult.controls, timestamp, dt, state.velocity),

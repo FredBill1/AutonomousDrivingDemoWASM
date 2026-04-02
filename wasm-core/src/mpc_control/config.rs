@@ -1,4 +1,3 @@
-use crate::car::CarConfig;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -16,14 +15,12 @@ pub struct MpcConfig {
     pub(crate) q_v: f64,
     pub(crate) q_yaw: f64,
     pub(crate) qf_scale: f64,
-    pub(crate) max_speed: f64,
-    pub(crate) min_speed: f64,
-    pub(crate) max_accel: f64,
-    pub(crate) max_steer: f64,
-    pub(crate) max_steer_speed: f64,
-    pub(crate) wheel_base: f64,
     /// MPC time step in seconds (dt used for both linearisation and integration).
     pub(crate) dt: f64,
+    pub(crate) desired_max_accel_ratio: f64,
+    pub(crate) min_horizon_distance: f64,
+    pub(crate) direction_change_dist: f64,
+    pub(crate) motion_resolution: f64,
 }
 
 #[wasm_bindgen]
@@ -94,44 +91,33 @@ impl MpcConfig {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn max_speed(&self) -> f64 {
-        self.max_speed
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn min_speed(&self) -> f64 {
-        self.min_speed
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn max_accel(&self) -> f64 {
-        self.max_accel
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn max_steer(&self) -> f64 {
-        self.max_steer
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn max_steer_speed(&self) -> f64 {
-        self.max_steer_speed
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn wheel_base(&self) -> f64 {
-        self.wheel_base
-    }
-
-    #[wasm_bindgen(getter)]
     pub fn dt(&self) -> f64 {
         self.dt
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn desired_max_accel_ratio(&self) -> f64 {
+        self.desired_max_accel_ratio
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn min_horizon_distance(&self) -> f64 {
+        self.min_horizon_distance
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn direction_change_dist(&self) -> f64 {
+        self.direction_change_dist
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn motion_resolution(&self) -> f64 {
+        self.motion_resolution
     }
 }
 
 impl Default for MpcConfig {
     fn default() -> Self {
-        let car = CarConfig::default();
         Self {
             horizon_length: 5,
             max_iter: 5,
@@ -145,13 +131,11 @@ impl Default for MpcConfig {
             q_v: 0.05,
             q_yaw: 1.1,
             qf_scale: 2.0,
-            max_speed: car.max_speed(),
-            min_speed: car.min_speed(),
-            max_accel: car.max_accel(),
-            max_steer: car.max_steer(),
-            max_steer_speed: car.max_steer_speed(),
-            wheel_base: car.wheel_base(),
             dt: 0.07,
+            desired_max_accel_ratio: 0.7,
+            min_horizon_distance: 0.3,
+            direction_change_dist: 0.1,
+            motion_resolution: 0.5,
         }
     }
 }

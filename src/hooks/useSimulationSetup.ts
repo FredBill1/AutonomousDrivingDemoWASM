@@ -1,11 +1,15 @@
 import type React from 'react';
 import { useEffect } from 'react';
 
+import type { CarShape, MotionLimits, MapServerSnapshot } from '../lib/appTypes';
 import type { CarState } from '../lib/appModel';
-import type { MapServerSnapshot } from '../lib/appTypes';
-import { flattenObstacleCoordinates, type MapServerNode } from '../lib/mapServerNode';
+import { createCarShape, createMotionLimits } from '../lib/appHelpers';
+import { MapServerNode, flattenObstacleCoordinates } from '../lib/mapServerNode';
 import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import {
+  checkCollision,
+  ensureWasmCore,
+  getCarConfigSnapshot,
   initSimulation,
   resetComputeWorker,
   setHybridAStarProgressListener,
@@ -35,6 +39,8 @@ type UseSimulationSetupParams = {
   setTimestamp: React.Dispatch<React.SetStateAction<number>>;
   setVelocityHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
   setSteerHistory: React.Dispatch<React.SetStateAction<{ t: number; value: number }[]>>;
+  setCarShape: React.Dispatch<React.SetStateAction<CarShape | null>>;
+  setMotionLimits: React.Dispatch<React.SetStateAction<MotionLimits | null>>;
   historyLimit: number;
   localPlannerUpdateIntervalMs: number;
   maxGlobalPlannerDisplayBatches: number;
@@ -57,6 +63,8 @@ export function useSimulationSetup({
   setTimestamp,
   setVelocityHistory,
   setSteerHistory,
+  setCarShape,
+  setMotionLimits,
   historyLimit,
   localPlannerUpdateIntervalMs,
   maxGlobalPlannerDisplayBatches,
@@ -134,9 +142,31 @@ export function useSimulationSetup({
 
     void (async () => {
       try {
-        const mapServerNode = mapServerNodeRef.current;
-        if (!mapServerNode) {
+        await ensureWasmCore();
+        if (!active) {
           return;
+        }
+
+        const configSnapshot = await getCarConfigSnapshot();
+        if (!active) {
+          return;
+        }
+
+        setCarShape(createCarShape(configSnapshot));
+        setMotionLimits(createMotionLimits(configSnapshot));
+
+        let mapServerNode = mapServerNodeRef.current;
+        if (mapServerNode === null) {
+          mapServerNode = new MapServerNode(checkCollision, {
+            backToCenter: configSnapshot.backToCenter,
+            scanRadius: configSnapshot.scanRadius,
+          });
+          (mapServerNodeRef as React.MutableRefObject<MapServerNode | null>).current = mapServerNode;
+        } else {
+          mapServerNode.setConfig({
+            backToCenter: configSnapshot.backToCenter,
+            scanRadius: configSnapshot.scanRadius,
+          });
         }
 
         const snapshot = mapServerNode.init();
@@ -181,6 +211,8 @@ export function useSimulationSetup({
     timestampRef,
     setTimestamp,
     setCar,
+    setCarShape,
+    setMotionLimits,
     setVelocityHistory,
     setSteerHistory,
     historyLimit,

@@ -6,8 +6,6 @@ import { MapViewport } from './components/MapViewport';
 import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import {
-  createCarShape,
-  createMotionLimits,
   formatFixedWithoutNegativeZero,
   toHybridAStarStartSeed,
   toTrajectoryPath,
@@ -29,10 +27,7 @@ import {
 import { MapServerNode } from './lib/mapServerNode';
 import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
 import {
-  checkCollision,
   checkTrajectoryCollision,
-  ensureWasmCore,
-  getCarConfigSnapshot,
   type HybridAStarProgress,
   type LocalPlannerPathPoint,
   type LocalPlannerReferencePoint,
@@ -153,42 +148,6 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-
-    void ensureWasmCore()
-      .then(() => getCarConfigSnapshot())
-      .then((snapshot) => {
-        if (!active) {
-          return;
-        }
-
-        const nextCarShape = createCarShape(snapshot);
-        const nextMotionLimits = createMotionLimits(snapshot);
-        setCarShape(nextCarShape);
-        setMotionLimits(nextMotionLimits);
-
-        if (mapServerNodeRef.current === null) {
-          mapServerNodeRef.current = new MapServerNode(checkCollision, {
-            backToCenter: snapshot.backToCenter,
-            scanRadius: snapshot.scanRadius,
-          });
-        } else {
-          mapServerNodeRef.current.setConfig({
-            backToCenter: snapshot.backToCenter,
-            scanRadius: snapshot.scanRadius,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to initialize WASM core', error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   useSimulationSetup({
     planningRequestRef,
     mapServerNodeRef,
@@ -206,6 +165,8 @@ function App() {
     setTimestamp,
     setVelocityHistory,
     setSteerHistory,
+    setCarShape,
+    setMotionLimits,
     historyLimit: HISTORY_LIMIT,
     localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,

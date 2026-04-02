@@ -1,10 +1,7 @@
-mod config;
 mod tracker;
 mod trajectory;
 mod types;
 
-#[cfg(test)]
-pub(crate) use config::MpcPrepConfig;
 pub use tracker::MpcReferenceTracker;
 pub use types::MpcReferenceResult;
 
@@ -15,15 +12,22 @@ pub(crate) use trajectory::{process_reference_trajectory, smooth_yaws};
 
 #[cfg(test)]
 mod tests {
-    use super::{MpcPrepConfig, MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws};
+    use crate::car::CarConfig;
+    use crate::mpc_control::MpcConfig;
+
+    use super::{MpcReferenceTracker, mpc_prepare_reference, process_reference_trajectory, smooth_yaws};
 
     #[test]
     fn prepares_reference_and_brake_preview() {
         let trajectory = vec![
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0,
         ];
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
 
-        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
+        let result =
+            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
+                .expect("mpc prep");
         assert_eq!(result.model_reference_states().len(), 24);
         assert_eq!(result.reference_states().len(), 24);
         assert!(!result.brake_trajectory().is_empty());
@@ -34,8 +38,10 @@ mod tests {
         let trajectory = vec![
             0.0, 0.0, 0.0, 1.0, 4.0, 0.0, 0.0, 1.0, 4.0, -2.0, -1.57, -1.0, 4.0, -5.0, -1.57, -1.0,
         ];
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
 
-        let tracker = MpcReferenceTracker::new(trajectory).expect("tracker");
+        let tracker = MpcReferenceTracker::new(trajectory, &mpc_config, &car_config).expect("tracker");
         assert!(!tracker.prepared.direction_change_us.is_empty());
     }
 
@@ -55,8 +61,10 @@ mod tests {
         let trajectory = vec![
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0,
         ];
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
 
-        let mut tracker = MpcReferenceTracker::new(trajectory).expect("tracker");
+        let mut tracker = MpcReferenceTracker::new(trajectory, &mpc_config, &car_config).expect("tracker");
         let _ = tracker.update(8.0, 0.0, 0.0, 4.0, 0.07);
         let progressed_u = tracker.current_progress();
         let _ = tracker.update(1.0, 0.0, 0.0, 4.0, 0.07);
@@ -70,8 +78,10 @@ mod tests {
         let trajectory = vec![
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0, 20.0, 0.0, 0.0, 1.0,
         ];
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
 
-        let mut tracker = MpcReferenceTracker::new(trajectory).expect("tracker");
+        let mut tracker = MpcReferenceTracker::new(trajectory, &mpc_config, &car_config).expect("tracker");
         let _ = tracker.update(2.0, 0.0, 0.0, 6.0, 0.07);
         tracker.brake();
         let first = tracker.update(2.5, 0.0, 0.0, 6.0, 0.07);
@@ -85,10 +95,12 @@ mod tests {
 
     #[test]
     fn rejects_zero_direction_input_like_python_assertion() {
-        let config = MpcPrepConfig::default();
-        let error = process_reference_trajectory(vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]], &config)
-            .err()
-            .expect("zero direction must fail");
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
+        let error =
+            process_reference_trajectory(vec![[0.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.0]], &mpc_config, &car_config)
+                .err()
+                .expect("zero direction must fail");
 
         assert_eq!(
             error,
@@ -98,7 +110,8 @@ mod tests {
 
     #[test]
     fn removes_only_exact_adjacent_duplicate_xy_points() {
-        let config = MpcPrepConfig::default();
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
         let prepared = process_reference_trajectory(
             vec![
                 [0.0, 0.0, 0.1, 1.0],
@@ -106,7 +119,8 @@ mod tests {
                 [1e-12, 0.0, 0.3, 1.0],
                 [1.0, 0.0, 0.4, 1.0],
             ],
-            &config,
+            &mpc_config,
+            &car_config,
         )
         .expect("prepared trajectory");
 
@@ -120,8 +134,12 @@ mod tests {
         let trajectory = vec![
             0.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0, 1.0, 15.0, 0.0, 0.0, 1.0,
         ];
+        let mpc_config = MpcConfig::default();
+        let car_config = CarConfig::default();
 
-        let result = mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false).expect("mpc prep");
+        let result =
+            mpc_prepare_reference(trajectory, 1.0, 0.0, 0.0, 6.0, 0.07, false, &mpc_config, &car_config)
+                .expect("mpc prep");
         let model = result.model_reference_states();
         let public = result.reference_states();
         let brake = result.brake_trajectory();
