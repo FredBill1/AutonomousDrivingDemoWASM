@@ -16,6 +16,7 @@ const checkScripts = [
     'check:format:rs',
     'check:lengths',
     'check:duplication:ts',
+    'check:duplication:tsx',
     'check:duplication:rs',
 ]
 
