@@ -13,6 +13,7 @@ import type {
   TrackingPlan,
   WasmCarState,
 } from './workerTypes';
+import { MPC_DT } from './workerTypes';
 
 export function buildTrajectoryCollisionInput(plan: TrackingPlan | null) {
   if (!plan || plan.path.length === 0) {
@@ -100,7 +101,7 @@ export function runLocalPlannerUpdate(
 ): Promise<LocalPlannerUpdateResult | null> {
   const mpcConfig = new MpcConfig();
   const carConfig = new CarConfig();
-  const dt = mpcConfig.dt;
+  const dt = MPC_DT;
   const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
   const referenceStates = referenceResult.reference_states;
   const modelReferenceStates = referenceResult.model_reference_states;
@@ -115,6 +116,7 @@ export function runLocalPlannerUpdate(
   const controlResult = mpc_control_preview(
     mpcConfig,
     carConfig,
+    dt,
     modelReferenceStates,
     state.x,
     state.y,

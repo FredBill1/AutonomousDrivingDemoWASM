@@ -14,14 +14,14 @@ import type {
 
 export type UsePlanningCallbacksParams = {
   mode: Mode;
-  carRef: React.MutableRefObject<CarState | null>;
-  goalRef: React.MutableRefObject<CarState | null>;
-  mapSnapshotRef: React.MutableRefObject<MapServerSnapshot>;
-  globalTrajectoryRef: React.MutableRefObject<LocalPlannerTrajectoryPoint[] | null>;
-  brakeTrajectoryRef: React.MutableRefObject<LocalPlannerReferencePoint[] | null>;
-  dragStartRef: React.MutableRefObject<DragStartState | null>;
-  planningRequestRef: React.MutableRefObject<number>;
-  localPlanningRef: React.MutableRefObject<boolean>;
+  carRef: React.RefObject<CarState | null>;
+  goalRef: React.RefObject<CarState | null>;
+  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
+  globalTrajectoryRef: React.RefObject<LocalPlannerTrajectoryPoint[] | null>;
+  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
+  dragStartRef: React.RefObject<DragStartState | null>;
+  planningRequestRef: React.RefObject<number>;
+  localPlanningRef: React.RefObject<boolean>;
   trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
   mapServerNodeRef: React.RefObject<MapServerNode | null>;
   setCar: React.Dispatch<React.SetStateAction<CarState | null>>;

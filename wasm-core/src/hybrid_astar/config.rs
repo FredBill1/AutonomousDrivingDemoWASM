@@ -15,8 +15,6 @@ pub struct HybridAStarConfig {
     pub(crate) steer_cost: f64,
     pub(crate) h_dist_cost: f64,
     pub(crate) h_yaw_cost: f64,
-    /// Maximum number of hybrid A* search steps per call to [`HybridAStarPlanner::step`].
-    pub(crate) step_budget: u32,
 }
 
 #[wasm_bindgen]
@@ -85,11 +83,6 @@ impl HybridAStarConfig {
     pub fn h_yaw_cost(&self) -> f64 {
         self.h_yaw_cost
     }
-
-    #[wasm_bindgen(getter)]
-    pub fn step_budget(&self) -> u32 {
-        self.step_budget
-    }
 }
 
 impl Default for HybridAStarConfig {
@@ -108,7 +101,6 @@ impl Default for HybridAStarConfig {
             steer_cost: 1.5,
             h_dist_cost: 2.0,
             h_yaw_cost: 3.0 / 45.0_f64.to_radians(),
-            step_budget: 96,
         }
     }
 }

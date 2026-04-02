@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::*;
 pub fn mpc_control_preview(
     mpc_config: &MpcConfig,
     car_config: &CarConfig,
+    dt: f64,
     flat_reference_states: Vec<f64>,
     state_x: f64,
     state_y: f64,
@@ -36,10 +37,10 @@ pub fn mpc_control_preview(
 
     for iteration in 0..mpc_config.max_iter as usize {
         iterations = iteration + 1;
-        let xbar = predict_motion(initial_state, &controls, mpc_config, car_config);
+        let xbar = predict_motion(initial_state, &controls, dt, car_config);
         let previous_controls = controls.clone();
         let Some((updated_controls, updated_states)) =
-            linear_mpc_control(&xref, &xbar, last_steer, mpc_config, car_config)
+            linear_mpc_control(&xref, &xbar, last_steer, dt, mpc_config, car_config)
         else {
             break;
         };
@@ -73,15 +74,14 @@ fn decode_reference(flat: &[f64]) -> Result<Vec<ModelState>, JsValue> {
 pub(crate) fn predict_motion(
     initial: RollingCarState,
     controls: &[Control],
-    mpc_config: &MpcConfig,
+    dt: f64,
     car_config: &CarConfig,
 ) -> Vec<ModelState> {
-    let dt = mpc_config.dt;
     let mut state = initial;
     let mut out = vec![[state.x, state.y, state.velocity, state.yaw]];
     for control in controls {
         let target_velocity = state.velocity + control[0] * dt;
-        state = step_state(state, target_velocity, control[1], mpc_config, car_config);
+        state = step_state(state, target_velocity, control[1], dt, car_config);
         out.push([state.x, state.y, state.velocity, state.yaw]);
     }
     out
@@ -91,10 +91,9 @@ fn step_state(
     mut state: RollingCarState,
     target_velocity: f64,
     target_steer: f64,
-    mpc_config: &MpcConfig,
+    dt: f64,
     car_config: &CarConfig,
 ) -> RollingCarState {
-    let dt = mpc_config.dt;
     state.x += state.velocity * state.yaw.cos() * dt;
     state.y += state.velocity * state.yaw.sin() * dt;
     state.yaw += state.velocity / car_config.wheel_base() * state.steer.tan() * dt;

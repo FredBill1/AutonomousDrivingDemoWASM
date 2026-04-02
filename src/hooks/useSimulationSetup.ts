@@ -24,13 +24,13 @@ import {
 
 type UseSimulationSetupParams = {
   planningRequestRef: React.RefObject<number>;
-  mapServerNodeRef: React.MutableRefObject<MapServerNode | null>;
+  mapServerNodeRef: React.RefObject<MapServerNode | null>;
   trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-  carRef: React.MutableRefObject<CarState | null>;
-  timestampRef: React.MutableRefObject<number>;
+  carRef: React.RefObject<CarState | null>;
+  timestampRef: React.RefObject<number>;
   localPlanningRef: React.RefObject<boolean>;
-  brakeTrajectoryRef: React.MutableRefObject<LocalPlannerReferencePoint[] | null>;
-  mapSnapshotRef: React.MutableRefObject<MapServerSnapshot>;
+  brakeTrajectoryRef: React.RefObject<LocalPlannerReferencePoint[] | null>;
+  mapSnapshotRef: React.RefObject<MapServerSnapshot>;
   setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
   setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
   setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;

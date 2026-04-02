@@ -15,8 +15,6 @@ pub struct MpcConfig {
     pub(crate) q_v: f64,
     pub(crate) q_yaw: f64,
     pub(crate) qf_scale: f64,
-    /// MPC time step in seconds (dt used for both linearisation and integration).
-    pub(crate) dt: f64,
     pub(crate) desired_max_accel_ratio: f64,
     pub(crate) min_horizon_distance: f64,
     pub(crate) direction_change_dist: f64,
@@ -91,11 +89,6 @@ impl MpcConfig {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn dt(&self) -> f64 {
-        self.dt
-    }
-
-    #[wasm_bindgen(getter)]
     pub fn desired_max_accel_ratio(&self) -> f64 {
         self.desired_max_accel_ratio
     }
@@ -131,7 +124,6 @@ impl Default for MpcConfig {
             q_v: 0.05,
             q_yaw: 1.1,
             qf_scale: 2.0,
-            dt: 0.07,
             desired_max_accel_ratio: 0.7,
             min_horizon_distance: 0.3,
             direction_change_dist: 0.1,

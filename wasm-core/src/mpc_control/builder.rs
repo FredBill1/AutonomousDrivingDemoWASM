@@ -11,10 +11,11 @@ pub(crate) fn linear_mpc_control(
     xref: &[ModelState],
     xbar: &[ModelState],
     last_steer: f64,
+    dt: f64,
     mpc_config: &MpcConfig,
     car_config: &CarConfig,
 ) -> Option<(Vec<Control>, Vec<ModelState>)> {
-    let problem = build_mpc_problem(xref, xbar, last_steer, mpc_config, car_config);
+    let problem = build_mpc_problem(xref, xbar, last_steer, dt, mpc_config, car_config);
 
     let settings = DefaultSettings::<f64> {
         verbose: false,
@@ -54,10 +55,10 @@ fn build_mpc_problem(
     xref: &[ModelState],
     xbar: &[ModelState],
     last_steer: f64,
+    dt: f64,
     mpc_config: &MpcConfig,
     car_config: &CarConfig,
 ) -> MpcProblem {
-    let dt = mpc_config.dt;
     let horizon = mpc_config.horizon_length as usize;
     let nvars = NX * (horizon + 1) + NU * horizon;
     let mut q = vec![0.0; nvars];
