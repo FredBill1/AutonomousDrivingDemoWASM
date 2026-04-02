@@ -255,11 +255,11 @@ impl HybridAStarPlanner {
     ) -> Result<HybridAStarPlanner, JsValue> {
         let (car_config, ha_config, heuristic) = Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates)?;
         let goal = [goal_x, goal_y, goal_yaw];
-        let start_state = start_seed
-            .last()
-            .map_or([0.0, 0.0, 0.0], |last| [last.x, last.y, last.yaw]);
 
         if Self::goal_collides(&car_config, goal, &obstacle_coordinates) {
+            let start_state = start_seed
+                .last()
+                .map_or([0.0, 0.0, 0.0], |last| [last.x, last.y, last.yaw]);
             return Ok(Self::finished_without_path(
                 car_config,
                 ha_config,
