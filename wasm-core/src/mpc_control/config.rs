@@ -22,6 +22,7 @@ pub struct MpcConfig {
     pub(crate) max_steer: f64,
     pub(crate) max_steer_speed: f64,
     pub(crate) wheel_base: f64,
+    /// MPC time step in seconds (dt used for both linearisation and integration).
     pub(crate) dt: f64,
 }
 

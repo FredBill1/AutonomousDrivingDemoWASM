@@ -15,6 +15,7 @@ pub struct HybridAStarConfig {
     pub(crate) steer_cost: f64,
     pub(crate) h_dist_cost: f64,
     pub(crate) h_yaw_cost: f64,
+    /// Maximum number of hybrid A* search steps per call to [`HybridAStarPlanner::step`].
     pub(crate) step_budget: u32,
 }
 
