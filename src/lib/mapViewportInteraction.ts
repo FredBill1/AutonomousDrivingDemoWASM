@@ -29,10 +29,10 @@ type PointerHandlersParams = {
   viewportRef: React.RefObject<Viewport | null>;
   boundsRef: React.RefObject<MapBoundingBox>;
   hostRef: React.RefObject<HTMLDivElement | null>;
-  primaryDragRef: React.MutableRefObject<{ pointerId: number; pointerType: string } | null>;
-  middlePanRef: React.MutableRefObject<{ pointerId: number; lastX: number; lastY: number } | null>;
-  touchStateRef: React.MutableRefObject<TouchState>;
-  fitScaleRef: React.MutableRefObject<number>;
+  primaryDragRef: React.RefObject<{ pointerId: number; pointerType: string } | null>;
+  middlePanRef: React.RefObject<{ pointerId: number; lastX: number; lastY: number } | null>;
+  touchStateRef: React.RefObject<TouchState>;
+  fitScaleRef: React.RefObject<number>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onPrimaryDragStartRef: React.RefObject<(world: { x: number; y: number }) => boolean>;
   onPrimaryDragMoveRef: React.RefObject<(world: { x: number; y: number }) => void>;
