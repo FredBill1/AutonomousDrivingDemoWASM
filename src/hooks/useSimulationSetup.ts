@@ -198,7 +198,9 @@ export function useSimulationSetup({
       active = false;
       setLocalPlannerUpdateListener(null);
       setSimulationStateListener(null);
-      void stopSimulation().catch(() => {});
+      void stopSimulation().catch((error) => {
+        console.error('Failed to stop simulation during cleanup', error);
+      });
       resetComputeWorker('App unmounted');
     };
   }, [

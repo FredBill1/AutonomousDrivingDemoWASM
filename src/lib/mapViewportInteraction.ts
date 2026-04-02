@@ -1,11 +1,11 @@
 import type { Viewport } from 'pixi-viewport';
 import type React from 'react';
 
+import { MAX_ZOOM, MIN_ZOOM, MIN_ZOOM_RELATIVE_TO_FIT, WHEEL_ZOOM_SENSITIVITY } from './constants';
 import type { MapBoundingBox } from './mapServerNode';
 import { clamp, setViewportTransform } from './mapViewportDraw';
 
-export const MIN_ZOOM = 0.05;
-export const MAX_ZOOM = 100;
+export { MAX_ZOOM, MIN_ZOOM };
 
 export type ScreenPoint = {
   x: number;
@@ -231,8 +231,12 @@ export function createPointerHandlers(params: PointerHandlersParams) {
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
     const worldPoint = viewport.toWorld(screenX, screenY);
-    const scaleFactor = Math.exp(-event.deltaY * 0.0015);
-    const nextScale = clamp(viewport.scale.x * scaleFactor, Math.max(MIN_ZOOM, fitScaleRef.current * 0.1), MAX_ZOOM);
+    const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
+    const nextScale = clamp(
+      viewport.scale.x * scaleFactor,
+      Math.max(MIN_ZOOM, fitScaleRef.current * MIN_ZOOM_RELATIVE_TO_FIT),
+      MAX_ZOOM,
+    );
     setViewportTransform(viewport, screenX, screenY, nextScale, worldPoint);
   };
 

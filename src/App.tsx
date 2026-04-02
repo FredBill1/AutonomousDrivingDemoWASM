@@ -20,6 +20,7 @@ import {
   type MapServerSnapshot,
   type MotionLimits,
 } from './lib/appTypes';
+import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
 import { MapServerNode } from './lib/mapServerNode';
 import { TrajectoryCollisionCheckingNode } from './lib/trajectoryCollisionCheckingNode';
 import {
@@ -52,7 +53,8 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
 }
 
 const LOCAL_PLANNER_UPDATE_INTERVAL_MS = 100;
-const REPLAN_MAX_SPEED = 5 / 3.6;
+const REPLAN_MAX_SPEED_KMH = 5;
+const REPLAN_MAX_SPEED = REPLAN_MAX_SPEED_KMH * KMH_TO_MS;
 const MAX_GLOBAL_PLANNER_DISPLAY_BATCHES = 32;
 
 function App() {
@@ -98,25 +100,14 @@ function App() {
     trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision);
   }
 
+  // Sync state to refs for use in async callbacks
   useEffect(() => {
     carRef.current = car;
-  }, [car]);
-
-  useEffect(() => {
     timestampRef.current = timestamp;
-  }, [timestamp]);
-
-  useEffect(() => {
     goalRef.current = goal;
-  }, [goal]);
-
-  useEffect(() => {
     mapSnapshotRef.current = mapSnapshot;
-  }, [mapSnapshot]);
-
-  useEffect(() => {
     globalTrajectoryRef.current = globalTrajectory;
-  }, [globalTrajectory]);
+  }, [car, timestamp, goal, mapSnapshot, globalTrajectory]);
 
   useLayoutEffect(() => {
     const host = dashboardGridRef.current;
@@ -270,7 +261,7 @@ function App() {
 
         <div className={`side-stack side-stack--${dashboardLayout}`}>
           <ChartPanel
-            heading={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * 3.6, 1)}km/h`}
+            heading={`Velocity: ${formatFixedWithoutNegativeZero((car?.velocity ?? 0) * MS_TO_KMH, 1)}km/h`}
             points={velocityHistory}
             minValue={motionLimits?.minSpeedKmh ?? 0}
             maxValue={motionLimits?.maxSpeedKmh ?? 0}
@@ -278,7 +269,7 @@ function App() {
           />
 
           <ChartPanel
-            heading={`Steer: ${formatFixedWithoutNegativeZero(((car?.steer ?? 0) * 180) / Math.PI, 1)}°`}
+            heading={`Steer: ${formatFixedWithoutNegativeZero((car?.steer ?? 0) * RAD_TO_DEG, 1)}°`}
             points={steerHistory}
             minValue={-(motionLimits?.maxSteerDeg ?? 0)}
             maxValue={motionLimits?.maxSteerDeg ?? 0}

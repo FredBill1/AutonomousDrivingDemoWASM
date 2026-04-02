@@ -28,6 +28,7 @@ export type MapServerUpdateResult = MapServerSnapshot & {
 const MAP_WIDTH = 60;
 const MAP_HEIGHT = 60;
 const UNKNOWN_OBSTACLE_COUNT = 40;
+const MAX_RANDOM_STATE_ATTEMPTS = 1000;
 
 function createKnownObstacleTemplate(): Obstacle[] {
   const obstacles: Obstacle[] = [];
@@ -108,7 +109,7 @@ export class MapServerNode {
 
   async generateRandomInitialState(): Promise<CarState> {
     const obstacleCoordinates = flattenObstacleCoordinates([...this.knownObstacles, ...this.unknownObstacles]);
-    while (true) {
+    for (let attempt = 0; attempt < MAX_RANDOM_STATE_ATTEMPTS; attempt++) {
       const candidate: CarState = {
         x: Math.random() * MAP_WIDTH,
         y: Math.random() * MAP_HEIGHT,
@@ -120,6 +121,15 @@ export class MapServerNode {
         return candidate;
       }
     }
+    // Fallback: return a state even if it might collide, rather than hang indefinitely
+    console.warn('Failed to generate collision-free initial state after maximum attempts');
+    return {
+      x: Math.random() * MAP_WIDTH,
+      y: Math.random() * MAP_HEIGHT,
+      yaw: Math.random() * Math.PI * 2 - Math.PI,
+      velocity: 0,
+      steer: 0,
+    };
   }
 
   update(state: Pick<CarState, 'x' | 'y' | 'yaw'>): MapServerUpdateResult | null {

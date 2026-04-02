@@ -101,6 +101,9 @@ export function usePlanningCallbacks({
 
     clearGlobalPlannerDisplaySegments();
 
+    // Helper to check if this planning request has been cancelled
+    const isCancelled = () => planningRequestRef.current !== requestId;
+
     try {
       const result = await solveHybridAStar(
         start,
@@ -109,9 +112,7 @@ export function usePlanningCallbacks({
         4000,
         requestId,
       );
-      if (planningRequestRef.current !== requestId) {
-        return;
-      }
+      if (isCancelled()) return;
 
       clearGlobalPlannerDisplaySegments();
       if (!result) {
@@ -140,26 +141,20 @@ export function usePlanningCallbacks({
       localPlanningRef.current = true;
       setGoalUnreachable((current) => ({ ...current, visible: false }));
 
-      if (planningRequestRef.current !== requestId) {
-        return;
-      }
+      if (isCancelled()) return;
       await setLocalPlannerTrajectory(trajectory);
-      if (planningRequestRef.current !== requestId) {
-        return;
-      }
+      if (isCancelled()) return;
       const collided = await trajectoryCollisionCheckingNodeRef.current!.setTrajectory(
         trajectory.map((point) => ({ x: point.x, y: point.y, yaw: point.yaw })),
       );
-      if (planningRequestRef.current !== requestId) {
-        return;
-      }
+      if (isCancelled()) return;
       if (collided) {
         return;
       }
 
       await resumeSimulationMotion();
     } catch (error) {
-      if (planningRequestRef.current !== requestId) {
+      if (isCancelled()) {
         return;
       }
       if (error instanceof Error && error.message === 'Hybrid A* search cancelled') {
@@ -205,7 +200,9 @@ export function usePlanningCallbacks({
     }
 
     node.setCollidedListener(() => {
-      void brakeLocalPlanner().catch(() => {});
+      void brakeLocalPlanner().catch((error) => {
+        console.error('Failed to brake local planner after collision', error);
+      });
       void handleTrajectoryCollided().catch((error) => {
         console.error('Failed to handle trajectory collision', error);
       });
