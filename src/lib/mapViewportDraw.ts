@@ -273,14 +273,16 @@ export function performDraw(layers: DrawLayers, viewportRef: React.RefObject<Vie
   }
 
   layers.cars.clear();
-  if (car && carShape) {
-    drawCar(layers.cars, car, bounds, carShape, 0xffffff);
-  }
-  if (goal && carShape) {
-    drawCar(layers.cars, goal, bounds, carShape, 0x9fe870);
-  }
-  if (pressedPose && carShape) {
-    drawCar(layers.cars, pressedPose, bounds, carShape, mode === 'pose' ? 0xffffff : 0x9fe870);
+  if (carShape) {
+    if (car) {
+      drawCar(layers.cars, car, bounds, carShape, 0xffffff);
+    }
+    if (goal) {
+      drawCar(layers.cars, goal, bounds, carShape, 0x9fe870);
+    }
+    if (pressedPose) {
+      drawCar(layers.cars, pressedPose, bounds, carShape, mode === 'pose' ? 0xffffff : 0x9fe870);
+    }
   }
 
   layers.label.visible = goalUnreachable.visible;

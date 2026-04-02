@@ -100,25 +100,14 @@ function App() {
     trajectoryCollisionCheckingNodeRef.current = new TrajectoryCollisionCheckingNode(checkTrajectoryCollision);
   }
 
+  // Sync state to refs for use in async callbacks
   useEffect(() => {
     carRef.current = car;
-  }, [car]);
-
-  useEffect(() => {
     timestampRef.current = timestamp;
-  }, [timestamp]);
-
-  useEffect(() => {
     goalRef.current = goal;
-  }, [goal]);
-
-  useEffect(() => {
     mapSnapshotRef.current = mapSnapshot;
-  }, [mapSnapshot]);
-
-  useEffect(() => {
     globalTrajectoryRef.current = globalTrajectory;
-  }, [globalTrajectory]);
+  }, [car, timestamp, goal, mapSnapshot, globalTrajectory]);
 
   useLayoutEffect(() => {
     const host = dashboardGridRef.current;
