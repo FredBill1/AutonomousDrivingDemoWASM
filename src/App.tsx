@@ -1,18 +1,14 @@
 import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
-import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 import { useAppState } from './hooks/useAppState';
 import { useDashboardLayout } from './hooks/useDashboardLayout';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { usePlanningCallbacks } from './hooks/usePlanningCallbacks';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT } from './lib/appModel';
-import {
-  type CarShape,
-  type GoalUnreachableState,
-  type MotionLimits,
-} from './lib/appTypes';
+import { type CarShape, type GoalUnreachableState, type MotionLimits } from './lib/appTypes';
 import {
   LOCAL_PLANNER_UPDATE_INTERVAL_MS,
   MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,

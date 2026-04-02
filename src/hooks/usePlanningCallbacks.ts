@@ -3,7 +3,13 @@ import { useGlobalPlanning } from './useGlobalPlanning';
 import { usePlanningCommands } from './usePlanningCommands';
 import { usePlanningDrag } from './usePlanningDrag';
 
-export function usePlanningCallbacks({ mode, refs, setters, replanMaxSpeed, toHybridAStarStartSeed }: UsePlanningCallbacksParams) {
+export function usePlanningCallbacks({
+  mode,
+  refs,
+  setters,
+  replanMaxSpeed,
+  toHybridAStarStartSeed,
+}: UsePlanningCallbacksParams) {
   const { clearGlobalPlannerDisplaySegments, runGlobalPlan, handleTrajectoryCollided } = useGlobalPlanning({
     refs,
     setters,

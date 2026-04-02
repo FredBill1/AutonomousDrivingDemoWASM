@@ -126,8 +126,7 @@ fn add_dynamics_constraints(
     car_config: &CarConfig,
 ) {
     for t in 0..horizon {
-        let (a_t, b_t, c_t) =
-            get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
+        let (a_t, b_t, c_t) = get_linear_model_matrix(xbar[t][2], xbar[t][3], last_steer, car_config.wheel_base(), dt);
         for state_dim in 0..NX {
             constraints.push_row_entry(state_index(t + 1, state_dim), 1.0);
             for previous_dim in 0..NX {

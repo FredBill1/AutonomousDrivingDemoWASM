@@ -18,6 +18,8 @@ export function usePlanningDrag({
   handleCancel,
   runGlobalPlan,
 }: UsePlanningDragParams) {
+  const { dragStartRef, globalTrajectoryRef, goalRef, mapSnapshotRef } = refs;
+
   const commitDrag = useCallback(
     async (finalX: number, finalY: number, startX: number, startY: number) => {
       const state: CarState = {
@@ -30,11 +32,11 @@ export function usePlanningDrag({
 
       setters.setPressedPose(null);
       setters.setGlobalTrajectory(null);
-      refs.globalTrajectoryRef.current = null;
+      globalTrajectoryRef.current = null;
 
       if (mode === 'pose') {
         setters.setGoal(null);
-        refs.goalRef.current = null;
+        goalRef.current = null;
         await handleCancel();
         try {
           await setSimulationState(state);
@@ -45,32 +47,32 @@ export function usePlanningDrag({
       }
 
       setters.setGoal(state);
-      refs.goalRef.current = state;
+      goalRef.current = state;
       setters.setGoalUnreachable({ visible: false, x: startX, y: startY });
       await handleBrake();
       await runGlobalPlan();
     },
-    [handleBrake, handleCancel, mode, refs, runGlobalPlan, setters],
+    [globalTrajectoryRef, goalRef, handleBrake, handleCancel, mode, runGlobalPlan, setters],
   );
 
   const handleMapPrimaryDragStart = useCallback(
     (world: { x: number; y: number }) => {
-      const bounds = refs.mapSnapshotRef.current.boundingBox;
+      const bounds = mapSnapshotRef.current.boundingBox;
       if (world.x < bounds.minX || world.x > bounds.maxX || world.y < bounds.minY || world.y > bounds.maxY) {
         return false;
       }
 
       setters.setGoalUnreachable((current) => ({ ...current, visible: false }));
-      refs.dragStartRef.current = { startX: world.x, startY: world.y };
+      dragStartRef.current = { startX: world.x, startY: world.y };
       setters.setPressedPose({ x: world.x, y: world.y, yaw: 0, velocity: 0, steer: 0 });
       return true;
     },
-    [refs, setters],
+    [dragStartRef, mapSnapshotRef, setters],
   );
 
   const handleMapPrimaryDragMove = useCallback(
     (world: { x: number; y: number }) => {
-      const start = refs.dragStartRef.current;
+      const start = dragStartRef.current;
       if (!start) {
         return;
       }
@@ -83,27 +85,27 @@ export function usePlanningDrag({
         steer: 0,
       });
     },
-    [refs, setters],
+    [dragStartRef, setters],
   );
 
   const handleMapPrimaryDragEnd = useCallback(
     (world: { x: number; y: number }) => {
-      const currentDrag = refs.dragStartRef.current;
+      const currentDrag = dragStartRef.current;
       if (!currentDrag) {
         return;
       }
 
-      refs.dragStartRef.current = null;
+      dragStartRef.current = null;
       setters.setPressedPose(null);
       void commitDrag(world.x, world.y, currentDrag.startX, currentDrag.startY);
     },
-    [commitDrag, refs, setters],
+    [commitDrag, dragStartRef, setters],
   );
 
   const handleMapPrimaryDragCancel = useCallback(() => {
-    refs.dragStartRef.current = null;
+    dragStartRef.current = null;
     setters.setPressedPose(null);
-  }, [refs, setters]);
+  }, [dragStartRef, setters]);
 
   return {
     commitDrag,

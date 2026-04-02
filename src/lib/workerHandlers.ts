@@ -2,7 +2,7 @@ import { HybridAStarPlanner } from '../../wasm-core/pkg/wasm_core';
 
 import { disposeWasmResource } from './wasmResource';
 import { decodeExploredSegments, flattenHybridSeedPoints, snapshotHybridResult } from './workerCodecs';
-import { postEvent, workerState, ensureWasmRuntime } from './workerRuntime';
+import { ensureWasmRuntime, postEvent, workerState } from './workerRuntime';
 import {
   HYBRID_ASTAR_STEP_BUDGET,
   HYBRID_SEGMENT_BATCH_SIZE,

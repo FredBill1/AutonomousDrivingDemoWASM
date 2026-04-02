@@ -1,18 +1,35 @@
 import { useCallback, useEffect } from 'react';
 
 import { flattenObstacleCoordinates } from '../lib/mapServerNode';
-import { brakeLocalPlanner, resumeSimulationMotion, setLocalPlannerTrajectory, solveHybridAStar } from '../lib/wasmCore';
+import {
+  brakeLocalPlanner,
+  resumeSimulationMotion,
+  setLocalPlannerTrajectory,
+  solveHybridAStar,
+} from '../lib/wasmCore';
 import { clearGoalPlanState, type UsePlanningCallbacksParams } from './planningHelpers';
 
-type UseGlobalPlanningParams = Pick<UsePlanningCallbacksParams, 'refs' | 'setters' | 'replanMaxSpeed' | 'toHybridAStarStartSeed'>;
+type UseGlobalPlanningParams = Pick<
+  UsePlanningCallbacksParams,
+  'refs' | 'setters' | 'replanMaxSpeed' | 'toHybridAStarStartSeed'
+>;
 
 export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStarStartSeed }: UseGlobalPlanningParams) {
+  const {
+    brakeTrajectoryRef,
+    carRef,
+    globalTrajectoryRef,
+    localPlanningRef,
+    planningRequestRef,
+    trajectoryCollisionCheckingNodeRef,
+  } = refs;
+
   const clearGlobalPlannerDisplaySegments = useCallback(() => {
     setters.setGlobalPlannerSegments([]);
   }, [setters]);
 
   const runGlobalPlan = useCallback(async () => {
-    const measuredState = refs.carRef.current;
+    const measuredState = carRef.current;
     const goalState = refs.goalRef.current;
 
     if (!measuredState || !goalState) {
@@ -20,15 +37,15 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
     }
 
     const start =
-      Math.abs(measuredState.velocity) > replanMaxSpeed && refs.brakeTrajectoryRef.current
-        ? toHybridAStarStartSeed(refs.brakeTrajectoryRef.current)
+      Math.abs(measuredState.velocity) > replanMaxSpeed && brakeTrajectoryRef.current
+        ? toHybridAStarStartSeed(brakeTrajectoryRef.current)
         : measuredState;
 
-    const requestId = refs.planningRequestRef.current + 1;
-    refs.planningRequestRef.current = requestId;
+    const requestId = planningRequestRef.current + 1;
+    planningRequestRef.current = requestId;
     clearGlobalPlannerDisplaySegments();
 
-    const isCancelled = () => refs.planningRequestRef.current !== requestId;
+    const isCancelled = () => planningRequestRef.current !== requestId;
 
     try {
       const result = await solveHybridAStar(
@@ -45,10 +62,10 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
 
       clearGlobalPlannerDisplaySegments();
       if (!result) {
-        refs.globalTrajectoryRef.current = null;
-        refs.localPlanningRef.current = false;
+        globalTrajectoryRef.current = null;
+        localPlanningRef.current = false;
         await Promise.all([
-          refs.trajectoryCollisionCheckingNodeRef.current?.setTrajectory(null) ?? Promise.resolve(false),
+          trajectoryCollisionCheckingNodeRef.current?.setTrajectory(null) ?? Promise.resolve(false),
           setLocalPlannerTrajectory(null),
         ]);
         clearGoalPlanState(refs, setters, { visible: true });
@@ -67,8 +84,8 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
       }));
 
       setters.setGlobalTrajectory(trajectory);
-      refs.globalTrajectoryRef.current = trajectory;
-      refs.localPlanningRef.current = true;
+      globalTrajectoryRef.current = trajectory;
+      localPlanningRef.current = true;
       setters.setGoalUnreachable((current) => ({ ...current, visible: false }));
 
       if (isCancelled()) {
@@ -80,7 +97,7 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
         return;
       }
 
-      const collided = await refs.trajectoryCollisionCheckingNodeRef.current?.setTrajectory(
+      const collided = await trajectoryCollisionCheckingNodeRef.current?.setTrajectory(
         trajectory.map((point) => ({ x: point.x, y: point.y, yaw: point.yaw })),
       );
 
@@ -99,23 +116,35 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
       }
 
       await Promise.all([
-        refs.trajectoryCollisionCheckingNodeRef.current?.setTrajectory(null) ?? Promise.resolve(false),
+        trajectoryCollisionCheckingNodeRef.current?.setTrajectory(null) ?? Promise.resolve(false),
         setLocalPlannerTrajectory(null),
       ]);
       clearGlobalPlannerDisplaySegments();
       clearGoalPlanState(refs, setters, { visible: true });
       console.error('Failed to compute global plan', error);
     }
-  }, [clearGlobalPlannerDisplaySegments, refs, replanMaxSpeed, setters, toHybridAStarStartSeed]);
+  }, [
+    brakeTrajectoryRef,
+    carRef,
+    clearGlobalPlannerDisplaySegments,
+    globalTrajectoryRef,
+    localPlanningRef,
+    planningRequestRef,
+    refs,
+    replanMaxSpeed,
+    setters,
+    toHybridAStarStartSeed,
+    trajectoryCollisionCheckingNodeRef,
+  ]);
 
   const handleTrajectoryCollided = useCallback(async () => {
     setters.setGlobalTrajectory(null);
-    refs.globalTrajectoryRef.current = null;
+    globalTrajectoryRef.current = null;
     await runGlobalPlan();
-  }, [refs, runGlobalPlan, setters]);
+  }, [globalTrajectoryRef, runGlobalPlan, setters]);
 
   useEffect(() => {
-    const node = refs.trajectoryCollisionCheckingNodeRef.current;
+    const node = trajectoryCollisionCheckingNodeRef.current;
     if (!node) {
       return;
     }
@@ -132,7 +161,7 @@ export function useGlobalPlanning({ refs, setters, replanMaxSpeed, toHybridAStar
     return () => {
       node.setCollidedListener(null);
     };
-  }, [handleTrajectoryCollided, refs]);
+  }, [handleTrajectoryCollided, trajectoryCollisionCheckingNodeRef]);
 
   return {
     clearGlobalPlannerDisplaySegments,

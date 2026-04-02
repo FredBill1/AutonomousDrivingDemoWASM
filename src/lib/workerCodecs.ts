@@ -1,11 +1,11 @@
-import { type CarConfig, MpcReferenceTracker, mpc_control_preview, trajectory_check_collision } from '../../wasm-core/pkg/wasm_core';
-
 import {
-  createFlatTupleDecoder,
-  decodeFlatTuples,
-  encodeFlatTuples,
-  encodeFlatTuplesToFloat64,
-} from './flatCodec';
+  type CarConfig,
+  MpcReferenceTracker,
+  mpc_control_preview,
+  trajectory_check_collision,
+} from '../../wasm-core/pkg/wasm_core';
+
+import { createFlatTupleDecoder, decodeFlatTuples, encodeFlatTuples, encodeFlatTuplesToFloat64 } from './flatCodec';
 import { ensureWasmRuntime } from './workerRuntime';
 import type {
   LocalPlannerPathPoint,
@@ -55,12 +55,16 @@ export const decodePredictedStateQuads = createFlatTupleDecoder<LocalPlannerPath
   }),
 );
 
-export const decodePlannerStateQuads = createFlatTupleDecoder<LocalPlannerReferencePoint>(4, 'planner state values', (values, offset) => ({
-  x: values[offset],
-  y: values[offset + 1],
-  yaw: values[offset + 2],
-  velocity: values[offset + 3],
-}));
+export const decodePlannerStateQuads = createFlatTupleDecoder<LocalPlannerReferencePoint>(
+  4,
+  'planner state values',
+  (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 2],
+    velocity: values[offset + 3],
+  }),
+);
 
 export function decodeControlPairs(
   flatValues: number[] | Float64Array,

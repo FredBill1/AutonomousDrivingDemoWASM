@@ -1,6 +1,7 @@
 import { CarState, MpcReferenceTracker, path_check_collision, rs_solve_path } from '../../wasm-core/pkg/wasm_core';
 
 import { encodeFlatTuplesToFloat64 } from './flatCodec';
+import { disposeWasmResource } from './wasmResource';
 import { checkTrajectoryCollision, decodeFlatCoordinates, flattenTrajectoryPoints } from './workerCodecs';
 import { solveHybridAStar } from './workerHandlers';
 import {
@@ -15,7 +16,6 @@ import {
   setSimulationControlSequenceInternal,
   startSimulationLoop,
 } from './workerHelpers';
-import { disposeWasmResource } from './wasmResource';
 import { ensureCarConfig, ensureWasmRuntime, workerState } from './workerRuntime';
 import type { LocalPlannerControlPoint, WasmCarState } from './workerTypes';
 
@@ -231,7 +231,13 @@ export const handlers = {
 
   async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
     const config = await ensureCarConfig();
-    const state = new CarState(payload.state.x, payload.state.y, payload.state.yaw, payload.state.velocity, payload.state.steer);
+    const state = new CarState(
+      payload.state.x,
+      payload.state.y,
+      payload.state.yaw,
+      payload.state.velocity,
+      payload.state.steer,
+    );
 
     try {
       return state.check_collision(config, Float64Array.from(payload.obstacleCoordinates));
@@ -255,7 +261,11 @@ export const handlers = {
     path: Array<{ x: number; y: number; yaw: number }>;
     obstacleCoordinates: number[];
   }) {
-    return checkTrajectoryCollision(await ensureCarConfig(), { path: payload.path, directions: [] }, payload.obstacleCoordinates);
+    return checkTrajectoryCollision(
+      await ensureCarConfig(),
+      { path: payload.path, directions: [] },
+      payload.obstacleCoordinates,
+    );
   },
 
   async solveReedsSheppCandidates(payload: {
@@ -290,7 +300,8 @@ export const handlers = {
             }),
           );
         } catch (error) {
-          console.warn('Ignoring invalid Reeds-Shepp candidate', { turnRadius, runwayLength, error });
+          const reason = error instanceof Error ? error.message : String(error);
+          console.warn(`Ignoring invalid Reeds-Shepp candidate (${reason})`, { turnRadius, runwayLength });
         }
       }
     }

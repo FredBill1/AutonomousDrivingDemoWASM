@@ -1,7 +1,7 @@
 import { CarState } from '../../wasm-core/pkg/wasm_core';
 
-import { runLocalPlannerUpdate } from './workerCodecs';
 import { disposeWasmResource } from './wasmResource';
+import { runLocalPlannerUpdate } from './workerCodecs';
 import { ensureCarConfig, postEvent, workerState } from './workerRuntime';
 import {
   DEFAULT_LOCAL_PLANNER_UPDATE_INTERVAL_MS,

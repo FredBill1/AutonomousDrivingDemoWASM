@@ -3,13 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Viewport } from 'pixi-viewport';
 import { Application, Graphics, Text } from 'pixi.js';
 
-import {
-  type DrawLayers,
-  performDraw,
-  syncCanvasElementSize,
-  worldHeight,
-  worldWidth,
-} from '../lib/mapViewportDraw';
+import { type DrawLayers, performDraw, syncCanvasElementSize, worldHeight, worldWidth } from '../lib/mapViewportDraw';
 import { type TouchState, createPointerHandlers } from '../lib/mapViewportInteraction';
 import { setupPixiCanvas, setupResizeListeners } from '../lib/pixiAppInit';
 import type { MapViewportProps } from './mapViewportTypes';
@@ -90,7 +84,7 @@ function createDrawLayers(viewport: Viewport, app: Application) {
   } satisfies DrawLayers;
 }
 
-function fitViewportToBounds(viewport: Viewport, bounds: MapViewportProps['bounds'], fitScaleRef: React.MutableRefObject<number>) {
+function fitViewportToBounds(viewport: Viewport, bounds: MapViewportProps['bounds'], fitScaleRef: { current: number }) {
   const width = worldWidth(bounds);
   const height = worldHeight(bounds);
   const scale = Math.min(viewport.screenWidth / Math.max(width, 1), viewport.screenHeight / Math.max(height, 1));
