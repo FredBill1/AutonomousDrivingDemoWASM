@@ -76,7 +76,7 @@ export function useSimulationSetup({
             });
         });
         return () => setHybridAStarProgressListener(null);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [planningRequestRef, setGlobalPlannerSegments, maxGlobalPlannerDisplayBatches]);
 
     useEffect(() => {
         let active = true;
@@ -175,5 +175,23 @@ export function useSimulationSetup({
             void stopSimulation().catch(() => {});
             resetComputeWorker('App unmounted');
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [
+        localPlanningRef,
+        brakeTrajectoryRef,
+        setLocalTrajectory,
+        setReferencePoints,
+        localPlannerDt,
+        localPlannerUpdateIntervalMs,
+        carRef,
+        timestampRef,
+        setTimestamp,
+        setCar,
+        setVelocityHistory,
+        setSteerHistory,
+        historyLimit,
+        mapServerNodeRef,
+        mapSnapshotRef,
+        trajectoryCollisionCheckingNodeRef,
+        setMapSnapshot,
+    ]);
 }
