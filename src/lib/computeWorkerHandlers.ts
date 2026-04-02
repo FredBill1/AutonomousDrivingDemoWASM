@@ -17,9 +17,21 @@ import {
   startSimulationLoop,
 } from './workerHelpers';
 import { ensureCarConfig, ensureWasmRuntime, workerState } from './workerRuntime';
-import type { LocalPlannerControlPoint, WasmCarState } from './workerTypes';
+import type {
+  LocalPlannerControlPoint,
+  LocalPlannerTrajectoryPoint,
+  SimulationSession,
+  WasmCarState,
+  WasmConfigSnapshot,
+  WorkerHandlerMap,
+  WorkerMethodMap,
+} from './workerTypes';
 
-function createSimulationSession(state: WasmCarState, timestamp = 0, simDeltaTime = DEFAULT_SIM_DELTA_TIME) {
+function createSimulationSession(
+  state: WasmCarState,
+  timestamp = 0,
+  simDeltaTime = DEFAULT_SIM_DELTA_TIME,
+): SimulationSession {
   return {
     state,
     timestamp,
@@ -48,7 +60,7 @@ function replaceLocalPlannerTracker(tracker: MpcReferenceTracker | null) {
   }
 }
 
-function toCarConfigSnapshot(config: Awaited<ReturnType<typeof ensureCarConfig>>) {
+function toCarConfigSnapshot(config: Awaited<ReturnType<typeof ensureCarConfig>>): WasmConfigSnapshot {
   return {
     wheelBase: config.wheel_base,
     length: config.length,
@@ -74,62 +86,24 @@ function toCarConfigSnapshot(config: Awaited<ReturnType<typeof ensureCarConfig>>
   };
 }
 
-function solveReedsSheppCandidate(payload: {
-  start: WasmCarState;
-  goal: WasmCarState;
-  turnRadius: number;
-  runwayLength: number;
-  stepSize: number;
-  lengthTolerance: number;
-}) {
-  const solvedPath = rs_solve_path(
-    payload.start.x,
-    payload.start.y,
-    payload.start.yaw,
-    payload.goal.x,
-    payload.goal.y,
-    payload.goal.yaw,
-    payload.turnRadius,
-    payload.runwayLength,
-    payload.stepSize,
-    payload.lengthTolerance,
-  );
-
-  try {
-    return {
-      path: decodeFlatCoordinates(solvedPath.flat_coordinates()),
-      totalLength: solvedPath.total_length(),
-      segmentCount: solvedPath.segment_count(),
-      runwayLength: solvedPath.runway_length(),
-      turnRadius: solvedPath.turn_radius(),
-    };
-  } finally {
-    solvedPath.free();
-  }
-}
-
-async function createTracker(trajectory: Array<{ x: number; y: number; yaw: number; direction: number }>) {
+async function createTracker(trajectory: LocalPlannerTrajectoryPoint[]) {
   const { carConfig, mpcConfig } = await ensureWasmRuntime();
   return new MpcReferenceTracker(Float64Array.from(flattenTrajectoryPoints(trajectory)), mpcConfig, carConfig);
 }
 
-export const handlers = {
+type ReedsSheppCandidate = WorkerMethodMap['solveReedsSheppCandidates']['result'][number];
+
+export const handlers: WorkerHandlerMap = {
   async getCarConfigSnapshot() {
     return toCarConfigSnapshot(await ensureCarConfig());
   },
 
-  stepCarState(payload: { current: WasmCarState; targetVelocity: number; targetSteer: number; dt: number }) {
+  async stepCarState(payload) {
     const { current, targetVelocity, targetSteer, dt } = payload;
     return computeStepCarState(current, targetVelocity, targetSteer, dt);
   },
 
-  async initSimulation(payload: {
-    state: WasmCarState;
-    timestamp?: number;
-    simDeltaTime?: number;
-    simulationIntervalMs?: number;
-    publishIntervalMs?: number;
-  }) {
+  async initSimulation(payload) {
     await ensureWasmRuntime();
     workerState.simulationSession = createSimulationSession(
       payload.state,
@@ -143,7 +117,7 @@ export const handlers = {
     return null;
   },
 
-  async setSimulationState(payload: { state: WasmCarState; timestamp?: number }) {
+  async setSimulationState(payload) {
     await ensureWasmRuntime();
     if (!workerState.simulationSession) {
       workerState.simulationSession = createSimulationSession(payload.state, payload.timestamp ?? 0);
@@ -171,11 +145,8 @@ export const handlers = {
     return Promise.resolve(null);
   },
 
-  async setLocalPlannerTrajectory(payload: {
-    trajectory: Array<{ x: number; y: number; yaw: number; direction: number }> | null;
-  }) {
+  async setLocalPlannerTrajectory(payload) {
     const session = ensureLocalPlannerSession();
-
     if (!payload.trajectory || payload.trajectory.length === 0) {
       session.tracker?.brake();
       return null;
@@ -187,7 +158,7 @@ export const handlers = {
     return null;
   },
 
-  setLocalPlannerState(payload: { state: WasmCarState; timestamp: number; updateIntervalMs?: number }) {
+  setLocalPlannerState(payload) {
     const session = ensureLocalPlannerSession();
     session.latestState = {
       state: payload.state,
@@ -229,7 +200,7 @@ export const handlers = {
     return Promise.resolve(null);
   },
 
-  async checkCollision(payload: { state: WasmCarState; obstacleCoordinates: number[] }) {
+  async checkCollision(payload) {
     const config = await ensureCarConfig();
     const state = new CarState(
       payload.state.x,
@@ -246,10 +217,7 @@ export const handlers = {
     }
   },
 
-  async checkPathCollision(payload: {
-    path: Array<{ x: number; y: number; yaw: number }>;
-    obstacleCoordinates: number[];
-  }) {
+  async checkPathCollision(payload) {
     return path_check_collision(
       await ensureCarConfig(),
       encodeFlatTuplesToFloat64(payload.path, (point) => [point.x, point.y, point.yaw]),
@@ -257,10 +225,7 @@ export const handlers = {
     );
   },
 
-  async checkTrajectoryCollision(payload: {
-    path: Array<{ x: number; y: number; yaw: number }>;
-    obstacleCoordinates: number[];
-  }) {
+  async checkTrajectoryCollision(payload) {
     return checkTrajectoryCollision(
       await ensureCarConfig(),
       { path: payload.path, directions: [] },
@@ -268,37 +233,37 @@ export const handlers = {
     );
   },
 
-  async solveReedsSheppCandidates(payload: {
-    start: WasmCarState;
-    goal: WasmCarState;
-    turnRadii: number[];
-    runwayLengths: number[];
-    stepSize: number;
-    lengthTolerance: number;
-  }) {
+  async solveReedsSheppCandidates(payload) {
     await ensureWasmRuntime();
 
-    const solutions: Array<{
-      path: Array<{ x: number; y: number; yaw: number }>;
-      totalLength: number;
-      segmentCount: number;
-      runwayLength: number;
-      turnRadius: number;
-    }> = [];
-
+    const solutions: ReedsSheppCandidate[] = [];
     for (const turnRadius of payload.turnRadii) {
       for (const runwayLength of payload.runwayLengths) {
         try {
-          solutions.push(
-            solveReedsSheppCandidate({
-              start: payload.start,
-              goal: payload.goal,
-              turnRadius,
-              runwayLength,
-              stepSize: payload.stepSize,
-              lengthTolerance: payload.lengthTolerance,
-            }),
+          const solvedPath = rs_solve_path(
+            payload.start.x,
+            payload.start.y,
+            payload.start.yaw,
+            payload.goal.x,
+            payload.goal.y,
+            payload.goal.yaw,
+            turnRadius,
+            runwayLength,
+            payload.stepSize,
+            payload.lengthTolerance,
           );
+
+          try {
+            solutions.push({
+              path: decodeFlatCoordinates(solvedPath.flat_coordinates()),
+              totalLength: solvedPath.total_length(),
+              segmentCount: solvedPath.segment_count(),
+              runwayLength: solvedPath.runway_length(),
+              turnRadius: solvedPath.turn_radius(),
+            });
+          } finally {
+            solvedPath.free();
+          }
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
           console.warn(`Ignoring invalid Reeds-Shepp candidate (${reason})`, { turnRadius, runwayLength });
@@ -306,7 +271,7 @@ export const handlers = {
       }
     }
 
-    solutions.sort((left, right) => {
+    solutions.sort((left: ReedsSheppCandidate, right: ReedsSheppCandidate) => {
       if (Math.abs(left.totalLength - right.totalLength) < payload.lengthTolerance) {
         return left.segmentCount - right.segmentCount;
       }
@@ -324,4 +289,4 @@ export const handlers = {
     }
     return Promise.resolve(null);
   },
-} as const;
+} satisfies WorkerHandlerMap;

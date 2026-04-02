@@ -5,7 +5,7 @@ import type { CarShape, DragStartState, GoalUnreachableState, MapServerSnapshot,
 import type { MapServerNode } from '../lib/mapServerNode';
 import type { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
 import type {
-  HybridAStarProgress,
+  HybridAStarProgressSegment,
   LocalPlannerPathPoint,
   LocalPlannerReferencePoint,
   LocalPlannerTrajectoryPoint,
@@ -15,6 +15,28 @@ export type HistoryPoint = {
   t: number;
   value: number;
 };
+
+export type AppState = {
+  mode: Mode;
+  timestamp: number;
+  mapSnapshot: MapServerSnapshot;
+  carShape: CarShape | null;
+  motionLimits: MotionLimits | null;
+  car: CarState | null;
+  goal: CarState | null;
+  pressedPose: CarState | null;
+  goalUnreachable: GoalUnreachableState;
+  globalTrajectory: LocalPlannerTrajectoryPoint[] | null;
+  localTrajectory: LocalPlannerPathPoint[];
+  referencePoints: LocalPlannerReferencePoint[];
+  globalPlannerSegments: HybridAStarProgressSegment[][];
+  velocityHistory: HistoryPoint[];
+  steerHistory: HistoryPoint[];
+};
+
+export type StateUpdater<T> = T | ((current: T) => T);
+
+export type AppStateUpdater = <Key extends keyof AppState>(key: Key, updater: StateUpdater<AppState[Key]>) => void;
 
 export type AppRefs = {
   mapServerNodeRef: React.RefObject<MapServerNode | null>;
@@ -28,22 +50,4 @@ export type AppRefs = {
   planningRequestRef: React.RefObject<number>;
   dragStartRef: React.RefObject<DragStartState | null>;
   trajectoryCollisionCheckingNodeRef: React.RefObject<TrajectoryCollisionCheckingNode | null>;
-};
-
-export type AppSetters = {
-  setMode: React.Dispatch<React.SetStateAction<Mode>>;
-  setTimestamp: React.Dispatch<React.SetStateAction<number>>;
-  setMapSnapshot: React.Dispatch<React.SetStateAction<MapServerSnapshot>>;
-  setCarShape: React.Dispatch<React.SetStateAction<CarShape | null>>;
-  setMotionLimits: React.Dispatch<React.SetStateAction<MotionLimits | null>>;
-  setCar: React.Dispatch<React.SetStateAction<CarState | null>>;
-  setGoal: React.Dispatch<React.SetStateAction<CarState | null>>;
-  setPressedPose: React.Dispatch<React.SetStateAction<CarState | null>>;
-  setGoalUnreachable: React.Dispatch<React.SetStateAction<GoalUnreachableState>>;
-  setGlobalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerTrajectoryPoint[] | null>>;
-  setLocalTrajectory: React.Dispatch<React.SetStateAction<LocalPlannerPathPoint[]>>;
-  setReferencePoints: React.Dispatch<React.SetStateAction<LocalPlannerReferencePoint[]>>;
-  setGlobalPlannerSegments: React.Dispatch<React.SetStateAction<HybridAStarProgress['segments'][]>>;
-  setVelocityHistory: React.Dispatch<React.SetStateAction<HistoryPoint[]>>;
-  setSteerHistory: React.Dispatch<React.SetStateAction<HistoryPoint[]>>;
 };

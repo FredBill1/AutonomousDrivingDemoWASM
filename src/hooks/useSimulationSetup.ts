@@ -13,154 +13,170 @@ import {
   setLocalPlannerUpdateListener,
   setSimulationStateListener,
   stopSimulation,
+  type HybridAStarProgress,
+  type LocalPlannerUpdateResult,
+  type SimulationStateEvent,
+  type WasmConfigSnapshot,
 } from '../lib/wasmCore';
-import type { AppRefs, AppSetters } from './appRuntimeTypes';
+import type { AppRefs, AppStateUpdater, HistoryPoint } from './appRuntimeTypes';
+
+const INITIAL_TIMESTAMP = 0;
 
 type UseSimulationSetupParams = {
   refs: AppRefs;
-  setters: AppSetters;
+  updateState: AppStateUpdater;
   historyLimit: number;
   localPlannerUpdateIntervalMs: number;
   maxGlobalPlannerDisplayBatches: number;
 };
 
+function appendHistory(history: HistoryPoint[], nextPoint: HistoryPoint, historyLimit: number) {
+  return [...history.slice(-historyLimit + 1), nextPoint];
+}
+
+function syncKnownObstacles(refs: AppRefs, knownObstacles: AppRefs['mapSnapshotRef']['current']['knownObstacles']) {
+  refs.trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(flattenObstacleCoordinates(knownObstacles));
+}
+
+function handleProgressUpdate(
+  progress: HybridAStarProgress,
+  refs: AppRefs,
+  updateState: AppStateUpdater,
+  maxGlobalPlannerDisplayBatches: number,
+) {
+  if (progress.token !== refs.planningRequestRef.current) {
+    return;
+  }
+
+  updateState('globalPlannerSegments', (segments) => {
+    const nextSegments = [...segments, progress.segments];
+    return nextSegments.length > maxGlobalPlannerDisplayBatches
+      ? nextSegments.slice(-maxGlobalPlannerDisplayBatches)
+      : nextSegments;
+  });
+}
+
+function handleLocalPlannerUpdate(result: LocalPlannerUpdateResult, refs: AppRefs, updateState: AppStateUpdater) {
+  if (!refs.localPlanningRef.current) {
+    return;
+  }
+
+  refs.brakeTrajectoryRef.current = result.brakeTrajectory;
+  updateState('localTrajectory', result.localTrajectory);
+  updateState('referencePoints', result.referencePoints);
+}
+
+function handleSimulationState(
+  event: SimulationStateEvent,
+  refs: AppRefs,
+  updateState: AppStateUpdater,
+  historyLimit: number,
+  localPlannerUpdateIntervalMs: number,
+) {
+  void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch((error) => {
+    console.error('Failed to update local planner state', error);
+  });
+
+  refs.carRef.current = event.state;
+  refs.timestampRef.current = event.timestamp;
+  updateState('timestamp', event.timestamp);
+  updateState('car', event.state);
+  updateState('velocityHistory', (history) =>
+    appendHistory(history, { t: event.timestamp, value: event.state.velocity * 3.6 }, historyLimit),
+  );
+  updateState('steerHistory', (history) =>
+    appendHistory(history, { t: event.timestamp, value: (event.state.steer * 180) / Math.PI }, historyLimit),
+  );
+
+  const mapUpdate = refs.mapServerNodeRef.current?.update(event.state);
+  if (!mapUpdate || mapUpdate.newObstacles.length === 0) {
+    return;
+  }
+
+  refs.mapSnapshotRef.current = mapUpdate;
+  syncKnownObstacles(refs, mapUpdate.knownObstacles);
+  updateState('mapSnapshot', mapUpdate);
+  void refs.trajectoryCollisionCheckingNodeRef.current
+    ?.checkCollision(flattenObstacleCoordinates(mapUpdate.newObstacles))
+    .catch((error) => {
+      console.error('Failed to check trajectory collision', error);
+    });
+}
+
+function createMapServerNode(snapshot: WasmConfigSnapshot) {
+  return new MapServerNode(checkCollision, {
+    backToCenter: snapshot.backToCenter,
+    scanRadius: snapshot.scanRadius,
+  });
+}
+
+async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpdater) {
+  await ensureWasmCore();
+  const configSnapshot = await getCarConfigSnapshot();
+
+  updateState('carShape', createCarShape(configSnapshot));
+  updateState('motionLimits', createMotionLimits(configSnapshot));
+
+  let mapServerNode = refs.mapServerNodeRef.current;
+  if (mapServerNode === null) {
+    mapServerNode = createMapServerNode(configSnapshot);
+    refs.mapServerNodeRef.current = mapServerNode;
+  } else {
+    mapServerNode.setConfig({
+      backToCenter: configSnapshot.backToCenter,
+      scanRadius: configSnapshot.scanRadius,
+    });
+  }
+
+  const snapshot = mapServerNode.init();
+  refs.mapSnapshotRef.current = snapshot;
+  syncKnownObstacles(refs, snapshot.knownObstacles);
+  updateState('mapSnapshot', snapshot);
+
+  const initialCar = await mapServerNode.generateRandomInitialState();
+  refs.carRef.current = initialCar;
+  refs.timestampRef.current = INITIAL_TIMESTAMP;
+  updateState('car', initialCar);
+  updateState('timestamp', INITIAL_TIMESTAMP);
+  await initSimulation(initialCar, INITIAL_TIMESTAMP);
+}
+
 export function useSimulationSetup({
   refs,
-  setters,
+  updateState,
   historyLimit,
   localPlannerUpdateIntervalMs,
   maxGlobalPlannerDisplayBatches,
 }: UseSimulationSetupParams): void {
-  const {
-    brakeTrajectoryRef,
-    carRef,
-    localPlanningRef,
-    mapServerNodeRef,
-    mapSnapshotRef,
-    planningRequestRef,
-    timestampRef,
-    trajectoryCollisionCheckingNodeRef,
-  } = refs;
-
   useEffect(() => {
     setHybridAStarProgressListener((progress) => {
-      if (progress.token !== planningRequestRef.current) {
-        return;
-      }
-      setters.setGlobalPlannerSegments((segments) => {
-        const nextSegments = [...segments, progress.segments];
-        return nextSegments.length > maxGlobalPlannerDisplayBatches
-          ? nextSegments.slice(-maxGlobalPlannerDisplayBatches)
-          : nextSegments;
-      });
+      handleProgressUpdate(progress, refs, updateState, maxGlobalPlannerDisplayBatches);
     });
     return () => setHybridAStarProgressListener(null);
-  }, [maxGlobalPlannerDisplayBatches, planningRequestRef, setters]);
+  }, [maxGlobalPlannerDisplayBatches, refs, updateState]);
 
   useEffect(() => {
     let active = true;
 
     setLocalPlannerUpdateListener((result) => {
-      if (!active || !localPlanningRef.current) {
+      if (!active) {
         return;
       }
-
-      brakeTrajectoryRef.current = result.brakeTrajectory;
-      setters.setLocalTrajectory(result.localTrajectory);
-      setters.setReferencePoints(result.referencePoints);
+      handleLocalPlannerUpdate(result, refs, updateState);
     });
 
     setSimulationStateListener((event) => {
       if (!active) {
         return;
       }
-
-      void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch((error) => {
-        console.error('Failed to update local planner state', error);
-      });
-
-      carRef.current = event.state;
-      timestampRef.current = event.timestamp;
-      setters.setTimestamp(event.timestamp);
-      setters.setCar(event.state);
-
-      setters.setVelocityHistory((history) => [
-        ...history.slice(-historyLimit + 1),
-        { t: event.timestamp, value: event.state.velocity * 3.6 },
-      ]);
-      setters.setSteerHistory((history) => [
-        ...history.slice(-historyLimit + 1),
-        { t: event.timestamp, value: (event.state.steer * 180) / Math.PI },
-      ]);
-
-      const mapUpdate = mapServerNodeRef.current?.update(event.state);
-      if (mapUpdate && mapUpdate.newObstacles.length > 0) {
-        mapSnapshotRef.current = mapUpdate;
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
-          flattenObstacleCoordinates(mapUpdate.knownObstacles),
-        );
-        setters.setMapSnapshot(mapUpdate);
-        void trajectoryCollisionCheckingNodeRef.current
-          ?.checkCollision(flattenObstacleCoordinates(mapUpdate.newObstacles))
-          .catch((error) => {
-            console.error('Failed to check trajectory collision', error);
-          });
-      }
+      handleSimulationState(event, refs, updateState, historyLimit, localPlannerUpdateIntervalMs);
     });
 
-    void (async () => {
-      try {
-        await ensureWasmCore();
-        if (!active) {
-          return;
-        }
-
-        const configSnapshot = await getCarConfigSnapshot();
-        if (!active) {
-          return;
-        }
-
-        setters.setCarShape(createCarShape(configSnapshot));
-        setters.setMotionLimits(createMotionLimits(configSnapshot));
-
-        let mapServerNode = mapServerNodeRef.current;
-        if (mapServerNode === null) {
-          mapServerNode = new MapServerNode(checkCollision, {
-            backToCenter: configSnapshot.backToCenter,
-            scanRadius: configSnapshot.scanRadius,
-          });
-          mapServerNodeRef.current = mapServerNode;
-        } else {
-          mapServerNode.setConfig({
-            backToCenter: configSnapshot.backToCenter,
-            scanRadius: configSnapshot.scanRadius,
-          });
-        }
-
-        const snapshot = mapServerNode.init();
-        if (!active) {
-          return;
-        }
-        trajectoryCollisionCheckingNodeRef.current?.setKnownObstacles(
-          flattenObstacleCoordinates(snapshot.knownObstacles),
-        );
-        setters.setMapSnapshot(snapshot);
-
-        const initialCar = await mapServerNode.generateRandomInitialState();
-        if (!active) {
-          return;
-        }
-
-        carRef.current = initialCar;
-        timestampRef.current = 0;
-        setters.setCar(initialCar);
-        setters.setTimestamp(0);
-
-        await initSimulation(initialCar, 0);
-      } catch (error) {
+    void initializeSimulationState(refs, updateState).catch((error) => {
+      if (active) {
         console.error('Failed to initialize app state', error);
       }
-    })();
+    });
 
     return () => {
       active = false;
@@ -171,17 +187,5 @@ export function useSimulationSetup({
       });
       resetComputeWorker('App unmounted');
     };
-  }, [
-    brakeTrajectoryRef,
-    carRef,
-    setters,
-    localPlannerUpdateIntervalMs,
-    historyLimit,
-    mapServerNodeRef,
-    mapSnapshotRef,
-    localPlanningRef,
-    planningRequestRef,
-    timestampRef,
-    trajectoryCollisionCheckingNodeRef,
-  ]);
+  }, [historyLimit, localPlannerUpdateIntervalMs, refs, updateState]);
 }

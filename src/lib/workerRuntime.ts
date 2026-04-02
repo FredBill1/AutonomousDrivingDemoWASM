@@ -1,6 +1,13 @@
 import initWasm, { CarConfig, MpcConfig } from '../../wasm-core/pkg/wasm_core';
 
-import type { LocalPlannerSession, PlannerSession, SimulationSession, WasmRuntime } from './workerTypes';
+import type {
+  LocalPlannerSession,
+  PlannerSession,
+  SimulationSession,
+  WasmRuntime,
+  WorkerEvent,
+  WorkerEventMap,
+} from './workerTypes';
 
 export const workerState = {
   initPromise: null as Promise<WasmRuntime> | null,
@@ -29,6 +36,6 @@ export async function ensureMpcConfig() {
   return (await ensureWasmRuntime()).mpcConfig;
 }
 
-export function postEvent(type: string, payload?: unknown) {
-  self.postMessage({ type, payload });
+export function postEvent<Key extends keyof WorkerEventMap>(type: Key, payload: WorkerEventMap[Key]) {
+  self.postMessage({ type, payload } as WorkerEvent);
 }

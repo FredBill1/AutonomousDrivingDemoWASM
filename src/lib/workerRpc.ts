@@ -3,21 +3,31 @@ type PendingRequest = {
   reject: (reason?: unknown) => void;
 };
 
-type RpcResponse = { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string };
+type RpcMethodMap = Record<string, { payload: unknown; result: unknown }>;
+type EventMap = Record<string, unknown>;
+type PayloadArgs<Payload> = undefined extends Payload ? [] | [payload: Payload] : [payload: Payload];
 
-type WorkerMessage = RpcResponse | { type: string; payload?: unknown };
+type RpcResponse<Methods extends RpcMethodMap> = {
+  [Key in keyof Methods]:
+    | { id: number; ok: true; result: Methods[Key]['result'] }
+    | { id: number; ok: false; error: string };
+}[keyof Methods];
 
-function isWorkerEvent(message: WorkerMessage): message is { type: string; payload?: unknown } {
-  return 'type' in message && !('id' in message);
+type RpcEvent<Events extends EventMap> = {
+  [Key in keyof Events]: { type: Key; payload: Events[Key] };
+}[keyof Events];
+
+function isWorkerEvent<Events extends EventMap>(message: unknown): message is RpcEvent<Events> {
+  return typeof message === 'object' && message !== null && 'type' in message && !('id' in message);
 }
 
-function isRpcResponse(message: WorkerMessage): message is RpcResponse {
-  return 'id' in message && typeof message.id === 'number' && 'ok' in message;
+function isRpcResponse<Methods extends RpcMethodMap>(message: unknown): message is RpcResponse<Methods> {
+  return typeof message === 'object' && message !== null && 'id' in message && 'ok' in message;
 }
 
-export function createWorkerRpc(
+export function createWorkerRpc<Methods extends RpcMethodMap, Events extends EventMap>(
   workerFactory: () => Worker,
-  onEvent?: (message: { type: string; payload?: unknown }) => void,
+  onEvent?: (event: RpcEvent<Events>) => void,
 ) {
   let worker: Worker | null = null;
   let nextId = 1;
@@ -31,22 +41,26 @@ export function createWorkerRpc(
   };
 
   const ensureWorker = () => {
-    if (worker) return worker;
+    if (worker) {
+      return worker;
+    }
 
     worker = workerFactory();
-    worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
+    worker.onmessage = (event: MessageEvent<RpcResponse<Methods> | RpcEvent<Events>>) => {
       const message = event.data;
-      if (isWorkerEvent(message)) {
+      if (isWorkerEvent<Events>(message)) {
         onEvent?.(message);
         return;
       }
 
-      if (!isRpcResponse(message)) {
+      if (!isRpcResponse<Methods>(message)) {
         return;
       }
 
       const request = pending.get(message.id);
-      if (!request) return;
+      if (!request) {
+        return;
+      }
       pending.delete(message.id);
 
       if (message.ok) {
@@ -71,14 +85,15 @@ export function createWorkerRpc(
   };
 
   return {
-    call<T>(type: string, payload?: unknown): Promise<T> {
+    call<Key extends keyof Methods & string>(type: Key, ...args: PayloadArgs<Methods[Key]['payload']>) {
       const activeWorker = ensureWorker();
       const id = nextId;
       nextId += 1;
+      const payload = args[0];
 
-      return new Promise<T>((resolve, reject) => {
-        pending.set(id, { resolve: (value) => resolve(value as T), reject });
-        activeWorker.postMessage({ id, type, payload });
+      return new Promise<Methods[Key]['result']>((resolve, reject) => {
+        pending.set(id, { resolve: (value) => resolve(value as Methods[Key]['result']), reject });
+        activeWorker.postMessage(payload === undefined ? { id, type } : { id, type, payload });
       });
     },
 

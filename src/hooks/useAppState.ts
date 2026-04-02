@@ -1,23 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 
-import type { CarState, Mode } from '../lib/appModel';
-import {
-  FALLBACK_MAP_BOUNDING_BOX,
-  type CarShape,
-  type DragStartState,
-  type GoalUnreachableState,
-  type MapServerSnapshot,
-  type MotionLimits,
-} from '../lib/appTypes';
+import type { CarState } from '../lib/appModel';
+import { FALLBACK_MAP_BOUNDING_BOX, type GoalUnreachableState, type MapServerSnapshot } from '../lib/appTypes';
 import { TrajectoryCollisionCheckingNode } from '../lib/trajectoryCollisionCheckingNode';
-import {
-  checkTrajectoryCollision,
-  type HybridAStarProgress,
-  type LocalPlannerPathPoint,
-  type LocalPlannerReferencePoint,
-  type LocalPlannerTrajectoryPoint,
-} from '../lib/wasmCore';
-import type { AppRefs, AppSetters, HistoryPoint } from './appRuntimeTypes';
+import { checkTrajectoryCollision } from '../lib/wasmCore';
+import type { AppRefs, AppState, AppStateUpdater, HistoryPoint, StateUpdater } from './appRuntimeTypes';
 
 function createInitialMapSnapshot(): MapServerSnapshot {
   return {
@@ -39,33 +26,66 @@ function createInitialHistory(): HistoryPoint[] {
   return [{ t: 0, value: 0 }];
 }
 
+function createInitialState(): AppState {
+  return {
+    mode: 'goal',
+    timestamp: 0,
+    mapSnapshot: createInitialMapSnapshot(),
+    carShape: null,
+    motionLimits: null,
+    car: null,
+    goal: null,
+    pressedPose: null,
+    goalUnreachable: createInitialGoalUnreachableState(),
+    globalTrajectory: null,
+    localTrajectory: [],
+    referencePoints: [],
+    globalPlannerSegments: [],
+    velocityHistory: createInitialHistory(),
+    steerHistory: createInitialHistory(),
+  };
+}
+
+type AppStateAction = {
+  apply: (state: AppState) => AppState;
+};
+
+function reduceAppState(state: AppState, action: AppStateAction) {
+  return action.apply(state);
+}
+
+function resolveUpdater<T>(current: T, updater: StateUpdater<T>): T {
+  return typeof updater === 'function' ? (updater as (value: T) => T)(current) : updater;
+}
+
+function buildStateAction<Key extends keyof AppState>(key: Key, updater: StateUpdater<AppState[Key]>): AppStateAction {
+  return {
+    apply: (state) => {
+      const nextValue = resolveUpdater(state[key], updater);
+      if (Object.is(nextValue, state[key])) {
+        return state;
+      }
+      return {
+        ...state,
+        [key]: nextValue,
+      };
+    },
+  };
+}
+
 export function useAppState() {
-  const [mode, setMode] = useState<Mode>('goal');
-  const [timestamp, setTimestamp] = useState(0);
-  const [mapSnapshot, setMapSnapshot] = useState<MapServerSnapshot>(createInitialMapSnapshot);
-  const [carShape, setCarShape] = useState<CarShape | null>(null);
-  const [motionLimits, setMotionLimits] = useState<MotionLimits | null>(null);
-  const [car, setCar] = useState<CarState | null>(null);
-  const [goal, setGoal] = useState<CarState | null>(null);
-  const [pressedPose, setPressedPose] = useState<CarState | null>(null);
-  const [goalUnreachable, setGoalUnreachable] = useState<GoalUnreachableState>(createInitialGoalUnreachableState);
-  const [globalTrajectory, setGlobalTrajectory] = useState<LocalPlannerTrajectoryPoint[] | null>(null);
-  const [localTrajectory, setLocalTrajectory] = useState<LocalPlannerPathPoint[]>([]);
-  const [referencePoints, setReferencePoints] = useState<LocalPlannerReferencePoint[]>([]);
-  const [globalPlannerSegments, setGlobalPlannerSegments] = useState<HybridAStarProgress['segments'][]>([]);
-  const [velocityHistory, setVelocityHistory] = useState<HistoryPoint[]>(createInitialHistory);
-  const [steerHistory, setSteerHistory] = useState<HistoryPoint[]>(createInitialHistory);
+  const [state, dispatch] = useReducer(reduceAppState, undefined, createInitialState);
 
   const mapServerNodeRef = useRef(null);
-  const carRef = useRef<CarState | null>(car);
-  const timestampRef = useRef(timestamp);
-  const goalRef = useRef<CarState | null>(goal);
-  const mapSnapshotRef = useRef(mapSnapshot);
-  const globalTrajectoryRef = useRef<LocalPlannerTrajectoryPoint[] | null>(globalTrajectory);
+  const carRef = useRef<CarState | null>(state.car);
+  const timestampRef = useRef(state.timestamp);
+  const goalRef = useRef<CarState | null>(state.goal);
+  const mapSnapshotRef = useRef(state.mapSnapshot);
+  const globalTrajectoryRef = useRef(state.globalTrajectory);
   const localPlanningRef = useRef(false);
-  const brakeTrajectoryRef = useRef<LocalPlannerReferencePoint[] | null>(null);
+  const brakeTrajectoryRef = useRef(null);
   const planningRequestRef = useRef(0);
-  const dragStartRef = useRef<DragStartState | null>(null);
+  const dragStartRef = useRef(null);
   const trajectoryCollisionCheckingNodeRef = useRef<TrajectoryCollisionCheckingNode | null>(null);
   const dashboardGridRef = useRef<HTMLElement | null>(null);
 
@@ -74,12 +94,12 @@ export function useAppState() {
   }
 
   useEffect(() => {
-    carRef.current = car;
-    timestampRef.current = timestamp;
-    goalRef.current = goal;
-    mapSnapshotRef.current = mapSnapshot;
-    globalTrajectoryRef.current = globalTrajectory;
-  }, [car, timestamp, goal, mapSnapshot, globalTrajectory]);
+    carRef.current = state.car;
+    timestampRef.current = state.timestamp;
+    goalRef.current = state.goal;
+    mapSnapshotRef.current = state.mapSnapshot;
+    globalTrajectoryRef.current = state.globalTrajectory;
+  }, [state.car, state.timestamp, state.goal, state.mapSnapshot, state.globalTrajectory]);
 
   const refs = useMemo<AppRefs>(
     () => ({
@@ -98,47 +118,14 @@ export function useAppState() {
     [],
   );
 
-  const setters = useMemo<AppSetters>(
-    () => ({
-      setMode,
-      setTimestamp,
-      setMapSnapshot,
-      setCarShape,
-      setMotionLimits,
-      setCar,
-      setGoal,
-      setPressedPose,
-      setGoalUnreachable,
-      setGlobalTrajectory,
-      setLocalTrajectory,
-      setReferencePoints,
-      setGlobalPlannerSegments,
-      setVelocityHistory,
-      setSteerHistory,
-    }),
-    [],
-  );
+  const updateState = useCallback<AppStateUpdater>((key, updater) => {
+    dispatch(buildStateAction(key, updater));
+  }, []);
 
   return {
-    state: {
-      mode,
-      timestamp,
-      mapSnapshot,
-      carShape,
-      motionLimits,
-      car,
-      goal,
-      pressedPose,
-      goalUnreachable,
-      globalTrajectory,
-      localTrajectory,
-      referencePoints,
-      globalPlannerSegments,
-      velocityHistory,
-      steerHistory,
-    },
+    state,
     refs,
-    setters,
+    updateState,
     dashboardGridRef,
   };
 }

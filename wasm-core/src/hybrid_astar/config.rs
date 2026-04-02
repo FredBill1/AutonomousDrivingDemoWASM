@@ -23,67 +23,22 @@ impl HybridAStarConfig {
     pub fn new() -> Self {
         Self::default()
     }
-
-    #[wasm_bindgen(getter)]
-    pub fn xy_grid_resolution(&self) -> f64 {
-        self.xy_grid_resolution
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn yaw_grid_resolution(&self) -> f64 {
-        self.yaw_grid_resolution
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn motion_distance(&self) -> f64 {
-        self.motion_distance
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn motion_resolution(&self) -> f64 {
-        self.motion_resolution
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn num_steer_commands(&self) -> u32 {
-        self.num_steer_commands
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn reeds_shepp_max_distance(&self) -> f64 {
-        self.reeds_shepp_max_distance
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn switch_direction_cost(&self) -> f64 {
-        self.switch_direction_cost
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn backwards_cost(&self) -> f64 {
-        self.backwards_cost
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn steer_change_cost(&self) -> f64 {
-        self.steer_change_cost
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn steer_cost(&self) -> f64 {
-        self.steer_cost
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn h_dist_cost(&self) -> f64 {
-        self.h_dist_cost
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn h_yaw_cost(&self) -> f64 {
-        self.h_yaw_cost
-    }
 }
+
+wasm_getters!(HybridAStarConfig {
+    xy_grid_resolution(this) -> f64 => this.xy_grid_resolution;
+    yaw_grid_resolution(this) -> f64 => this.yaw_grid_resolution;
+    motion_distance(this) -> f64 => this.motion_distance;
+    motion_resolution(this) -> f64 => this.motion_resolution;
+    num_steer_commands(this) -> u32 => this.num_steer_commands;
+    reeds_shepp_max_distance(this) -> f64 => this.reeds_shepp_max_distance;
+    switch_direction_cost(this) -> f64 => this.switch_direction_cost;
+    backwards_cost(this) -> f64 => this.backwards_cost;
+    steer_change_cost(this) -> f64 => this.steer_change_cost;
+    steer_cost(this) -> f64 => this.steer_cost;
+    h_dist_cost(this) -> f64 => this.h_dist_cost;
+    h_yaw_cost(this) -> f64 => this.h_yaw_cost;
+});
 
 impl Default for HybridAStarConfig {
     fn default() -> Self {

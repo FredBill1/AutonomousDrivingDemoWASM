@@ -1,3 +1,5 @@
+#[macro_use]
+mod wasm_getters;
 mod car;
 mod geometry;
 mod hybrid_astar;
