@@ -1,15 +1,16 @@
+import { getDefaultControllerConfig } from './controllerConfig';
+import { createPubSub } from './workerEventBus';
 import { createWorkerRpc } from './workerRpc';
 import type {
   HybridAStarProgress,
   HybridAStarStartSeedPoint,
-  LocalPlannerControlPoint,
   LocalPlannerTrajectoryPoint,
   LocalPlannerUpdateResult,
+  OrchestratorEventMap,
+  OrchestratorMethodMap,
   SimulationStateEvent,
   WasmCarState,
-  WorkerEventMap,
-  WorkerMethodMap,
-} from './workerTypes';
+} from './workerContracts';
 
 export type {
   HybridAStarProgress,
@@ -24,185 +25,151 @@ export type {
   SimulationStateEvent,
   WasmCarState,
   WasmConfigSnapshot,
-} from './workerTypes';
+} from './workerContracts';
 
-const computeRpc = createWorkerRpc<WorkerMethodMap, WorkerEventMap>(
-  () => new Worker(new URL('./computeWorker.ts', import.meta.url), { type: 'module' }),
+const controllerConfig = getDefaultControllerConfig();
+const eventBus = createPubSub<OrchestratorEventMap>();
+const orchestratorRpc = createWorkerRpc<OrchestratorMethodMap, OrchestratorEventMap>(
+  () => new Worker(new URL('./orchestrationWorker.ts', import.meta.url), { type: 'module' }),
   (event) => {
-    switch (event.type) {
-      case 'hybridAStarProgress':
-        eventListeners.hybridAStarProgress?.(event.payload);
-        break;
-      case 'simulationState':
-        eventListeners.simulationState?.(event.payload);
-        break;
-      case 'localPlannerUpdate':
-        eventListeners.localPlannerUpdate?.(event.payload);
-        break;
-      default:
-        break;
-    }
+    eventBus.publish(event.type, event.payload);
   },
 );
 
-const eventListeners: {
-  [Key in keyof WorkerEventMap]: ((payload: WorkerEventMap[Key]) => void) | null;
-} = {
-  hybridAStarProgress: null,
-  simulationState: null,
-  localPlannerUpdate: null,
-};
+let initializationPromise: Promise<void> | null = null;
 
-function serializeObstacleCoordinates(obstacleCoordinates: Float64Array) {
-  return Array.from(obstacleCoordinates);
-}
-
-function setEventListener<Key extends keyof WorkerEventMap>(
+function subscribeToEvent<Key extends keyof OrchestratorEventMap>(
   type: Key,
-  listener: ((payload: WorkerEventMap[Key]) => void) | null,
+  listener: ((payload: OrchestratorEventMap[Key]) => void) | null,
 ) {
-  switch (type) {
-    case 'hybridAStarProgress':
-      eventListeners.hybridAStarProgress = listener as ((payload: HybridAStarProgress) => void) | null;
-      break;
-    case 'simulationState':
-      eventListeners.simulationState = listener as ((payload: SimulationStateEvent) => void) | null;
-      break;
-    case 'localPlannerUpdate':
-      eventListeners.localPlannerUpdate = listener as ((payload: LocalPlannerUpdateResult) => void) | null;
-      break;
-    default:
-      break;
+  if (!listener) {
+    return () => undefined;
   }
+  return eventBus.subscribe(type, listener);
 }
 
 export async function ensureWasmCore() {
-  await computeRpc.call('getCarConfigSnapshot');
+  if (!initializationPromise) {
+    initializationPromise = orchestratorRpc.call('initializeRuntime', controllerConfig);
+  }
+  await initializationPromise;
 }
 
-export function stepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
-  return computeRpc.call('stepCarState', { current, targetVelocity, targetSteer, dt });
+export async function getCarConfigSnapshot() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('getCarConfigSnapshot');
 }
 
-export function initSimulation(
-  state: WasmCarState,
-  timestamp = 0,
-  simDeltaTime = 0.015,
-  simulationIntervalMs = 20,
-  publishIntervalMs = 50,
-) {
-  return computeRpc.call('initSimulation', {
-    state,
-    timestamp,
-    simDeltaTime,
-    simulationIntervalMs,
-    publishIntervalMs,
-  });
+export async function stepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('stepCarState', { current, targetVelocity, targetSteer, dt });
 }
 
-export function setSimulationState(state: WasmCarState, timestamp?: number) {
-  return computeRpc.call('setSimulationState', { state, timestamp });
+export async function initSimulation(state: WasmCarState, timestamp = 0) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('initSimulation', { state, timestamp });
 }
 
-export function setSimulationControlSequence(controlSequence: LocalPlannerControlPoint[]) {
-  return computeRpc.call('setSimulationControlSequence', { controlSequence });
+export async function setSimulationState(state: WasmCarState, timestamp?: number) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('setSimulationState', { state, timestamp });
 }
 
-export function stopSimulationMotion() {
-  return computeRpc.call('stopSimulationMotion');
+export async function stopSimulationMotion() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('stopSimulationMotion');
 }
 
-export function resumeSimulationMotion() {
-  return computeRpc.call('resumeSimulationMotion');
+export async function resumeSimulationMotion() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('resumeSimulationMotion');
 }
 
-export function stopSimulation() {
-  return computeRpc.call('stopSimulation');
+export async function stopSimulation() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('stopSimulation');
 }
 
-export function checkCollision(state: WasmCarState, obstacleCoordinates: Float64Array) {
-  return computeRpc.call('checkCollision', {
-    state,
-    obstacleCoordinates: serializeObstacleCoordinates(obstacleCoordinates),
-  });
+export async function checkCollision(state: WasmCarState, obstacleCoordinates: Float64Array) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('checkCollision', { state, obstacleCoordinates });
 }
 
-export function checkPathCollision(
+export async function checkPathCollision(path: Array<{ x: number; y: number; yaw: number }>, obstacleCoordinates: Float64Array) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('checkPathCollision', { path, obstacleCoordinates });
+}
+
+export async function checkTrajectoryCollision(
   path: Array<{ x: number; y: number; yaw: number }>,
   obstacleCoordinates: Float64Array,
 ) {
-  return computeRpc.call('checkPathCollision', {
-    path,
-    obstacleCoordinates: serializeObstacleCoordinates(obstacleCoordinates),
-  });
+  await ensureWasmCore();
+  return orchestratorRpc.call('checkTrajectoryCollision', { path, obstacleCoordinates });
 }
 
-export function checkTrajectoryCollision(
-  path: Array<{ x: number; y: number; yaw: number }>,
-  obstacleCoordinates: Float64Array,
-) {
-  return computeRpc.call('checkTrajectoryCollision', {
-    path,
-    obstacleCoordinates: serializeObstacleCoordinates(obstacleCoordinates),
-  });
-}
-
-export function getCarConfigSnapshot() {
-  return computeRpc.call('getCarConfigSnapshot');
-}
-
-export function solveHybridAStar(
+export async function solveHybridAStar(
   start: WasmCarState | HybridAStarStartSeedPoint[],
   goal: WasmCarState,
   obstacleCoordinates: Float64Array,
   maxIterations: number,
   requestToken?: number,
 ) {
-  return computeRpc.call('solveHybridAStar', {
+  await ensureWasmCore();
+  return orchestratorRpc.call('solveHybridAStar', {
     start,
     startIsTrajectorySeed: Array.isArray(start),
     goal,
-    obstacleCoordinates: serializeObstacleCoordinates(obstacleCoordinates),
+    obstacleCoordinates,
     maxIterations,
     requestToken,
   });
 }
 
-export function cancelHybridAStar() {
-  return computeRpc.call('cancelHybridAStar');
+export async function cancelHybridAStar() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('cancelHybridAStar');
 }
 
-export function setLocalPlannerTrajectory(trajectory: LocalPlannerTrajectoryPoint[] | null) {
-  return computeRpc.call('setLocalPlannerTrajectory', { trajectory });
+export async function setLocalPlannerTrajectory(trajectory: LocalPlannerTrajectoryPoint[] | null) {
+  await ensureWasmCore();
+  return orchestratorRpc.call('setLocalPlannerTrajectory', { trajectory });
 }
 
-export function setLocalPlannerState(state: WasmCarState, timestamp: number, updateIntervalMs?: number) {
-  return computeRpc.call('setLocalPlannerState', { state, timestamp, updateIntervalMs });
+export async function brakeLocalPlanner() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('brakeLocalPlanner');
 }
 
-export function brakeLocalPlanner() {
-  return computeRpc.call('brakeLocalPlanner');
+export async function cancelLocalPlanner() {
+  await ensureWasmCore();
+  return orchestratorRpc.call('cancelLocalPlanner');
 }
 
-export function cancelLocalPlanner() {
-  return computeRpc.call('cancelLocalPlanner');
-}
+let clearLocalPlannerUpdateSubscription = () => undefined;
+let clearHybridAStarProgressSubscription = () => undefined;
+let clearSimulationStateSubscription = () => undefined;
 
 export function setLocalPlannerUpdateListener(listener: ((event: LocalPlannerUpdateResult) => void) | null) {
-  setEventListener('localPlannerUpdate', listener);
+  clearLocalPlannerUpdateSubscription();
+  clearLocalPlannerUpdateSubscription = subscribeToEvent('localPlannerUpdate', listener);
 }
 
 export function setHybridAStarProgressListener(listener: ((progress: HybridAStarProgress) => void) | null) {
-  setEventListener('hybridAStarProgress', listener);
+  clearHybridAStarProgressSubscription();
+  clearHybridAStarProgressSubscription = subscribeToEvent('hybridAStarProgress', listener);
 }
 
 export function setSimulationStateListener(listener: ((event: SimulationStateEvent) => void) | null) {
-  setEventListener('simulationState', listener);
+  clearSimulationStateSubscription();
+  clearSimulationStateSubscription = subscribeToEvent('simulationState', listener);
 }
 
 export function resetComputeWorker(reason?: string) {
-  setEventListener('hybridAStarProgress', null);
-  setEventListener('simulationState', null);
-  setEventListener('localPlannerUpdate', null);
-  computeRpc.reset(reason);
+  clearHybridAStarProgressSubscription();
+  clearSimulationStateSubscription();
+  clearLocalPlannerUpdateSubscription();
+  initializationPromise = null;
+  eventBus.clear();
+  orchestratorRpc.reset(reason);
 }

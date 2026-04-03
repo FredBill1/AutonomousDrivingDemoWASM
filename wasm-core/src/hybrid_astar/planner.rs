@@ -40,6 +40,8 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
         _max_iterations: usize,
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<HybridAStarPlanner, JsValue> {
         Self::from_point_start(
             start_x,
@@ -49,6 +51,8 @@ impl HybridAStarPlanner {
             goal_y,
             goal_yaw,
             obstacle_coordinates,
+            car_config,
+            ha_config,
         )
     }
 
@@ -60,9 +64,11 @@ impl HybridAStarPlanner {
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
         _max_iterations: usize,
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<HybridAStarPlanner, JsValue> {
         let seed = decode_start_seed(&flat_start_seed)?;
-        Self::from_seed_start(&seed, goal_x, goal_y, goal_yaw, obstacle_coordinates)
+        Self::from_seed_start(&seed, goal_x, goal_y, goal_yaw, obstacle_coordinates, car_config, ha_config)
     }
 
     #[wasm_bindgen(getter)]
@@ -187,11 +193,11 @@ impl HybridAStarPlanner {
         goal_x: f64,
         goal_y: f64,
         obstacle_coordinates: &[f64],
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<(CarConfig, HybridAStarConfig, HeuristicGrid), JsValue> {
-        let car_config = CarConfig::new();
-        let ha_config = HybridAStarConfig::default();
-        let heuristic = HeuristicGrid::from_obstacles(obstacle_coordinates, goal_x, goal_y, &car_config, &ha_config)?;
-        Ok((car_config, ha_config, heuristic))
+        let heuristic = HeuristicGrid::from_obstacles(obstacle_coordinates, goal_x, goal_y, car_config, ha_config)?;
+        Ok((*car_config, *ha_config, heuristic))
     }
 
     fn goal_collides(car_config: &CarConfig, goal: [f64; 3], obstacle_coordinates: &[f64]) -> bool {
@@ -213,8 +219,11 @@ impl HybridAStarPlanner {
         goal_y: f64,
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let (car_config, ha_config, heuristic) = Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates)?;
+        let (car_config, ha_config, heuristic) =
+            Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates, car_config, ha_config)?;
         let start_state = [start_x, start_y, start_yaw];
         let goal = [goal_x, goal_y, goal_yaw];
 
@@ -252,8 +261,11 @@ impl HybridAStarPlanner {
         goal_y: f64,
         goal_yaw: f64,
         obstacle_coordinates: Vec<f64>,
+        car_config: &CarConfig,
+        ha_config: &HybridAStarConfig,
     ) -> Result<HybridAStarPlanner, JsValue> {
-        let (car_config, ha_config, heuristic) = Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates)?;
+        let (car_config, ha_config, heuristic) =
+            Self::build_shared_components(goal_x, goal_y, &obstacle_coordinates, car_config, ha_config)?;
         let goal = [goal_x, goal_y, goal_yaw];
 
         if Self::goal_collides(&car_config, goal, &obstacle_coordinates) {

@@ -20,8 +20,35 @@ pub struct HybridAStarConfig {
 #[wasm_bindgen]
 impl HybridAStarConfig {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        Self::default()
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        xy_grid_resolution: f64,
+        yaw_grid_resolution: f64,
+        motion_distance: f64,
+        motion_resolution: f64,
+        num_steer_commands: u32,
+        reeds_shepp_max_distance: f64,
+        switch_direction_cost: f64,
+        backwards_cost: f64,
+        steer_change_cost: f64,
+        steer_cost: f64,
+        h_dist_cost: f64,
+        h_yaw_cost: f64,
+    ) -> Self {
+        Self {
+            xy_grid_resolution,
+            yaw_grid_resolution,
+            motion_distance,
+            motion_resolution,
+            num_steer_commands,
+            reeds_shepp_max_distance,
+            switch_direction_cost,
+            backwards_cost,
+            steer_change_cost,
+            steer_cost,
+            h_dist_cost,
+            h_yaw_cost,
+        }
     }
 }
 

@@ -12,7 +12,6 @@ import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPat
 import { HISTORY_LIMIT } from './lib/appModel';
 import { type CarShape, type GoalUnreachableState, type MotionLimits } from './lib/appTypes';
 import {
-  LOCAL_PLANNER_UPDATE_INTERVAL_MS,
   MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
   MS_TO_KMH,
   RAD_TO_DEG,
@@ -48,7 +47,6 @@ function App() {
     refs,
     updateState,
     historyLimit: HISTORY_LIMIT,
-    localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
   });
 

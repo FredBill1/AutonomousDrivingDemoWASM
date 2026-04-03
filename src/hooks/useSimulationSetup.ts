@@ -9,7 +9,6 @@ import {
   initSimulation,
   resetComputeWorker,
   setHybridAStarProgressListener,
-  setLocalPlannerState,
   setLocalPlannerUpdateListener,
   setSimulationStateListener,
   stopSimulation,
@@ -26,7 +25,6 @@ type UseSimulationSetupParams = {
   refs: AppRefs;
   updateState: AppStateUpdater;
   historyLimit: number;
-  localPlannerUpdateIntervalMs: number;
   maxGlobalPlannerDisplayBatches: number;
 };
 
@@ -71,12 +69,7 @@ function handleSimulationState(
   refs: AppRefs,
   updateState: AppStateUpdater,
   historyLimit: number,
-  localPlannerUpdateIntervalMs: number,
 ) {
-  void setLocalPlannerState(event.state, event.timestamp, localPlannerUpdateIntervalMs).catch((error) => {
-    console.error('Failed to update local planner state', error);
-  });
-
   refs.carRef.current = event.state;
   refs.timestampRef.current = event.timestamp;
   updateState('timestamp', event.timestamp);
@@ -157,7 +150,6 @@ export function useSimulationSetup({
   refs,
   updateState,
   historyLimit,
-  localPlannerUpdateIntervalMs,
   maxGlobalPlannerDisplayBatches,
 }: UseSimulationSetupParams): void {
   useEffect(() => {
@@ -181,7 +173,7 @@ export function useSimulationSetup({
       if (!active) {
         return;
       }
-      handleSimulationState(event, refs, updateState, historyLimit, localPlannerUpdateIntervalMs);
+      handleSimulationState(event, refs, updateState, historyLimit);
     });
 
     void initializeSimulationState(refs, updateState, () => active).catch((error) => {
@@ -199,5 +191,5 @@ export function useSimulationSetup({
       });
       resetComputeWorker('App unmounted');
     };
-  }, [historyLimit, localPlannerUpdateIntervalMs, refs, updateState]);
+  }, [historyLimit, refs, updateState]);
 }
