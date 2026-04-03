@@ -11,13 +11,7 @@ import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT } from './lib/appModel';
 import { type CarShape, type GoalUnreachableState, type MotionLimits } from './lib/appTypes';
-import {
-  LOCAL_PLANNER_UPDATE_INTERVAL_MS,
-  MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
-  MS_TO_KMH,
-  RAD_TO_DEG,
-  REPLAN_MAX_SPEED_MS,
-} from './lib/constants';
+import { MAX_GLOBAL_PLANNER_DISPLAY_BATCHES, MS_TO_KMH, RAD_TO_DEG, REPLAN_MAX_SPEED_MS } from './lib/constants';
 
 export type { CarShape, GoalUnreachableState, MotionLimits };
 
@@ -48,7 +42,6 @@ function App() {
     refs,
     updateState,
     historyLimit: HISTORY_LIMIT,
-    localPlannerUpdateIntervalMs: LOCAL_PLANNER_UPDATE_INTERVAL_MS,
     maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
   });
 

@@ -7,6 +7,8 @@ mod types;
 mod utils;
 
 #[cfg(test)]
+mod test_support;
+#[cfg(test)]
 mod tests;
 
 macro_rules! impl_partial_ord_from_ord {

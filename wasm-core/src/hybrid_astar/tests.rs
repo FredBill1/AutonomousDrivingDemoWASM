@@ -5,15 +5,15 @@ use crate::rsplan::{ReedsSheppPath, ReedsSheppSegment, SegmentKind};
 use super::{
     HybridAStarConfig,
     heuristic::HeuristicGrid,
-    planner::HybridAStarPlanner,
     search::{calc_rspath_cost, generate_neighbour, traceback_path},
+    test_support::{build_test_planner, build_test_seed_planner},
     types::SearchNode,
     utils::{calc_ijk, python_sign},
 };
 
 #[test]
 fn planner_uses_python_target_max_steer_for_rs_radius() {
-    let planner = HybridAStarPlanner::new(
+    let planner = build_test_planner(
         2.0,
         2.0,
         0.0,
@@ -22,8 +22,7 @@ fn planner_uses_python_target_max_steer_for_rs_radius() {
         0.0,
         vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0],
         10,
-    )
-    .expect("planner");
+    );
 
     let expected = planner.car_config.wheel_base() / 35.0_f64.to_radians().tan();
     let actual = planner.car_config.target_min_turning_radius();
@@ -40,7 +39,7 @@ fn planner_uses_python_target_max_steer_for_rs_radius() {
 #[test]
 fn heuristic_grid_indexes_goal_cell() {
     let obstacles = vec![0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 10.0, 10.0];
-    let car_config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::default();
     let ha_config = HybridAStarConfig::default();
     let grid = HeuristicGrid::from_obstacles(&obstacles, 5.0, 5.0, &car_config, &ha_config).expect("grid");
     let index = calc_ijk(5.0, 5.0, 0.0, &grid, ha_config.yaw_grid_resolution);
@@ -51,7 +50,7 @@ fn heuristic_grid_indexes_goal_cell() {
 #[test]
 fn heuristic_grid_matches_python_downsampling() {
     let obstacles = vec![0.0, 0.0, 0.0, 4.0, 4.0, 0.0, 4.0, 4.0, 1.75, 1.75];
-    let car_config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::default();
     let ha_config = HybridAStarConfig::default();
     let grid = HeuristicGrid::from_obstacles(&obstacles, 2.0, 2.0, &car_config, &ha_config).expect("grid");
 
@@ -69,7 +68,7 @@ fn heuristic_grid_matches_python_downsampling() {
 #[test]
 fn planner_returns_success_result_in_empty_box() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0];
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000).expect("path");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000);
     while !planner.step(256).expect("step") {}
     let result = planner.take_result().expect("result");
     assert!(result.flat_path().len() > 4);
@@ -80,7 +79,7 @@ fn planner_returns_success_result_in_empty_box() {
 #[test]
 fn goal_collision_returns_finished_empty_result() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0, 15.0, 15.0];
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000).expect("planner");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000);
 
     assert!(planner.is_finished());
     let result = planner.take_result().expect("result");
@@ -95,7 +94,7 @@ fn unreachable_search_returns_finished_empty_result() {
         obstacles.extend_from_slice(&[6.0, y as f64]);
     }
 
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 10.0, 2.0, 0.0, obstacles, 4000).expect("planner");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 10.0, 2.0, 0.0, obstacles, 4000);
     while !planner.step(256).expect("step") {}
 
     let result = planner.take_result().expect("result");
@@ -106,7 +105,7 @@ fn unreachable_search_returns_finished_empty_result() {
 #[test]
 fn planner_steps_emit_explored_segments_before_finish() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0];
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000).expect("planner");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000);
     let finished = planner.step(4).expect("step");
     let explored = planner.take_explored_segments();
 
@@ -117,7 +116,7 @@ fn planner_steps_emit_explored_segments_before_finish() {
 #[test]
 fn point_start_collision_keeps_first_escape_rollout() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0, 0.8, 2.0];
-    let planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 1).expect("planner");
+    let planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 1);
     let current = planner.nodes.values().next().expect("start node");
 
     let neighbour = generate_neighbour(
@@ -156,7 +155,7 @@ fn neighbour_acceptance_does_not_prune_blocked_heuristic_cells() {
         blocked: vec![true; 64],
         distances: vec![0.0; 64],
     };
-    let car_config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::default();
     let ha_config = HybridAStarConfig::default();
     let goal = [7.0, 7.0, 0.0];
     let obstacles = box_obstacles(8.0, 8.0);
@@ -179,15 +178,14 @@ fn neighbour_acceptance_does_not_prune_blocked_heuristic_cells() {
 #[test]
 fn trajectory_seed_start_matches_python_seed_semantics() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0];
-    let planner = HybridAStarPlanner::from_trajectory_seed(
+    let planner = build_test_seed_planner(
         vec![1.0, 1.0, 0.0, 2.0, 2.0, 1.0, 0.2, 2.0, 3.0, 1.1, 0.3, 2.0],
         15.0,
         15.0,
         0.0,
         obstacles,
         4000,
-    )
-    .expect("planner");
+    );
 
     let start = planner.nodes.get(&(1, 3, 1)).expect("seed start node");
     assert_eq!(start.direction, 1);
@@ -210,7 +208,7 @@ fn python_sign_keeps_zero_velocity_seed_direction() {
 #[test]
 fn planner_ignores_runtime_iteration_cap_parameter() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0];
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 1).expect("planner");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 1);
 
     for _ in 0..128 {
         if planner.step(1).expect("step") {
@@ -225,7 +223,7 @@ fn planner_ignores_runtime_iteration_cap_parameter() {
 
 #[test]
 fn rs_cost_matches_python_segment_penalties() {
-    let car_config = crate::car::CarConfig::new();
+    let car_config = crate::car::CarConfig::default();
     let ha_config = HybridAStarConfig::default();
     let node = SearchNode {
         ijk: (0, 0, 0),
@@ -254,7 +252,7 @@ fn rs_cost_matches_python_segment_penalties() {
 #[test]
 fn explored_segments_follow_neighbour_trajectory_geometry() {
     let obstacles = vec![0.0, 0.0, 0.0, 20.0, 20.0, 0.0, 20.0, 20.0];
-    let mut planner = HybridAStarPlanner::new(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000).expect("planner");
+    let mut planner = build_test_planner(2.0, 2.0, 0.0, 15.0, 15.0, 0.0, obstacles, 4000);
     planner.step(1).expect("step");
     let explored = planner.take_explored_segments();
 

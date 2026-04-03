@@ -24,8 +24,43 @@ pub struct MpcConfig {
 #[wasm_bindgen]
 impl MpcConfig {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        Self::default()
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        horizon_length: u32,
+        max_iter: u32,
+        du_th: f64,
+        r_accel: f64,
+        r_steer: f64,
+        rd_accel: f64,
+        rd_steer: f64,
+        q_x: f64,
+        q_y: f64,
+        q_v: f64,
+        q_yaw: f64,
+        qf_scale: f64,
+        desired_max_accel_ratio: f64,
+        min_horizon_distance: f64,
+        direction_change_dist: f64,
+        motion_resolution: f64,
+    ) -> Self {
+        Self {
+            horizon_length,
+            max_iter,
+            du_th,
+            r_accel,
+            r_steer,
+            rd_accel,
+            rd_steer,
+            q_x,
+            q_y,
+            q_v,
+            q_yaw,
+            qf_scale,
+            desired_max_accel_ratio,
+            min_horizon_distance,
+            direction_change_dist,
+            motion_resolution,
+        }
     }
 }
 

@@ -7,6 +7,7 @@ pub struct CarConfig {
     length: f64,
     width: f64,
     back_to_wheel: f64,
+    collision_padding: f64,
     target_max_steer: f64,
     max_steer: f64,
     max_steer_speed: f64,
@@ -21,8 +22,39 @@ pub struct CarConfig {
 #[wasm_bindgen]
 impl CarConfig {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> CarConfig {
-        Self::default()
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        wheel_base: f64,
+        length: f64,
+        width: f64,
+        back_to_wheel: f64,
+        collision_padding: f64,
+        target_max_steer: f64,
+        max_steer: f64,
+        max_steer_speed: f64,
+        max_speed: f64,
+        min_speed: f64,
+        max_accel: f64,
+        max_centripetal_accel: f64,
+        target_speed: f64,
+        scan_radius: f64,
+    ) -> CarConfig {
+        Self {
+            wheel_base,
+            length,
+            width,
+            back_to_wheel,
+            collision_padding,
+            target_max_steer,
+            max_steer,
+            max_steer_speed,
+            max_speed,
+            min_speed,
+            max_accel,
+            max_centripetal_accel,
+            target_speed,
+            scan_radius,
+        }
     }
 }
 
@@ -34,6 +66,7 @@ wasm_getters!(CarConfig {
     wheel_length(_this) -> f64 => 0.8;
     wheel_width(_this) -> f64 => 0.5;
     wheel_spacing(_this) -> f64 => 1.4;
+    collision_padding(this) -> f64 => this.collision_padding;
     target_max_steer(this) -> f64 => this.target_max_steer;
     max_steer(this) -> f64 => this.max_steer;
     max_steer_speed(this) -> f64 => this.max_steer_speed;
@@ -44,8 +77,8 @@ wasm_getters!(CarConfig {
     target_speed(this) -> f64 => this.target_speed;
     scan_radius(this) -> f64 => this.scan_radius;
     back_to_center(this) -> f64 => this.length / 2.0 - this.back_to_wheel;
-    collision_length(this) -> f64 => this.length + 0.5;
-    collision_width(this) -> f64 => this.width + 0.5;
+    collision_length(this) -> f64 => this.length + this.collision_padding;
+    collision_width(this) -> f64 => this.width + this.collision_padding;
     collision_radius(this) -> f64 => (this.collision_width() / 2.0).hypot(this.collision_length() / 2.0);
     target_min_turning_radius(this) -> f64 => this.wheel_base / this.target_max_steer.tan();
 });
@@ -57,6 +90,7 @@ impl Default for CarConfig {
             length: 4.5,
             width: 2.0,
             back_to_wheel: 1.0,
+            collision_padding: 0.5,
             target_max_steer: 35.0_f64.to_radians(),
             max_steer: 40.0_f64.to_radians(),
             max_steer_speed: 360.0_f64.to_radians(),
