@@ -242,7 +242,10 @@ export type LocalPlannerWorkerEventMap = {
 };
 
 export type GlobalPlannerWorkerMethodMap = {
-  initializeRuntime: WorkerMethodSpec<{ carConfig: CarConfigSnapshot; hybridAStarConfig: HybridAStarConfigSnapshot; runtime: RuntimeConfigSnapshot }, null>;
+  initializeRuntime: WorkerMethodSpec<
+    { carConfig: CarConfigSnapshot; hybridAStarConfig: HybridAStarConfigSnapshot; runtime: RuntimeConfigSnapshot },
+    null
+  >;
   solveHybridAStar: OrchestratorMethodMap['solveHybridAStar'];
   cancelHybridAStar: OrchestratorMethodMap['cancelHybridAStar'];
   solveReedsSheppCandidates: OrchestratorMethodMap['solveReedsSheppCandidates'];

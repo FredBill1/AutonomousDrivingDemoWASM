@@ -68,7 +68,15 @@ impl HybridAStarPlanner {
         ha_config: &HybridAStarConfig,
     ) -> Result<HybridAStarPlanner, JsValue> {
         let seed = decode_start_seed(&flat_start_seed)?;
-        Self::from_seed_start(&seed, goal_x, goal_y, goal_yaw, obstacle_coordinates, car_config, ha_config)
+        Self::from_seed_start(
+            &seed,
+            goal_x,
+            goal_y,
+            goal_yaw,
+            obstacle_coordinates,
+            car_config,
+            ha_config,
+        )
     }
 
     #[wasm_bindgen(getter)]

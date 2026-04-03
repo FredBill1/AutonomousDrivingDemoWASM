@@ -1,6 +1,4 @@
 import { getDefaultControllerConfig } from './controllerConfig';
-import { createPubSub } from './workerEventBus';
-import { createWorkerRpc } from './workerRpc';
 import type {
   HybridAStarProgress,
   HybridAStarStartSeedPoint,
@@ -11,6 +9,8 @@ import type {
   SimulationStateEvent,
   WasmCarState,
 } from './workerContracts';
+import { createPubSub } from './workerEventBus';
+import { createWorkerRpc } from './workerRpc';
 
 export type {
   HybridAStarProgress,
@@ -50,7 +50,7 @@ function subscribeToEvent<Key extends keyof OrchestratorEventMap>(
 
 export async function ensureWasmCore() {
   if (!initializationPromise) {
-    initializationPromise = orchestratorRpc.call('initializeRuntime', controllerConfig);
+    initializationPromise = orchestratorRpc.call('initializeRuntime', controllerConfig).then(() => undefined);
   }
   await initializationPromise;
 }
@@ -95,7 +95,10 @@ export async function checkCollision(state: WasmCarState, obstacleCoordinates: F
   return orchestratorRpc.call('checkCollision', { state, obstacleCoordinates });
 }
 
-export async function checkPathCollision(path: Array<{ x: number; y: number; yaw: number }>, obstacleCoordinates: Float64Array) {
+export async function checkPathCollision(
+  path: Array<{ x: number; y: number; yaw: number }>,
+  obstacleCoordinates: Float64Array,
+) {
   await ensureWasmCore();
   return orchestratorRpc.call('checkPathCollision', { path, obstacleCoordinates });
 }
@@ -146,9 +149,9 @@ export async function cancelLocalPlanner() {
   return orchestratorRpc.call('cancelLocalPlanner');
 }
 
-let clearLocalPlannerUpdateSubscription = () => undefined;
-let clearHybridAStarProgressSubscription = () => undefined;
-let clearSimulationStateSubscription = () => undefined;
+let clearLocalPlannerUpdateSubscription: () => void = () => undefined;
+let clearHybridAStarProgressSubscription: () => void = () => undefined;
+let clearSimulationStateSubscription: () => void = () => undefined;
 
 export function setLocalPlannerUpdateListener(listener: ((event: LocalPlannerUpdateResult) => void) | null) {
   clearLocalPlannerUpdateSubscription();

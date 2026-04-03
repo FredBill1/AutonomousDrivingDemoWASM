@@ -1,6 +1,7 @@
 import initWasm, { MpcReferenceTracker, mpc_control_preview } from '../../wasm-core/pkg/wasm_core';
 
 import { createFlatTupleDecoder, decodeFlatTuples, encodeFlatTuples, encodeFlatTuplesToFloat64 } from './flatCodec';
+import { createCarConfig, createMpcConfig } from './wasmConfig';
 import { disposeWasmResource } from './wasmResource';
 import type {
   LocalPlannerPathPoint,
@@ -10,26 +11,33 @@ import type {
   LocalPlannerWorkerEventMap,
   LocalPlannerWorkerMethodMap,
   WasmCarState,
+  WasmRuntime,
   WorkerEvent,
   WorkerHandlerMap,
   WorkerRequest,
   WorkerResponse,
-  WasmRuntime,
 } from './workerContracts';
-import { createCarConfig, createMpcConfig } from './wasmConfig';
 
-const decodePredictedStateQuads = createFlatTupleDecoder<LocalPlannerPathPoint>(4, 'predicted state values', (values, offset) => ({
-  x: values[offset],
-  y: values[offset + 1],
-  yaw: values[offset + 3],
-}));
+const decodePredictedStateQuads = createFlatTupleDecoder<LocalPlannerPathPoint>(
+  4,
+  'predicted state values',
+  (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 3],
+  }),
+);
 
-const decodePlannerStateQuads = createFlatTupleDecoder<LocalPlannerReferencePoint>(4, 'planner state values', (values, offset) => ({
-  x: values[offset],
-  y: values[offset + 1],
-  yaw: values[offset + 2],
-  velocity: values[offset + 3],
-}));
+const decodePlannerStateQuads = createFlatTupleDecoder<LocalPlannerReferencePoint>(
+  4,
+  'planner state values',
+  (values, offset) => ({
+    x: values[offset],
+    y: values[offset + 1],
+    yaw: values[offset + 2],
+    velocity: values[offset + 3],
+  }),
+);
 
 const workerState: {
   runtime: WasmRuntime | null;
@@ -43,7 +51,7 @@ const workerState: {
   mpcTimeStep: 0.07,
 };
 
-async function ensureRuntime() {
+function ensureRuntime() {
   if (!workerState.runtime) {
     throw new Error('Local planner worker runtime not initialized');
   }
@@ -66,7 +74,9 @@ function ensureSession() {
         return;
       }
       session.updateInFlight = true;
-      void runLocalPlannerUpdate(session.tracker, session.latestState.state, session.latestState.timestamp)
+      void Promise.resolve(
+        runLocalPlannerUpdate(session.tracker, session.latestState.state, session.latestState.timestamp),
+      )
         .then((result) => {
           if (!result || workerState.session !== session) {
             return;
@@ -102,7 +112,12 @@ function flattenTrajectoryPoints(points: Array<{ x: number; y: number; yaw: numb
   return encodeFlatTuples(points, (point) => [point.x, point.y, point.yaw, point.direction]);
 }
 
-function decodeControlPairs(flatValues: number[] | Float64Array, timestamp: number, dt: number, initialVelocity: number) {
+function decodeControlPairs(
+  flatValues: number[] | Float64Array,
+  timestamp: number,
+  dt: number,
+  initialVelocity: number,
+) {
   const controlSequence: LocalPlannerUpdateResult['controlSequence'] = [];
   let velocity = initialVelocity;
   for (let index = 0; index < flatValues.length; index += 2) {
@@ -116,12 +131,12 @@ function decodeControlPairs(flatValues: number[] | Float64Array, timestamp: numb
   return controlSequence;
 }
 
-async function runLocalPlannerUpdate(
+function runLocalPlannerUpdate(
   tracker: MpcReferenceTracker,
   state: WasmCarState,
   timestamp: number,
-): Promise<LocalPlannerUpdateResult | null> {
-  const { carConfig, mpcConfig } = await ensureRuntime();
+): LocalPlannerUpdateResult | null {
+  const { carConfig, mpcConfig } = ensureRuntime();
   const dt = workerState.mpcTimeStep;
   const referenceResult = tracker.update(state.x, state.y, state.yaw, state.velocity, dt);
 
@@ -175,13 +190,13 @@ const handlers: WorkerHandlerMap<LocalPlannerWorkerMethodMap> = {
     return null;
   },
 
-  async setLocalPlannerTrajectory(payload) {
+  setLocalPlannerTrajectory(payload) {
     const session = ensureSession();
     if (!payload.trajectory || payload.trajectory.length === 0) {
       session.tracker?.brake();
-      return null;
+      return Promise.resolve(null);
     }
-    const { carConfig, mpcConfig } = await ensureRuntime();
+    const { carConfig, mpcConfig } = ensureRuntime();
     const nextTracker = new MpcReferenceTracker(
       Float64Array.from(flattenTrajectoryPoints(payload.trajectory)),
       mpcConfig,
@@ -189,36 +204,36 @@ const handlers: WorkerHandlerMap<LocalPlannerWorkerMethodMap> = {
     );
     disposeWasmResource(session.tracker);
     session.tracker = nextTracker;
-    return null;
+    return Promise.resolve(null);
   },
 
-  async setLocalPlannerState(payload) {
+  setLocalPlannerState(payload) {
     const session = ensureSession();
     session.latestState = {
       state: { ...payload.state },
       timestamp: payload.timestamp,
     };
-    return null;
+    return Promise.resolve(null);
   },
 
-  async brakeLocalPlanner() {
+  brakeLocalPlanner() {
     workerState.session?.tracker?.brake();
-    return null;
+    return Promise.resolve(null);
   },
 
-  async cancelLocalPlanner() {
+  cancelLocalPlanner() {
     if (workerState.session) {
       disposeWasmResource(workerState.session.tracker);
       workerState.session.tracker = null;
     }
-    return null;
+    return Promise.resolve(null);
   },
 
-  async stopLocalPlanner() {
+  stopLocalPlanner() {
     clearLocalPlannerTimer();
     disposeWasmResource(workerState.session?.tracker);
     workerState.session = null;
-    return null;
+    return Promise.resolve(null);
   },
 };
 
@@ -226,7 +241,9 @@ function isKnownRequestType(type: string): type is keyof LocalPlannerWorkerMetho
   return type in handlers;
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest<LocalPlannerWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>) => {
+self.onmessage = (
+  event: MessageEvent<WorkerRequest<LocalPlannerWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>,
+) => {
   const message = event.data;
   if (typeof message.id !== 'number' || typeof message.type !== 'string' || !isKnownRequestType(message.type)) {
     self.postMessage({
@@ -237,15 +254,20 @@ self.onmessage = (event: MessageEvent<WorkerRequest<LocalPlannerWorkerMethodMap>
     return;
   }
 
+  const requestId = message.id;
+
   void handlers[message.type](message.payload as never)
     .then((result) => {
-      self.postMessage({ id: message.id, ok: true, result } satisfies WorkerResponse<LocalPlannerWorkerMethodMap>);
+      self.postMessage({ id: requestId, ok: true, result } satisfies WorkerResponse<LocalPlannerWorkerMethodMap>);
     })
     .catch((error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      self.postMessage({ id: message.id, ok: false, error: errorMessage } satisfies WorkerResponse<LocalPlannerWorkerMethodMap>);
+      self.postMessage({
+        id: requestId,
+        ok: false,
+        error: errorMessage,
+      } satisfies WorkerResponse<LocalPlannerWorkerMethodMap>);
     });
 };
 
 export { decodeFlatTuples, encodeFlatTuplesToFloat64 };
-export {};

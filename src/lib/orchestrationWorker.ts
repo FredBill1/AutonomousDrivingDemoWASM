@@ -1,8 +1,7 @@
 import initWasm, { CarState, path_check_collision, trajectory_check_collision } from '../../wasm-core/pkg/wasm_core';
 
 import { encodeFlatTuplesToFloat64 } from './flatCodec';
-import { createPubSub } from './workerEventBus';
-import { createWorkerRpc } from './workerRpc';
+import { createCarConfig, toWasmConfigSnapshot } from './wasmConfig';
 import type {
   GlobalPlannerWorkerEventMap,
   GlobalPlannerWorkerMethodMap,
@@ -13,13 +12,14 @@ import type {
   SimulationWorkerEventMap,
   SimulationWorkerMethodMap,
   WasmPose,
+  WasmRuntime,
   WorkerEvent,
   WorkerHandlerMap,
   WorkerRequest,
   WorkerResponse,
-  WasmRuntime,
 } from './workerContracts';
-import { createCarConfig, toWasmConfigSnapshot } from './wasmConfig';
+import { createPubSub } from './workerEventBus';
+import { createWorkerRpc } from './workerRpc';
 
 const domainEvents = createPubSub<OrchestratorEventMap>();
 const simulationRpc = createWorkerRpc<SimulationWorkerMethodMap, SimulationWorkerEventMap>(
@@ -52,7 +52,7 @@ const workerState: {
 };
 
 function postEvent<Key extends keyof OrchestratorEventMap>(type: Key, payload: OrchestratorEventMap[Key]) {
-  self.postMessage({ type, payload } satisfies WorkerEvent<OrchestratorEventMap>);
+  self.postMessage({ type, payload } as WorkerEvent<OrchestratorEventMap>);
 }
 
 function registerSubscriptions() {
@@ -63,21 +63,25 @@ function registerSubscriptions() {
 
   domainEvents.subscribe('simulationState', (payload) => {
     postEvent('simulationState', payload);
-    void localPlannerRpc.call('setLocalPlannerState', {
-      state: payload.state,
-      timestamp: payload.timestamp,
-    }).catch((error) => {
-      console.error('Failed to forward simulation state to local planner', error);
-    });
+    void localPlannerRpc
+      .call('setLocalPlannerState', {
+        state: payload.state,
+        timestamp: payload.timestamp,
+      })
+      .catch((error) => {
+        console.error('Failed to forward simulation state to local planner', error);
+      });
   });
 
   domainEvents.subscribe('localPlannerUpdate', (payload) => {
     postEvent('localPlannerUpdate', payload);
-    void simulationRpc.call('setSimulationControlSequence', {
-      controlSequence: payload.controlSequence,
-    }).catch((error) => {
-      console.error('Failed to forward local planner controls to simulation', error);
-    });
+    void simulationRpc
+      .call('setSimulationControlSequence', {
+        controlSequence: payload.controlSequence,
+      })
+      .catch((error) => {
+        console.error('Failed to forward local planner controls to simulation', error);
+      });
   });
 
   domainEvents.subscribe('hybridAStarProgress', (payload) => {
@@ -125,11 +129,11 @@ const handlers: WorkerHandlerMap<OrchestratorMethodMap> = {
     return null;
   },
 
-  async getCarConfigSnapshot() {
+  getCarConfigSnapshot() {
     if (!workerState.controllerConfig) {
       throw new Error('Controller runtime not initialized');
     }
-    return toWasmConfigSnapshot(workerState.controllerConfig.carConfig);
+    return Promise.resolve(toWasmConfigSnapshot(workerState.controllerConfig.carConfig));
   },
 
   stepCarState(payload) {
@@ -216,7 +220,9 @@ function isKnownRequestType(type: string): type is keyof OrchestratorMethodMap {
   return type in handlers;
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest<OrchestratorMethodMap> | { id?: number; type?: string; payload?: unknown }>) => {
+self.onmessage = (
+  event: MessageEvent<WorkerRequest<OrchestratorMethodMap> | { id?: number; type?: string; payload?: unknown }>,
+) => {
   const message = event.data;
   if (typeof message.id !== 'number' || typeof message.type !== 'string' || !isKnownRequestType(message.type)) {
     self.postMessage({
@@ -227,13 +233,19 @@ self.onmessage = (event: MessageEvent<WorkerRequest<OrchestratorMethodMap> | { i
     return;
   }
 
+  const requestId = message.id;
+
   void handlers[message.type](message.payload as never)
     .then((result) => {
-      self.postMessage({ id: message.id, ok: true, result } satisfies WorkerResponse<OrchestratorMethodMap>);
+      self.postMessage({ id: requestId, ok: true, result } satisfies WorkerResponse<OrchestratorMethodMap>);
     })
     .catch((error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      self.postMessage({ id: message.id, ok: false, error: errorMessage } satisfies WorkerResponse<OrchestratorMethodMap>);
+      self.postMessage({
+        id: requestId,
+        ok: false,
+        error: errorMessage,
+      } satisfies WorkerResponse<OrchestratorMethodMap>);
     });
 };
 

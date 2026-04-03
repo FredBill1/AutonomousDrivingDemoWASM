@@ -1,21 +1,21 @@
 import initWasm, { HybridAStarPlanner, rs_solve_path } from '../../wasm-core/pkg/wasm_core';
 
 import { decodeFlatTuples } from './flatCodec';
+import { createCarConfig, createHybridAStarConfig } from './wasmConfig';
 import { disposeWasmResource } from './wasmResource';
 import type {
   GlobalPlannerWorkerEventMap,
   GlobalPlannerWorkerMethodMap,
   HybridAStarProgressSegment,
-  HybridAStarStartSeedPoint,
   HybridAStarSolution,
+  HybridAStarStartSeedPoint,
   WasmCarState,
+  WasmRuntime,
   WorkerEvent,
   WorkerHandlerMap,
   WorkerRequest,
   WorkerResponse,
-  WasmRuntime,
 } from './workerContracts';
-import { createCarConfig, createHybridAStarConfig } from './wasmConfig';
 
 const workerState: {
   runtime: WasmRuntime | null;
@@ -31,14 +31,17 @@ const workerState: {
   hybridAStarSegmentBatchSize: 320,
 };
 
-async function ensureRuntime() {
+function ensureRuntime() {
   if (!workerState.runtime) {
     throw new Error('Global planner worker runtime not initialized');
   }
   return workerState.runtime;
 }
 
-function postEvent<Key extends keyof GlobalPlannerWorkerEventMap>(type: Key, payload: GlobalPlannerWorkerEventMap[Key]) {
+function postEvent<Key extends keyof GlobalPlannerWorkerEventMap>(
+  type: Key,
+  payload: GlobalPlannerWorkerEventMap[Key],
+) {
   self.postMessage({ type, payload } satisfies WorkerEvent<GlobalPlannerWorkerEventMap>);
 }
 
@@ -51,13 +54,16 @@ function decodeExploredSegments(values: ArrayLike<number>): HybridAStarProgressS
   }));
 }
 
-function decodeHybridResult(token: number, result: {
-  flat_path: Float64Array | number[];
-  explored_segments: Float64Array | number[];
-  explored_count: number;
-  analytic_expansions: number;
-  success: boolean;
-}): HybridAStarSolution | null {
+function decodeHybridResult(
+  token: number,
+  result: {
+    flat_path: Float64Array | number[];
+    explored_segments: Float64Array | number[];
+    explored_count: number;
+    analytic_expansions: number;
+    success: boolean;
+  },
+): HybridAStarSolution | null {
   if (!result.success) {
     return null;
   }
@@ -95,7 +101,7 @@ const handlers: WorkerHandlerMap<GlobalPlannerWorkerMethodMap> = {
   },
 
   async solveHybridAStar(payload) {
-    const { carConfig, hybridAStarConfig } = await ensureRuntime();
+    const { carConfig, hybridAStarConfig } = ensureRuntime();
     disposeWasmResource(workerState.activePlanner?.planner);
     const planner = payload.startIsTrajectorySeed
       ? HybridAStarPlanner.from_trajectory_seed(
@@ -165,15 +171,15 @@ const handlers: WorkerHandlerMap<GlobalPlannerWorkerMethodMap> = {
     throw new Error('Hybrid A* search cancelled');
   },
 
-  async cancelHybridAStar() {
+  cancelHybridAStar() {
     if (workerState.activePlanner) {
       workerState.activePlanner.cancelled = true;
     }
-    return null;
+    return Promise.resolve(null);
   },
 
-  async solveReedsSheppCandidates(payload) {
-    await ensureRuntime();
+  solveReedsSheppCandidates(payload) {
+    ensureRuntime();
     const solutions: GlobalPlannerWorkerMethodMap['solveReedsSheppCandidates']['result'] = [];
     for (const turnRadius of payload.turnRadii) {
       for (const runwayLength of payload.runwayLengths) {
@@ -218,7 +224,7 @@ const handlers: WorkerHandlerMap<GlobalPlannerWorkerMethodMap> = {
       }
       return left.totalLength - right.totalLength;
     });
-    return solutions;
+    return Promise.resolve(solutions);
   },
 };
 
@@ -226,7 +232,9 @@ function isKnownRequestType(type: string): type is keyof GlobalPlannerWorkerMeth
   return type in handlers;
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest<GlobalPlannerWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>) => {
+self.onmessage = (
+  event: MessageEvent<WorkerRequest<GlobalPlannerWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>,
+) => {
   const message = event.data;
   if (typeof message.id !== 'number' || typeof message.type !== 'string' || !isKnownRequestType(message.type)) {
     self.postMessage({
@@ -237,13 +245,19 @@ self.onmessage = (event: MessageEvent<WorkerRequest<GlobalPlannerWorkerMethodMap
     return;
   }
 
+  const requestId = message.id;
+
   void handlers[message.type](message.payload as never)
     .then((result) => {
-      self.postMessage({ id: message.id, ok: true, result } satisfies WorkerResponse<GlobalPlannerWorkerMethodMap>);
+      self.postMessage({ id: requestId, ok: true, result } satisfies WorkerResponse<GlobalPlannerWorkerMethodMap>);
     })
     .catch((error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      self.postMessage({ id: message.id, ok: false, error: errorMessage } satisfies WorkerResponse<GlobalPlannerWorkerMethodMap>);
+      self.postMessage({
+        id: requestId,
+        ok: false,
+        error: errorMessage,
+      } satisfies WorkerResponse<GlobalPlannerWorkerMethodMap>);
     });
 };
 

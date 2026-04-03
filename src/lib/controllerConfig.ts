@@ -1,5 +1,10 @@
 import { DEG_TO_RAD, KMH_TO_MS } from './constants';
-import type { CarConfigSnapshot, ControllerConfig, HybridAStarConfigSnapshot, MpcConfigSnapshot } from './workerContracts';
+import type {
+  CarConfigSnapshot,
+  ControllerConfig,
+  HybridAStarConfigSnapshot,
+  MpcConfigSnapshot,
+} from './workerContracts';
 
 export const DEFAULT_CAR_CONFIG: CarConfigSnapshot = {
   wheelBase: 2.5,

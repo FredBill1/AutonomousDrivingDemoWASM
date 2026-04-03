@@ -1,5 +1,6 @@
 import initWasm, { CarState } from '../../wasm-core/pkg/wasm_core';
 
+import { createCarConfig } from './wasmConfig';
 import type {
   LocalPlannerControlPoint,
   SimulationSession,
@@ -7,13 +8,12 @@ import type {
   SimulationWorkerEventMap,
   SimulationWorkerMethodMap,
   WasmCarState,
+  WasmRuntime,
   WorkerEvent,
   WorkerHandlerMap,
   WorkerRequest,
   WorkerResponse,
-  WasmRuntime,
 } from './workerContracts';
-import { createCarConfig } from './wasmConfig';
 
 const workerState: {
   runtime: WasmRuntime | null;
@@ -29,7 +29,7 @@ const workerState: {
   publishIntervalMs: 50,
 };
 
-async function ensureRuntime() {
+function ensureRuntime() {
   if (!workerState.runtime) {
     throw new Error('Simulation worker runtime not initialized');
   }
@@ -139,8 +139,8 @@ function sampleControl(controlSequence: LocalPlannerControlPoint[] | null, times
   return last;
 }
 
-async function computeStepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
-  const { carConfig } = await ensureRuntime();
+function computeStepCarState(current: WasmCarState, targetVelocity: number, targetSteer: number, dt: number) {
+  const { carConfig } = ensureRuntime();
   const state = new CarState(current.x, current.y, current.yaw, current.velocity, current.steer);
   try {
     const next = state.stepped(carConfig, targetVelocity, targetSteer, dt);
@@ -160,16 +160,15 @@ async function computeStepCarState(current: WasmCarState, targetVelocity: number
   }
 }
 
-async function advanceSimulation(session: SimulationSession) {
+function advanceSimulation(session: SimulationSession) {
   const control = sampleControl(session.controlSequence, session.timestamp);
   if (!control) {
-    return computeStepCarState(session.state, session.state.velocity, session.state.steer, workerState.simulationDeltaTime);
+    return Promise.resolve(
+      computeStepCarState(session.state, session.state.velocity, session.state.steer, workerState.simulationDeltaTime),
+    );
   }
-  return computeStepCarState(
-    session.state,
-    control.targetVelocity,
-    control.targetSteer,
-    workerState.simulationDeltaTime,
+  return Promise.resolve(
+    computeStepCarState(session.state, control.targetVelocity, control.targetSteer, workerState.simulationDeltaTime),
   );
 }
 
@@ -233,22 +232,24 @@ const handlers: WorkerHandlerMap<SimulationWorkerMethodMap> = {
   },
 
   stepCarState(payload) {
-    return computeStepCarState(payload.current, payload.targetVelocity, payload.targetSteer, payload.dt);
+    return Promise.resolve(
+      computeStepCarState(payload.current, payload.targetVelocity, payload.targetSteer, payload.dt),
+    );
   },
 
-  async initSimulation(payload) {
-    await ensureRuntime();
+  initSimulation(payload) {
+    ensureRuntime();
     workerState.session = createSimulationSession(payload.state, payload.timestamp ?? 0);
     startSimulationLoop();
-    return null;
+    return Promise.resolve(null);
   },
 
-  async setSimulationState(payload) {
-    await ensureRuntime();
+  setSimulationState(payload) {
+    ensureRuntime();
     if (!workerState.session) {
       workerState.session = createSimulationSession(payload.state, payload.timestamp ?? 0);
       startSimulationLoop();
-      return null;
+      return Promise.resolve(null);
     }
     workerState.session.state = cloneState(payload.state);
     workerState.session.controlSequence = null;
@@ -257,38 +258,38 @@ const handlers: WorkerHandlerMap<SimulationWorkerMethodMap> = {
     if (payload.timestamp !== undefined) {
       workerState.session.timestamp = payload.timestamp;
     }
-    return null;
+    return Promise.resolve(null);
   },
 
-  async setSimulationControlSequence(payload) {
+  setSimulationControlSequence(payload) {
     const session = requireSession();
     if (session.stopped) {
-      return null;
+      return Promise.resolve(null);
     }
     assertValidControlSequence(payload.controlSequence);
     session.controlSequence = cloneControlSequence(payload.controlSequence);
     session.stateVersion += 1;
-    return null;
+    return Promise.resolve(null);
   },
 
-  async stopSimulationMotion() {
+  stopSimulationMotion() {
     const session = requireSession();
     session.state = { ...session.state, velocity: 0, steer: 0 };
     session.controlSequence = null;
     session.stopped = true;
     session.stateVersion += 1;
-    return null;
+    return Promise.resolve(null);
   },
 
-  async resumeSimulationMotion() {
+  resumeSimulationMotion() {
     requireSession().stopped = false;
-    return null;
+    return Promise.resolve(null);
   },
 
-  async stopSimulation() {
+  stopSimulation() {
     clearTimers();
     workerState.session = null;
-    return null;
+    return Promise.resolve(null);
   },
 };
 
@@ -296,7 +297,9 @@ function isKnownRequestType(type: string): type is keyof SimulationWorkerMethodM
   return type in handlers;
 }
 
-self.onmessage = (event: MessageEvent<WorkerRequest<SimulationWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>) => {
+self.onmessage = (
+  event: MessageEvent<WorkerRequest<SimulationWorkerMethodMap> | { id?: number; type?: string; payload?: unknown }>,
+) => {
   const message = event.data;
   if (typeof message.id !== 'number' || typeof message.type !== 'string' || !isKnownRequestType(message.type)) {
     self.postMessage({
@@ -307,13 +310,19 @@ self.onmessage = (event: MessageEvent<WorkerRequest<SimulationWorkerMethodMap> |
     return;
   }
 
+  const requestId = message.id;
+
   void handlers[message.type](message.payload as never)
     .then((result) => {
-      self.postMessage({ id: message.id, ok: true, result } satisfies WorkerResponse<SimulationWorkerMethodMap>);
+      self.postMessage({ id: requestId, ok: true, result } satisfies WorkerResponse<SimulationWorkerMethodMap>);
     })
     .catch((error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      self.postMessage({ id: message.id, ok: false, error: errorMessage } satisfies WorkerResponse<SimulationWorkerMethodMap>);
+      self.postMessage({
+        id: requestId,
+        ok: false,
+        error: errorMessage,
+      } satisfies WorkerResponse<SimulationWorkerMethodMap>);
     });
 };
 
