@@ -29,7 +29,63 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
   }
 
   const defaultConfig = createDefaultAppConfig();
-  const activeSection = SETTINGS_SECTIONS[activeSectionIndex] ?? SETTINGS_SECTIONS[0];
+  const sectionEntries = [
+    ...SETTINGS_SECTIONS.map((section) => ({
+      title: section.title,
+      description: section.description,
+      render: () => (
+        <div className="settings-grid">
+          {section.fields.map((field) => {
+            const value = getNumericAppConfigValue(config, field.path);
+            const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
+            const fieldId = field.path.join('-');
+            const hintId = `${fieldId}-hint`;
+            return (
+              <label key={field.path.join('.')} className="settings-field">
+                <span className="settings-field__label">{field.label}</span>
+                <input
+                  id={fieldId}
+                  type="number"
+                  value={String(value)}
+                  min={field.min}
+                  step={field.step}
+                  aria-describedby={hintId}
+                  onChange={(event) => {
+                    if (event.target.value.trim() === '') {
+                      return;
+                    }
+                    const nextValue = Number(event.target.value);
+                    if (!Number.isFinite(nextValue)) {
+                      return;
+                    }
+                    onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
+                  }}
+                />
+                <span id={hintId} className="settings-field__hint">
+                  {field.description} Default: {defaultValue}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      ),
+    })),
+    {
+      title: 'About',
+      description: 'Project links and repository information.',
+      render: () => (
+        <a
+          className="settings-link"
+          href="https://github.com/FredBill1/AutonomousDrivingDemoWASM"
+          target="_blank"
+          rel="noreferrer"
+        >
+          github.com/FredBill1/AutonomousDrivingDemoWASM
+        </a>
+      ),
+    },
+  ];
+  const activeSection = sectionEntries[activeSectionIndex] ?? sectionEntries[0];
 
   return (
     <div className="settings-overlay" onClick={onClose}>
@@ -46,7 +102,7 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
 
         <div className="settings-panel__content">
           <nav className="settings-nav" aria-label="Settings sections">
-            {SETTINGS_SECTIONS.map((section, index) => (
+            {sectionEntries.map((section, index) => (
               <button
                 key={section.title}
                 className={`settings-nav__button ${index === activeSectionIndex ? 'active' : ''}`}
@@ -62,55 +118,7 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
               <h3>{activeSection.title}</h3>
               <p>{activeSection.description}</p>
             </div>
-            <div className="settings-grid">
-              {activeSection.fields.map((field) => {
-                const value = getNumericAppConfigValue(config, field.path);
-                const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
-                const fieldId = field.path.join('-');
-                const hintId = `${fieldId}-hint`;
-                return (
-                  <label key={field.path.join('.')} className="settings-field">
-                    <span className="settings-field__label">{field.label}</span>
-                    <input
-                      id={fieldId}
-                      type="number"
-                      value={String(value)}
-                      min={field.min}
-                      step={field.step}
-                      aria-describedby={hintId}
-                      onChange={(event) => {
-                        if (event.target.value.trim() === '') {
-                          return;
-                        }
-                        const nextValue = Number(event.target.value);
-                        if (!Number.isFinite(nextValue)) {
-                          return;
-                        }
-                        onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
-                      }}
-                    />
-                    <span id={hintId} className="settings-field__hint">
-                      {field.description} Default: {defaultValue}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="settings-section settings-section--about">
-            <div className="settings-section__heading">
-              <h3>About</h3>
-              <p>Project links and repository information.</p>
-            </div>
-            <a
-              className="settings-link"
-              href="https://github.com/FredBill1/AutonomousDrivingDemoWASM"
-              target="_blank"
-              rel="noreferrer"
-            >
-              github.com/FredBill1/AutonomousDrivingDemoWASM
-            </a>
+            {activeSection.render()}
           </section>
         </div>
 

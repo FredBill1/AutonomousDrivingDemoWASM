@@ -201,6 +201,7 @@ button {
 }
 
 .control-ribbon__row--actions {
+  display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
 }
@@ -220,6 +221,10 @@ button {
   padding: 0 18px;
   border-radius: 999px;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
   transition:
     transform 140ms ease,
     background 140ms ease,
@@ -240,6 +245,10 @@ button {
   background: linear-gradient(135deg, rgba(159, 232, 112, 0.9), rgba(96, 178, 118, 0.84));
   color: #06110c;
   font-weight: 700;
+}
+
+.button-shortcut {
+  white-space: nowrap;
 }
 
 .segmented-control button:hover,
@@ -439,6 +448,10 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .button-shortcut {
+    display: none;
+  }
+
   .segmented-control,
   .ghost-button,
   .accent-button {
@@ -473,10 +486,6 @@ button {
     grid-auto-flow: column;
     grid-auto-columns: minmax(160px, 1fr);
     overflow: auto hidden;
-  }
-
-  .settings-section--about {
-    grid-column: auto;
   }
 
   .settings-grid {

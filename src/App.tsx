@@ -55,6 +55,15 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
   );
 }
 
+function ShortcutLabel({ label, shortcut }: { label: string; shortcut?: string }) {
+  return (
+    <>
+      <span>{label}</span>
+      {shortcut ? <span className="button-shortcut">({shortcut})</span> : null}
+    </>
+  );
+}
+
 function App() {
   const [appConfig, setAppConfig] = useState(loadStoredAppConfig);
   const [settingsDraft, setSettingsDraft] = useState(createDefaultAppConfig);
@@ -173,22 +182,22 @@ function App() {
         <div className="control-ribbon__row">
           <div className="segmented-control">
             <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
-              Set Goal(A)
+              <ShortcutLabel label="Set Goal" shortcut="A" />
             </button>
             <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
-              Set Pose(S)
+              <ShortcutLabel label="Set Pose" shortcut="S" />
             </button>
           </div>
         </div>
         <div className="control-ribbon__row control-ribbon__row--actions">
           <button className="ghost-button" onClick={() => void handleBrake()}>
-            Brake(D)
+            <ShortcutLabel label="Brake" shortcut="D" />
           </button>
           <button className="ghost-button" onClick={() => void handleCancel()}>
-            Cancel(F)
+            <ShortcutLabel label="Cancel" shortcut="F" />
           </button>
           <button className="accent-button" onClick={() => void handleRestart()}>
-            Restart(R)
+            <ShortcutLabel label="Restart" shortcut="R" />
           </button>
           <button className="ghost-button" onClick={handleOpenSettings}>
             Settings
