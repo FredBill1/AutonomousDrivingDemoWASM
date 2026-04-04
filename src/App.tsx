@@ -123,6 +123,11 @@ function App() {
     setSettingsOpen(false);
   };
 
+  const handleCancelSettings = () => {
+    setSettingsDraft(cloneAppConfig(appConfig));
+    setSettingsOpen(false);
+  };
+
   return (
     <div className="app-shell">
       <main ref={dashboardGridRef} className={`dashboard-grid dashboard-grid--${dashboardLayout}`}>
@@ -211,6 +216,7 @@ function App() {
           config={settingsDraft}
           hasChanges={hasSettingsChanges}
           onConfigChange={setSettingsDraft}
+          onCancel={handleCancelSettings}
           onClose={handleCloseSettings}
           onReset={() => setSettingsDraft(createDefaultAppConfig())}
         />

@@ -271,7 +271,7 @@ button {
 
 .settings-modal {
   width: min(1040px, 100%);
-  max-height: min(820px, calc(100dvh - 48px));
+  height: min(820px, calc(100dvh - 48px));
   padding: 18px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -469,7 +469,7 @@ button {
   .settings-modal {
     width: 100%;
     padding: 12px;
-    max-height: calc(100dvh - 24px);
+    height: calc(100dvh - 24px);
   }
 
   .settings-panel__header,

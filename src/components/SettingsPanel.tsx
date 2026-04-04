@@ -13,6 +13,7 @@ type SettingsPanelProps = {
   config: AppConfig;
   hasChanges: boolean;
   onConfigChange: (config: AppConfig) => void;
+  onCancel: () => void;
   onClose: () => void;
   onReset: () => void;
 };
@@ -21,7 +22,7 @@ function stopPanelClick(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
 }
 
-export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onClose, onReset }: SettingsPanelProps) {
+export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCancel, onClose, onReset }: SettingsPanelProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
 
   if (!isOpen) {
@@ -95,8 +96,8 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
             <h2>Settings</h2>
             <p>Changes are saved in local storage and applied when this panel closes.</p>
           </div>
-          <button className="ghost-button" onClick={onClose}>
-            {hasChanges ? 'Apply & Close' : 'Close'}
+          <button className="ghost-button" onClick={hasChanges ? onCancel : onClose}>
+            {hasChanges ? 'Cancel' : 'Close'}
           </button>
         </div>
 
