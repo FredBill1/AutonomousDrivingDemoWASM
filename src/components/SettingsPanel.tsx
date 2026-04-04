@@ -7,6 +7,7 @@ import {
   type AppConfig,
 } from '../lib/appConfig';
 import { SETTINGS_SECTIONS } from '../lib/settingsSchema';
+import { SETTINGS_DISPLAY_VALUE_DIGITS } from '../lib/settingsUnits';
 
 type SettingsPanelProps = {
   isOpen: boolean;
@@ -18,14 +19,12 @@ type SettingsPanelProps = {
   onReset: () => void;
 };
 
-const DISPLAY_VALUE_DIGITS = 12;
-
 function stopPanelClick(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
 }
 
 function formatDisplayValue(value: number) {
-  return Number(value.toFixed(DISPLAY_VALUE_DIGITS)).toString();
+  return Number(value.toFixed(SETTINGS_DISPLAY_VALUE_DIGITS)).toString();
 }
 
 export function SettingsPanel({

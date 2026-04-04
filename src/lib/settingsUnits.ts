@@ -1,6 +1,6 @@
 import { MS_TO_KMH, RAD_TO_DEG } from './constants';
 
-const DISPLAY_ROUNDING_DIGITS = 12;
+export const SETTINGS_DISPLAY_VALUE_DIGITS = 6;
 
 export type SettingsValueFormat = {
   unit: string;
@@ -9,7 +9,7 @@ export type SettingsValueFormat = {
 };
 
 function roundDisplayValue(value: number) {
-  return Number(value.toFixed(DISPLAY_ROUNDING_DIGITS));
+  return Number(value.toFixed(SETTINGS_DISPLAY_VALUE_DIGITS));
 }
 
 function createIdentityFormat(unit: string): SettingsValueFormat {
