@@ -102,7 +102,7 @@ export function SettingsPanel({
         <div className="settings-panel__header">
           <div>
             <h2>Settings</h2>
-            <p>Changes are saved in local storage and applied when this panel closes.</p>
+            <p>Changes are saved in local storage when you apply them.</p>
           </div>
           <button className="ghost-button" onClick={hasChanges ? onCancel : onClose}>
             {hasChanges ? 'Cancel' : 'Close'}
