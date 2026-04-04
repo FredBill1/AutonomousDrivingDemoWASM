@@ -22,7 +22,15 @@ function stopPanelClick(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
 }
 
-export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCancel, onClose, onReset }: SettingsPanelProps) {
+export function SettingsPanel({
+  isOpen,
+  config,
+  hasChanges,
+  onConfigChange,
+  onCancel,
+  onClose,
+  onReset,
+}: SettingsPanelProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
 
   if (!isOpen) {
