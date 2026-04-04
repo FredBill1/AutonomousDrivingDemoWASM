@@ -105,13 +105,21 @@ function readNestedValue(source: unknown, path: readonly string[]) {
   }, source);
 }
 
-function writeNestedValue(target: AppConfig, path: readonly string[], value: number) {
+function findWritableParent(target: AppConfig, path: readonly string[]) {
   const [firstKey, ...restPath] = path;
   let current: Record<string, unknown> = target[firstKey as keyof AppConfig] as unknown as Record<string, unknown>;
   for (let index = 0; index < restPath.length - 1; index += 1) {
     current = current[restPath[index]] as Record<string, unknown>;
   }
-  current[restPath[restPath.length - 1]] = value;
+  return {
+    parent: current,
+    key: restPath[restPath.length - 1],
+  };
+}
+
+function writeNestedValue(target: AppConfig, path: readonly string[], value: number) {
+  const { parent, key } = findWritableParent(target, path);
+  parent[key] = value;
 }
 
 function normalizeValue(field: NumericField, value: number) {
@@ -134,17 +142,17 @@ export function cloneAppConfig(config: AppConfig): AppConfig {
 }
 
 export function getNumericAppConfigValue(config: AppConfig, path: readonly string[]) {
-  return path.reduce<unknown>((current, key) => (current as Record<string, unknown>)[key], config) as number;
+  const value = readNestedValue(config, path);
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid numeric settings path: ${path.join('.')}`);
+  }
+  return value;
 }
 
 export function updateNumericAppConfigValue(config: AppConfig, path: readonly string[], value: number): AppConfig {
   const nextConfig = cloneAppConfig(config);
-  const [firstKey, ...restPath] = path;
-  let current: Record<string, unknown> = nextConfig[firstKey as keyof AppConfig] as unknown as Record<string, unknown>;
-  for (let index = 0; index < restPath.length - 1; index += 1) {
-    current = current[restPath[index]] as Record<string, unknown>;
-  }
-  current[restPath[restPath.length - 1]] = value;
+  const { parent, key } = findWritableParent(nextConfig, path);
+  parent[key] = value;
   return nextConfig;
 }
 

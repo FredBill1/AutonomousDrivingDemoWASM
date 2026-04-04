@@ -61,6 +61,9 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
                         min={field.min}
                         step={field.step}
                         onChange={(event) => {
+                          if (event.target.value.trim() === '') {
+                            return;
+                          }
                           const nextValue = Number(event.target.value);
                           if (!Number.isFinite(nextValue)) {
                             return;
