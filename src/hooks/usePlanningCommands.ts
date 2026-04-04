@@ -8,7 +8,13 @@ import {
   setSimulationState,
   stopSimulationMotion,
 } from '../lib/wasmCore';
-import { hideGoalUnreachable, resetPlanningInteractionState, type PlanningControllerParams } from './planningHelpers';
+import {
+  hideGoalUnreachable,
+  INITIAL_SIMULATION_TIMESTAMP,
+  resetPlanningInteractionState,
+  resetSimulationSessionState,
+  type PlanningControllerParams,
+} from './planningHelpers';
 
 type UsePlanningCommandsParams = Pick<PlanningControllerParams, 'refs' | 'updateState'> & {
   clearGlobalPlannerDisplaySegments: () => void;
@@ -22,8 +28,6 @@ export function usePlanningCommands({
   const {
     brakeTrajectoryRef,
     carRef,
-    globalTrajectoryRef,
-    goalRef,
     localPlanningRef,
     mapServerNodeRef,
     mapSnapshotRef,
@@ -71,13 +75,7 @@ export function usePlanningCommands({
 
   const handleRestart = useCallback(async () => {
     await handleCancel();
-    goalRef.current = null;
-    globalTrajectoryRef.current = null;
-    brakeTrajectoryRef.current = null;
-    updateState('goal', null);
-    updateState('pressedPose', null);
-    updateState('globalTrajectory', null);
-    hideGoalUnreachable(updateState);
+    resetSimulationSessionState(refs, updateState);
 
     try {
       const mapServerNode = mapServerNodeRef.current;
@@ -95,21 +93,11 @@ export function usePlanningCommands({
       const nextCar = await mapServerNode.generateRandomInitialState();
       carRef.current = nextCar;
       updateState('car', nextCar);
-      await setSimulationState(nextCar);
+      await setSimulationState(nextCar, INITIAL_SIMULATION_TIMESTAMP);
     } catch (error) {
       console.error('Failed to restart simulation state', error);
     }
-  }, [
-    brakeTrajectoryRef,
-    carRef,
-    globalTrajectoryRef,
-    goalRef,
-    handleCancel,
-    mapServerNodeRef,
-    mapSnapshotRef,
-    trajectoryCollisionCheckingNodeRef,
-    updateState,
-  ]);
+  }, [carRef, handleCancel, mapServerNodeRef, mapSnapshotRef, refs, trajectoryCollisionCheckingNodeRef, updateState]);
 
   return {
     handleCancel,

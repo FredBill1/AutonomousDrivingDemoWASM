@@ -1,11 +1,9 @@
 import type { Viewport } from 'pixi-viewport';
 import type React from 'react';
 
-import { MAX_ZOOM, MIN_ZOOM, MIN_ZOOM_RELATIVE_TO_FIT, WHEEL_ZOOM_SENSITIVITY } from './constants';
+import type { ViewportConfig } from './appConfig';
 import type { MapBoundingBox } from './mapServerNode';
 import { clamp, setViewportTransform } from './mapViewportDraw';
-
-export { MAX_ZOOM, MIN_ZOOM };
 
 export type ScreenPoint = {
   x: number;
@@ -34,6 +32,7 @@ type PointerHandlersParams = {
   touchStateRef: React.RefObject<TouchState>;
   fitScaleRef: React.RefObject<number>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  viewportConfigRef: React.RefObject<ViewportConfig>;
   onPrimaryDragStartRef: React.RefObject<(world: { x: number; y: number }) => boolean>;
   onPrimaryDragMoveRef: React.RefObject<(world: { x: number; y: number }) => void>;
   onPrimaryDragEndRef: React.RefObject<(world: { x: number; y: number }) => void>;
@@ -50,6 +49,7 @@ export function createPointerHandlers(params: PointerHandlersParams) {
     touchStateRef,
     fitScaleRef,
     canvasRef,
+    viewportConfigRef,
     onPrimaryDragStartRef,
     onPrimaryDragMoveRef,
     onPrimaryDragEndRef,
@@ -159,6 +159,7 @@ export function createPointerHandlers(params: PointerHandlersParams) {
       const nextCenterY = (firstPoint.y + secondPoint.y) / 2;
       const nextDistance = distance(firstPoint, secondPoint);
       const previousGesture = touchStateRef.current.gesture;
+      const { minZoom, maxZoom } = viewportConfigRef.current;
 
       viewport.position.x += nextCenterX - previousGesture.centerX;
       viewport.position.y += nextCenterY - previousGesture.centerY;
@@ -168,7 +169,7 @@ export function createPointerHandlers(params: PointerHandlersParams) {
       const screenY = nextCenterY - rect.top;
       const worldPoint = viewport.toWorld(screenX, screenY);
       const scaleFactor = nextDistance / Math.max(previousGesture.distance, 1);
-      const nextScale = clamp(viewport.scale.x * scaleFactor, MIN_ZOOM, MAX_ZOOM);
+      const nextScale = clamp(viewport.scale.x * scaleFactor, minZoom, maxZoom);
       setViewportTransform(viewport, screenX, screenY, nextScale, worldPoint);
 
       touchStateRef.current.gesture = {
@@ -231,11 +232,12 @@ export function createPointerHandlers(params: PointerHandlersParams) {
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
     const worldPoint = viewport.toWorld(screenX, screenY);
-    const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
+    const { maxZoom, minZoom, minZoomRelativeToFit, wheelZoomSensitivity } = viewportConfigRef.current;
+    const scaleFactor = Math.exp(-event.deltaY * wheelZoomSensitivity);
     const nextScale = clamp(
       viewport.scale.x * scaleFactor,
-      Math.max(MIN_ZOOM, fitScaleRef.current * MIN_ZOOM_RELATIVE_TO_FIT),
-      MAX_ZOOM,
+      Math.max(minZoom, fitScaleRef.current * minZoomRelativeToFit),
+      maxZoom,
     );
     setViewportTransform(viewport, screenX, screenY, nextScale, worldPoint);
   };

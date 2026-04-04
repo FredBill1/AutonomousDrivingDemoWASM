@@ -75,6 +75,15 @@ export const DEFAULT_CONTROLLER_CONFIG: ControllerConfig = {
   },
 };
 
+export function cloneControllerConfig(config: ControllerConfig): ControllerConfig {
+  return {
+    carConfig: { ...config.carConfig },
+    hybridAStarConfig: { ...config.hybridAStarConfig },
+    mpcConfig: { ...config.mpcConfig },
+    runtime: { ...config.runtime },
+  };
+}
+
 export function getDefaultControllerConfig(): ControllerConfig {
-  return DEFAULT_CONTROLLER_CONFIG;
+  return cloneControllerConfig(DEFAULT_CONTROLLER_CONFIG);
 }

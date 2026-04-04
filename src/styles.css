@@ -188,9 +188,22 @@ button {
   border-radius: 24px;
   padding: 14px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.control-ribbon__row {
+  display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.control-ribbon__row--actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .segmented-control {
@@ -208,6 +221,10 @@ button {
   padding: 0 18px;
   border-radius: 999px;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
   transition:
     transform 140ms ease,
     background 140ms ease,
@@ -230,10 +247,149 @@ button {
   font-weight: 700;
 }
 
+.button-shortcut {
+  white-space: nowrap;
+}
+
 .segmented-control button:hover,
 .ghost-button:hover,
 .accent-button:hover {
   transform: translateY(-1px);
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 10, 18, 0.72);
+  backdrop-filter: blur(10px);
+  padding: 24px;
+}
+
+.settings-modal {
+  width: min(1040px, 100%);
+  height: min(820px, calc(100dvh - 48px));
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  background: rgba(7, 17, 26, 0.96);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.settings-panel__header,
+.settings-section__heading,
+.settings-panel__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-panel__header h2,
+.settings-section__heading h3 {
+  margin: 0;
+}
+
+.settings-panel__header p,
+.settings-section__heading p,
+.settings-field__hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.settings-panel__content {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.settings-nav {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  overflow: auto;
+}
+
+.settings-nav__button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+}
+
+.settings-nav__button.active {
+  background: linear-gradient(135deg, rgba(158, 232, 112, 0.32), rgba(87, 216, 255, 0.32));
+}
+
+.settings-section {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+}
+
+.settings-section--active {
+  padding-right: 10px;
+}
+
+.settings-section--about {
+  grid-column: 2;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-field__label {
+  font-weight: 700;
+}
+
+.settings-field input {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-link {
+  color: var(--cyan);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
+}
+
+.settings-panel__footer {
+  align-items: center;
 }
 
 @media (max-width: 1080px) {
@@ -275,6 +431,25 @@ button {
   .control-ribbon {
     justify-content: stretch;
     padding: 10px;
+    flex-direction: column;
+  }
+
+  .control-ribbon__row,
+  .control-ribbon__row--actions {
+    width: 100%;
+  }
+
+  .control-ribbon__row {
+    flex-wrap: wrap;
+  }
+
+  .control-ribbon__row--actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .button-shortcut {
+    display: none;
   }
 
   .segmented-control,
@@ -285,6 +460,36 @@ button {
 
   .segmented-control button {
     flex: 1;
+  }
+
+  .settings-overlay {
+    padding: 12px;
+  }
+
+  .settings-modal {
+    width: 100%;
+    padding: 12px;
+    height: calc(100dvh - 24px);
+  }
+
+  .settings-panel__header,
+  .settings-section__heading,
+  .settings-panel__footer {
+    flex-direction: column;
+  }
+
+  .settings-panel__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-nav {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(160px, 1fr);
+    overflow: auto hidden;
+  }
+
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-grid {

@@ -1,5 +1,6 @@
 import { getDefaultControllerConfig } from './controllerConfig';
 import type {
+  ControllerConfig,
   HybridAStarProgress,
   HybridAStarStartSeedPoint,
   LocalPlannerTrajectoryPoint,
@@ -27,7 +28,7 @@ export type {
   WasmConfigSnapshot,
 } from './workerContracts';
 
-const controllerConfig = getDefaultControllerConfig();
+let controllerConfig = getDefaultControllerConfig();
 const eventBus = createPubSub<OrchestratorEventMap>();
 const orchestratorRpc = createWorkerRpc<OrchestratorMethodMap, OrchestratorEventMap>(
   () => new Worker(new URL('./orchestrationWorker.ts', import.meta.url), { type: 'module' }),
@@ -53,6 +54,10 @@ export async function ensureWasmCore() {
     initializationPromise = orchestratorRpc.call('initializeRuntime', controllerConfig).then(() => undefined);
   }
   await initializationPromise;
+}
+
+export function setControllerConfig(config: ControllerConfig) {
+  controllerConfig = config;
 }
 
 export async function getCarConfigSnapshot() {

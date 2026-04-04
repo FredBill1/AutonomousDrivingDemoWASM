@@ -1,6 +1,9 @@
+import { useMemo, useState } from 'react';
+
 import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
+import { SettingsPanel } from './components/SettingsPanel';
 import { useAppState } from './hooks/useAppState';
 import { useDashboardLayout } from './hooks/useDashboardLayout';
 import { useGlobalPlanning } from './hooks/useGlobalPlanning';
@@ -8,10 +11,11 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { usePlanningCommands } from './hooks/usePlanningCommands';
 import { usePlanningDrag } from './hooks/usePlanningDrag';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
+import { cloneAppConfig, createDefaultAppConfig, loadStoredAppConfig, persistAppConfig } from './lib/appConfig';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
 import { HISTORY_LIMIT } from './lib/appModel';
 import { type CarShape, type GoalUnreachableState, type MotionLimits } from './lib/appTypes';
-import { MAX_GLOBAL_PLANNER_DISPLAY_BATCHES, MS_TO_KMH, RAD_TO_DEG, REPLAN_MAX_SPEED_MS } from './lib/constants';
+import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
 
 export type { CarShape, GoalUnreachableState, MotionLimits };
 
@@ -22,6 +26,23 @@ type ChartPanelProps = {
   maxValue: number;
   lineColor: number;
 };
+
+function hasSameNumericEntries(left: Record<string, number>, right: Record<string, number>) {
+  return Object.keys(left).every((key) => left[key] === right[key]);
+}
+
+function areAppConfigsEqual(
+  left: ReturnType<typeof loadStoredAppConfig>,
+  right: ReturnType<typeof loadStoredAppConfig>,
+) {
+  return (
+    hasSameNumericEntries(left.controller.carConfig, right.controller.carConfig) &&
+    hasSameNumericEntries(left.controller.hybridAStarConfig, right.controller.hybridAStarConfig) &&
+    hasSameNumericEntries(left.controller.mpcConfig, right.controller.mpcConfig) &&
+    hasSameNumericEntries(left.controller.runtime, right.controller.runtime) &&
+    hasSameNumericEntries(left.ui, right.ui)
+  );
+}
 
 function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPanelProps) {
   return (
@@ -34,21 +55,37 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
   );
 }
 
+function ShortcutLabel({ label, shortcut }: { label: string; shortcut?: string }) {
+  return (
+    <>
+      <span>{label}</span>
+      {shortcut ? <span className="button-shortcut">({shortcut})</span> : null}
+    </>
+  );
+}
+
 function App() {
+  const [appConfig, setAppConfig] = useState(loadStoredAppConfig);
+  const [settingsDraft, setSettingsDraft] = useState(() => createDefaultAppConfig());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [restartToken, setRestartToken] = useState(0);
   const { state, refs, updateState, dashboardGridRef } = useAppState();
   const dashboardLayout = useDashboardLayout(dashboardGridRef);
+  const hasSettingsChanges = useMemo(() => !areAppConfigsEqual(settingsDraft, appConfig), [appConfig, settingsDraft]);
 
   useSimulationSetup({
+    controllerConfig: appConfig.controller,
     refs,
     updateState,
     historyLimit: HISTORY_LIMIT,
-    maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
+    maxGlobalPlannerDisplayBatches: appConfig.ui.maxGlobalPlannerDisplayBatches,
+    restartToken,
   });
 
   const { clearGlobalPlannerDisplaySegments, runGlobalPlan } = useGlobalPlanning({
     refs,
     updateState,
-    replanMaxSpeed: REPLAN_MAX_SPEED_MS,
+    replanMaxSpeed: appConfig.ui.replanMaxSpeedKmh * KMH_TO_MS,
     toHybridAStarStartSeed,
   });
   const { handleCancel, handleBrake, handleRestart } = usePlanningCommands({
@@ -72,6 +109,24 @@ function App() {
     handleCancel,
     handleRestart,
   });
+
+  const handleOpenSettings = () => {
+    setSettingsDraft(cloneAppConfig(appConfig));
+    setSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    if (hasSettingsChanges) {
+      setAppConfig(persistAppConfig(settingsDraft));
+      setRestartToken((current) => current + 1);
+    }
+    setSettingsOpen(false);
+  };
+
+  const handleCancelSettings = () => {
+    setSettingsDraft(cloneAppConfig(appConfig));
+    setSettingsOpen(false);
+  };
 
   return (
     <div className="app-shell">
@@ -105,6 +160,7 @@ function App() {
               onPrimaryDragEnd: handleMapPrimaryDragEnd,
               onPrimaryDragCancel: handleMapPrimaryDragCancel,
             }}
+            viewportConfig={appConfig.ui}
           />
         </section>
 
@@ -128,24 +184,43 @@ function App() {
       </main>
 
       <section className="control-ribbon">
-        <div className="segmented-control">
-          <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
-            Set Goal(A)
+        <div className="control-ribbon__row">
+          <div className="segmented-control">
+            <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
+              <ShortcutLabel label="Set Goal" shortcut="A" />
+            </button>
+            <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
+              <ShortcutLabel label="Set Pose" shortcut="S" />
+            </button>
+          </div>
+        </div>
+        <div className="control-ribbon__row control-ribbon__row--actions">
+          <button className="ghost-button" onClick={() => void handleBrake()}>
+            <ShortcutLabel label="Brake" shortcut="D" />
           </button>
-          <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
-            Set Pose(S)
+          <button className="ghost-button" onClick={() => void handleCancel()}>
+            <ShortcutLabel label="Cancel" shortcut="F" />
+          </button>
+          <button className="ghost-button" onClick={() => void handleRestart()}>
+            <ShortcutLabel label="Restart" shortcut="R" />
+          </button>
+          <button className="accent-button" onClick={handleOpenSettings}>
+            Settings
           </button>
         </div>
-        <button className="ghost-button" onClick={() => void handleBrake()}>
-          Brake(D)
-        </button>
-        <button className="ghost-button" onClick={() => void handleCancel()}>
-          Cancel(F)
-        </button>
-        <button className="accent-button" onClick={() => void handleRestart()}>
-          Restart(R)
-        </button>
       </section>
+
+      {settingsOpen ? (
+        <SettingsPanel
+          isOpen={settingsOpen}
+          config={settingsDraft}
+          hasChanges={hasSettingsChanges}
+          onConfigChange={setSettingsDraft}
+          onCancel={handleCancelSettings}
+          onClose={handleCloseSettings}
+          onReset={() => setSettingsDraft(createDefaultAppConfig())}
+        />
+      ) : null}
     </div>
   );
 }
