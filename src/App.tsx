@@ -196,10 +196,10 @@ function App() {
           <button className="ghost-button" onClick={() => void handleCancel()}>
             <ShortcutLabel label="Cancel" shortcut="F" />
           </button>
-          <button className="accent-button" onClick={() => void handleRestart()}>
+          <button className="ghost-button" onClick={() => void handleRestart()}>
             <ShortcutLabel label="Restart" shortcut="R" />
           </button>
-          <button className="ghost-button" onClick={handleOpenSettings}>
+          <button className="accent-button" onClick={handleOpenSettings}>
             Settings
           </button>
         </div>
