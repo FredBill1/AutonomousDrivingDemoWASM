@@ -1,7 +1,12 @@
 import type { MouseEvent } from 'react';
 
-import { createDefaultAppConfig, type AppConfig } from '../lib/appConfig';
-import { SETTINGS_SECTIONS, getNumericSettingValue, updateNumericSettingValue } from '../lib/settingsSchema';
+import {
+  createDefaultAppConfig,
+  getNumericAppConfigValue,
+  updateNumericAppConfigValue,
+  type AppConfig,
+} from '../lib/appConfig';
+import { SETTINGS_SECTIONS } from '../lib/settingsSchema';
 
 type SettingsPanelProps = {
   isOpen: boolean;
@@ -45,8 +50,8 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
               </div>
               <div className="settings-grid">
                 {section.fields.map((field) => {
-                  const value = getNumericSettingValue(config, field.path);
-                  const defaultValue = getNumericSettingValue(defaultConfig, field.path);
+                  const value = getNumericAppConfigValue(config, field.path);
+                  const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
                   return (
                     <label key={field.path.join('.')} className="settings-field">
                       <span className="settings-field__label">{field.label}</span>
@@ -60,7 +65,7 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
                           if (!Number.isFinite(nextValue)) {
                             return;
                           }
-                          onConfigChange(updateNumericSettingValue(config, field.path, nextValue));
+                          onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
                         }}
                       />
                       <span className="settings-field__hint">

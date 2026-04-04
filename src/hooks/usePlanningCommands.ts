@@ -97,15 +97,7 @@ export function usePlanningCommands({
     } catch (error) {
       console.error('Failed to restart simulation state', error);
     }
-  }, [
-    carRef,
-    handleCancel,
-    mapServerNodeRef,
-    mapSnapshotRef,
-    refs,
-    trajectoryCollisionCheckingNodeRef,
-    updateState,
-  ]);
+  }, [carRef, handleCancel, mapServerNodeRef, mapSnapshotRef, refs, trajectoryCollisionCheckingNodeRef, updateState]);
 
   return {
     handleCancel,

@@ -1,5 +1,5 @@
-import { cloneControllerConfig, getDefaultControllerConfig } from './controllerConfig';
 import { MIN_RANGE_VALUE } from './constants';
+import { cloneControllerConfig, getDefaultControllerConfig } from './controllerConfig';
 import type { ControllerConfig } from './workerContracts';
 
 const APP_CONFIG_STORAGE_KEY = 'autonomous-driving-demo-settings-v1';
@@ -131,6 +131,21 @@ export function cloneAppConfig(config: AppConfig): AppConfig {
     controller: cloneControllerConfig(config.controller),
     ui: { ...config.ui },
   };
+}
+
+export function getNumericAppConfigValue(config: AppConfig, path: readonly string[]) {
+  return path.reduce<unknown>((current, key) => (current as Record<string, unknown>)[key], config) as number;
+}
+
+export function updateNumericAppConfigValue(config: AppConfig, path: readonly string[], value: number): AppConfig {
+  const nextConfig = cloneAppConfig(config);
+  const [firstKey, ...restPath] = path;
+  let current: Record<string, unknown> = nextConfig[firstKey as keyof AppConfig] as unknown as Record<string, unknown>;
+  for (let index = 0; index < restPath.length - 1; index += 1) {
+    current = current[restPath[index]] as Record<string, unknown>;
+  }
+  current[restPath[restPath.length - 1]] = value;
+  return nextConfig;
 }
 
 export function sanitizeAppConfig(source: unknown): AppConfig {
