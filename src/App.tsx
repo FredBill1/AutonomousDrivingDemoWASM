@@ -182,14 +182,16 @@ function App() {
         </div>
       </section>
 
-      <SettingsPanel
-        isOpen={settingsOpen}
-        config={settingsDraft}
-        hasChanges={hasSettingsChanges}
-        onConfigChange={setSettingsDraft}
-        onClose={handleCloseSettings}
-        onReset={() => setSettingsDraft(createDefaultAppConfig())}
-      />
+      {settingsOpen ? (
+        <SettingsPanel
+          isOpen={settingsOpen}
+          config={settingsDraft}
+          hasChanges={hasSettingsChanges}
+          onConfigChange={setSettingsDraft}
+          onClose={handleCloseSettings}
+          onReset={() => setSettingsDraft(createDefaultAppConfig())}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 
 import {
   createDefaultAppConfig,
@@ -23,12 +23,6 @@ function stopPanelClick(event: MouseEvent<HTMLElement>) {
 
 export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onClose, onReset }: SettingsPanelProps) {
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
-
-  useEffect(() => {
-    if (isOpen) {
-      setActiveSectionIndex(0);
-    }
-  }, [isOpen]);
 
   if (!isOpen) {
     return null;
