@@ -163,7 +163,7 @@ export function useSimulationSetup({
       handleProgressUpdate(progress, refs, updateState, maxGlobalPlannerDisplayBatches);
     });
     return () => setHybridAStarProgressListener(null);
-  }, [maxGlobalPlannerDisplayBatches, refs, updateState]);
+  }, [controllerConfig, maxGlobalPlannerDisplayBatches, refs, restartToken, updateState]);
 
   useEffect(() => {
     let active = true;

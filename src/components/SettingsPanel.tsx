@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 
 import {
   createDefaultAppConfig,
@@ -22,15 +22,24 @@ function stopPanelClick(event: MouseEvent<HTMLElement>) {
 }
 
 export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onClose, onReset }: SettingsPanelProps) {
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveSectionIndex(0);
+    }
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
 
   const defaultConfig = createDefaultAppConfig();
+  const activeSection = SETTINGS_SECTIONS[activeSectionIndex] ?? SETTINGS_SECTIONS[0];
 
   return (
     <div className="settings-overlay" onClick={onClose}>
-      <aside className="settings-panel" onClick={stopPanelClick}>
+      <aside className="settings-modal" onClick={stopPanelClick}>
         <div className="settings-panel__header">
           <div>
             <h2>Settings</h2>
@@ -42,46 +51,56 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
         </div>
 
         <div className="settings-panel__content">
-          {SETTINGS_SECTIONS.map((section) => (
-            <section key={section.title} className="settings-section">
-              <div className="settings-section__heading">
-                <h3>{section.title}</h3>
-                <p>{section.description}</p>
-              </div>
-              <div className="settings-grid">
-                {section.fields.map((field) => {
-                  const value = getNumericAppConfigValue(config, field.path);
-                  const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
-                  return (
-                    <label key={field.path.join('.')} className="settings-field">
-                      <span className="settings-field__label">{field.label}</span>
-                      <input
-                        type="number"
-                        value={String(value)}
-                        min={field.min}
-                        step={field.step}
-                        onChange={(event) => {
-                          if (event.target.value.trim() === '') {
-                            return;
-                          }
-                          const nextValue = Number(event.target.value);
-                          if (!Number.isFinite(nextValue)) {
-                            return;
-                          }
-                          onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
-                        }}
-                      />
-                      <span className="settings-field__hint">
-                        {field.description} Default: {defaultValue}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          <nav className="settings-nav" aria-label="Settings sections">
+            {SETTINGS_SECTIONS.map((section, index) => (
+              <button
+                key={section.title}
+                className={`settings-nav__button ${index === activeSectionIndex ? 'active' : ''}`}
+                onClick={() => setActiveSectionIndex(index)}
+              >
+                {section.title}
+              </button>
+            ))}
+          </nav>
 
-          <section className="settings-section">
+          <section className="settings-section settings-section--active">
+            <div className="settings-section__heading">
+              <h3>{activeSection.title}</h3>
+              <p>{activeSection.description}</p>
+            </div>
+            <div className="settings-grid">
+              {activeSection.fields.map((field) => {
+                const value = getNumericAppConfigValue(config, field.path);
+                const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
+                return (
+                  <label key={field.path.join('.')} className="settings-field">
+                    <span className="settings-field__label">{field.label}</span>
+                    <input
+                      type="number"
+                      value={String(value)}
+                      min={field.min}
+                      step={field.step}
+                      onChange={(event) => {
+                        if (event.target.value.trim() === '') {
+                          return;
+                        }
+                        const nextValue = Number(event.target.value);
+                        if (!Number.isFinite(nextValue)) {
+                          return;
+                        }
+                        onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
+                      }}
+                    />
+                    <span className="settings-field__hint">
+                      {field.description} Default: {defaultValue}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="settings-section settings-section--about">
             <div className="settings-section__heading">
               <h3>About</h3>
               <p>Project links and repository information.</p>

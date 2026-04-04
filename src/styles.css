@@ -189,7 +189,7 @@ button {
   padding: 14px;
   display: flex;
   flex-wrap: nowrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   align-items: stretch;
 }
@@ -202,7 +202,7 @@ button {
 
 .control-ribbon__row--actions {
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .segmented-control {
@@ -253,20 +253,23 @@ button {
   inset: 0;
   z-index: 20;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   background: rgba(3, 10, 18, 0.72);
   backdrop-filter: blur(10px);
+  padding: 24px;
 }
 
-.settings-panel {
-  width: min(720px, 100%);
-  height: 100%;
+.settings-modal {
+  width: min(1040px, 100%);
+  max-height: min(820px, calc(100dvh - 48px));
   padding: 18px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
   background: rgba(7, 17, 26, 0.96);
-  border-left: 1px solid var(--panel-border);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
   box-shadow: var(--shadow);
 }
 
@@ -293,10 +296,34 @@ button {
 }
 
 .settings-panel__content {
-  overflow: auto;
+  min-height: 0;
   display: grid;
-  gap: 14px;
-  padding-right: 4px;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.settings-nav {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  overflow: auto;
+}
+
+.settings-nav__button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+}
+
+.settings-nav__button.active {
+  background: linear-gradient(135deg, rgba(158, 232, 112, 0.32), rgba(87, 216, 255, 0.32));
 }
 
 .settings-section {
@@ -306,6 +333,15 @@ button {
   background: rgba(255, 255, 255, 0.03);
   display: grid;
   gap: 14px;
+  overflow: auto;
+}
+
+.settings-section--active {
+  padding-right: 10px;
+}
+
+.settings-section--about {
+  grid-column: 2;
 }
 
 .settings-grid {
@@ -413,15 +449,34 @@ button {
     flex: 1;
   }
 
-  .settings-panel {
+  .settings-overlay {
+    padding: 12px;
+  }
+
+  .settings-modal {
     width: 100%;
     padding: 12px;
+    max-height: calc(100dvh - 24px);
   }
 
   .settings-panel__header,
   .settings-section__heading,
   .settings-panel__footer {
     flex-direction: column;
+  }
+
+  .settings-panel__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-nav {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(160px, 1fr);
+    overflow: auto hidden;
+  }
+
+  .settings-section--about {
+    grid-column: auto;
   }
 
   .settings-grid {
