@@ -18,8 +18,14 @@ type SettingsPanelProps = {
   onReset: () => void;
 };
 
+const DISPLAY_VALUE_DIGITS = 12;
+
 function stopPanelClick(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
+}
+
+function formatDisplayValue(value: number) {
+  return Number(value.toFixed(DISPLAY_VALUE_DIGITS)).toString();
 }
 
 export function SettingsPanel({
@@ -45,33 +51,36 @@ export function SettingsPanel({
       render: () => (
         <div className="settings-grid">
           {section.fields.map((field) => {
-            const value = getNumericAppConfigValue(config, field.path);
-            const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
+            const value = field.toDisplay(getNumericAppConfigValue(config, field.path));
+            const defaultValue = field.toDisplay(getNumericAppConfigValue(defaultConfig, field.path));
             const fieldId = field.path.join('-');
             const hintId = `${fieldId}-hint`;
             return (
               <label key={field.path.join('.')} className="settings-field">
                 <span className="settings-field__label">{field.label}</span>
-                <input
-                  id={fieldId}
-                  type="number"
-                  value={String(value)}
-                  min={field.min}
-                  step={field.step}
-                  aria-describedby={hintId}
-                  onChange={(event) => {
-                    if (event.target.value.trim() === '') {
-                      return;
-                    }
-                    const nextValue = Number(event.target.value);
-                    if (!Number.isFinite(nextValue)) {
-                      return;
-                    }
-                    onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
-                  }}
-                />
+                <div className="settings-field__control">
+                  <input
+                    id={fieldId}
+                    type="number"
+                    value={formatDisplayValue(value)}
+                    min={field.min}
+                    step={field.step}
+                    aria-describedby={hintId}
+                    onChange={(event) => {
+                      if (event.target.value.trim() === '') {
+                        return;
+                      }
+                      const nextValue = Number(event.target.value);
+                      if (!Number.isFinite(nextValue)) {
+                        return;
+                      }
+                      onConfigChange(updateNumericAppConfigValue(config, field.path, field.toStored(nextValue)));
+                    }}
+                  />
+                  <span className="settings-field__unit">{field.unit}</span>
+                </div>
                 <span id={hintId} className="settings-field__hint">
-                  {field.description} Default: {defaultValue}
+                  {field.description} Default: {formatDisplayValue(defaultValue)} {field.unit}
                 </span>
               </label>
             );
