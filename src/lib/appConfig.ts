@@ -156,6 +156,13 @@ export function updateNumericAppConfigValue(config: AppConfig, path: readonly st
   return nextConfig;
 }
 
+/**
+ * Normalizes persisted settings and also enforces cross-field constraints that
+ * individual field validation cannot express:
+ * - targetMaxSteer cannot exceed maxSteer
+ * - targetSpeed is clamped between minSpeed and maxSpeed
+ * - maxZoom cannot be smaller than minZoom
+ */
 export function sanitizeAppConfig(source: unknown): AppConfig {
   const sanitized = createDefaultAppConfig();
   for (const field of NUMERIC_FIELDS) {
@@ -175,7 +182,17 @@ export function sanitizeAppConfig(source: unknown): AppConfig {
 }
 
 function canUseLocalStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return false;
+  }
+  try {
+    const probeKey = `${APP_CONFIG_STORAGE_KEY}:probe`;
+    window.localStorage.setItem(probeKey, probeKey);
+    window.localStorage.removeItem(probeKey);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function loadStoredAppConfig(): AppConfig {

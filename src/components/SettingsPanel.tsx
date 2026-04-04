@@ -66,14 +66,18 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
               {activeSection.fields.map((field) => {
                 const value = getNumericAppConfigValue(config, field.path);
                 const defaultValue = getNumericAppConfigValue(defaultConfig, field.path);
+                const fieldId = field.path.join('-');
+                const hintId = `${fieldId}-hint`;
                 return (
                   <label key={field.path.join('.')} className="settings-field">
                     <span className="settings-field__label">{field.label}</span>
                     <input
+                      id={fieldId}
                       type="number"
                       value={String(value)}
                       min={field.min}
                       step={field.step}
+                      aria-describedby={hintId}
                       onChange={(event) => {
                         if (event.target.value.trim() === '') {
                           return;
@@ -85,7 +89,7 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
                         onConfigChange(updateNumericAppConfigValue(config, field.path, nextValue));
                       }}
                     />
-                    <span className="settings-field__hint">
+                    <span id={hintId} className="settings-field__hint">
                       {field.description} Default: {defaultValue}
                     </span>
                   </label>

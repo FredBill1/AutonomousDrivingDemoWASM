@@ -27,6 +27,23 @@ type ChartPanelProps = {
   lineColor: number;
 };
 
+function hasSameNumericEntries(left: Record<string, number>, right: Record<string, number>) {
+  return Object.keys(left).every((key) => left[key] === right[key]);
+}
+
+function areAppConfigsEqual(
+  left: ReturnType<typeof loadStoredAppConfig>,
+  right: ReturnType<typeof loadStoredAppConfig>,
+) {
+  return (
+    hasSameNumericEntries(left.controller.carConfig, right.controller.carConfig) &&
+    hasSameNumericEntries(left.controller.hybridAStarConfig, right.controller.hybridAStarConfig) &&
+    hasSameNumericEntries(left.controller.mpcConfig, right.controller.mpcConfig) &&
+    hasSameNumericEntries(left.controller.runtime, right.controller.runtime) &&
+    hasSameNumericEntries(left.ui, right.ui)
+  );
+}
+
 function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPanelProps) {
   return (
     <section className="panel chart-panel">
@@ -45,10 +62,7 @@ function App() {
   const [restartToken, setRestartToken] = useState(0);
   const { state, refs, updateState, dashboardGridRef } = useAppState();
   const dashboardLayout = useDashboardLayout(dashboardGridRef);
-  const hasSettingsChanges = useMemo(
-    () => JSON.stringify(settingsDraft) !== JSON.stringify(appConfig),
-    [appConfig, settingsDraft],
-  );
+  const hasSettingsChanges = useMemo(() => !areAppConfigsEqual(settingsDraft, appConfig), [appConfig, settingsDraft]);
 
   useSimulationSetup({
     controllerConfig: appConfig.controller,
