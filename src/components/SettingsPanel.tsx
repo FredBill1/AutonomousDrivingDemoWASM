@@ -105,7 +105,7 @@ export function SettingsPanel({ isOpen, config, hasChanges, onConfigChange, onCl
             {sectionEntries.map((section, index) => (
               <button
                 key={section.title}
-                className={`settings-nav__button ${index === activeSectionIndex ? 'active' : ''}`}
+                className={index === activeSectionIndex ? 'settings-nav__button active' : 'settings-nav__button'}
                 onClick={() => setActiveSectionIndex(index)}
               >
                 {section.title}

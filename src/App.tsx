@@ -66,7 +66,7 @@ function ShortcutLabel({ label, shortcut }: { label: string; shortcut?: string }
 
 function App() {
   const [appConfig, setAppConfig] = useState(loadStoredAppConfig);
-  const [settingsDraft, setSettingsDraft] = useState(createDefaultAppConfig);
+  const [settingsDraft, setSettingsDraft] = useState(() => createDefaultAppConfig());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [restartToken, setRestartToken] = useState(0);
   const { state, refs, updateState, dashboardGridRef } = useAppState();
