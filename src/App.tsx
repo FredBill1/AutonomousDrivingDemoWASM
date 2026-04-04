@@ -1,6 +1,9 @@
+import { useMemo, useState } from 'react';
+
 import { AutoShrinkHeading } from './components/AutoShrinkHeading';
 import { HistoryChart } from './components/HistoryChart';
 import { MapViewport } from './components/MapViewport';
+import { SettingsPanel } from './components/SettingsPanel';
 import { useAppState } from './hooks/useAppState';
 import { useDashboardLayout } from './hooks/useDashboardLayout';
 import { useGlobalPlanning } from './hooks/useGlobalPlanning';
@@ -9,9 +12,10 @@ import { usePlanningCommands } from './hooks/usePlanningCommands';
 import { usePlanningDrag } from './hooks/usePlanningDrag';
 import { useSimulationSetup } from './hooks/useSimulationSetup';
 import { formatFixedWithoutNegativeZero, toHybridAStarStartSeed, toTrajectoryPath } from './lib/appHelpers';
+import { cloneAppConfig, createDefaultAppConfig, loadStoredAppConfig, persistAppConfig } from './lib/appConfig';
 import { HISTORY_LIMIT } from './lib/appModel';
 import { type CarShape, type GoalUnreachableState, type MotionLimits } from './lib/appTypes';
-import { MAX_GLOBAL_PLANNER_DISPLAY_BATCHES, MS_TO_KMH, RAD_TO_DEG, REPLAN_MAX_SPEED_MS } from './lib/constants';
+import { KMH_TO_MS, MS_TO_KMH, RAD_TO_DEG } from './lib/constants';
 
 export type { CarShape, GoalUnreachableState, MotionLimits };
 
@@ -35,20 +39,30 @@ function ChartPanel({ heading, points, minValue, maxValue, lineColor }: ChartPan
 }
 
 function App() {
+  const [appConfig, setAppConfig] = useState(loadStoredAppConfig);
+  const [settingsDraft, setSettingsDraft] = useState(createDefaultAppConfig);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [restartToken, setRestartToken] = useState(0);
   const { state, refs, updateState, dashboardGridRef } = useAppState();
   const dashboardLayout = useDashboardLayout(dashboardGridRef);
+  const hasSettingsChanges = useMemo(
+    () => JSON.stringify(settingsDraft) !== JSON.stringify(appConfig),
+    [appConfig, settingsDraft],
+  );
 
   useSimulationSetup({
+    controllerConfig: appConfig.controller,
     refs,
     updateState,
     historyLimit: HISTORY_LIMIT,
-    maxGlobalPlannerDisplayBatches: MAX_GLOBAL_PLANNER_DISPLAY_BATCHES,
+    maxGlobalPlannerDisplayBatches: appConfig.ui.maxGlobalPlannerDisplayBatches,
+    restartToken,
   });
 
   const { clearGlobalPlannerDisplaySegments, runGlobalPlan } = useGlobalPlanning({
     refs,
     updateState,
-    replanMaxSpeed: REPLAN_MAX_SPEED_MS,
+    replanMaxSpeed: appConfig.ui.replanMaxSpeedKmh * KMH_TO_MS,
     toHybridAStarStartSeed,
   });
   const { handleCancel, handleBrake, handleRestart } = usePlanningCommands({
@@ -72,6 +86,19 @@ function App() {
     handleCancel,
     handleRestart,
   });
+
+  const handleOpenSettings = () => {
+    setSettingsDraft(cloneAppConfig(appConfig));
+    setSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    if (hasSettingsChanges) {
+      setAppConfig(persistAppConfig(settingsDraft));
+      setRestartToken((current) => current + 1);
+    }
+    setSettingsOpen(false);
+  };
 
   return (
     <div className="app-shell">
@@ -105,6 +132,7 @@ function App() {
               onPrimaryDragEnd: handleMapPrimaryDragEnd,
               onPrimaryDragCancel: handleMapPrimaryDragCancel,
             }}
+            viewportConfig={appConfig.ui}
           />
         </section>
 
@@ -128,24 +156,40 @@ function App() {
       </main>
 
       <section className="control-ribbon">
-        <div className="segmented-control">
-          <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
-            Set Goal(A)
+        <div className="control-ribbon__row">
+          <div className="segmented-control">
+            <button className={state.mode === 'goal' ? 'active' : ''} onClick={() => updateState('mode', 'goal')}>
+              Set Goal(A)
+            </button>
+            <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
+              Set Pose(S)
+            </button>
+          </div>
+        </div>
+        <div className="control-ribbon__row control-ribbon__row--actions">
+          <button className="ghost-button" onClick={() => void handleBrake()}>
+            Brake(D)
           </button>
-          <button className={state.mode === 'pose' ? 'active' : ''} onClick={() => updateState('mode', 'pose')}>
-            Set Pose(S)
+          <button className="ghost-button" onClick={() => void handleCancel()}>
+            Cancel(F)
+          </button>
+          <button className="accent-button" onClick={() => void handleRestart()}>
+            Restart(R)
+          </button>
+          <button className="ghost-button" onClick={handleOpenSettings}>
+            Settings
           </button>
         </div>
-        <button className="ghost-button" onClick={() => void handleBrake()}>
-          Brake(D)
-        </button>
-        <button className="ghost-button" onClick={() => void handleCancel()}>
-          Cancel(F)
-        </button>
-        <button className="accent-button" onClick={() => void handleRestart()}>
-          Restart(R)
-        </button>
       </section>
+
+      <SettingsPanel
+        isOpen={settingsOpen}
+        config={settingsDraft}
+        hasChanges={hasSettingsChanges}
+        onConfigChange={setSettingsDraft}
+        onClose={handleCloseSettings}
+        onReset={() => setSettingsDraft(createDefaultAppConfig())}
+      />
     </div>
   );
 }

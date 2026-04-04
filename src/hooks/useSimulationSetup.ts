@@ -6,6 +6,7 @@ import {
   checkCollision,
   ensureWasmCore,
   getCarConfigSnapshot,
+  setControllerConfig,
   initSimulation,
   resetComputeWorker,
   setHybridAStarProgressListener,
@@ -17,15 +18,17 @@ import {
   type SimulationStateEvent,
   type WasmConfigSnapshot,
 } from '../lib/wasmCore';
+import type { ControllerConfig } from '../lib/workerContracts';
 import type { AppRefs, AppStateUpdater, HistoryPoint } from './appRuntimeTypes';
-
-const INITIAL_TIMESTAMP = 0;
+import { INITIAL_SIMULATION_TIMESTAMP, resetSimulationSessionState } from './planningHelpers';
 
 type UseSimulationSetupParams = {
+  controllerConfig: ControllerConfig;
   refs: AppRefs;
   updateState: AppStateUpdater;
   historyLimit: number;
   maxGlobalPlannerDisplayBatches: number;
+  restartToken: number;
 };
 
 function appendHistory(history: HistoryPoint[], nextPoint: HistoryPoint, historyLimit: number) {
@@ -104,6 +107,7 @@ function createMapServerNode(snapshot: WasmConfigSnapshot) {
 }
 
 async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpdater, isActive: () => boolean) {
+  resetSimulationSessionState(refs, updateState);
   await ensureWasmCore();
   if (!isActive()) {
     return;
@@ -140,17 +144,19 @@ async function initializeSimulationState(refs: AppRefs, updateState: AppStateUpd
     return;
   }
   refs.carRef.current = initialCar;
-  refs.timestampRef.current = INITIAL_TIMESTAMP;
+  refs.timestampRef.current = INITIAL_SIMULATION_TIMESTAMP;
   updateState('car', initialCar);
-  updateState('timestamp', INITIAL_TIMESTAMP);
-  await initSimulation(initialCar, INITIAL_TIMESTAMP);
+  updateState('timestamp', INITIAL_SIMULATION_TIMESTAMP);
+  await initSimulation(initialCar, INITIAL_SIMULATION_TIMESTAMP);
 }
 
 export function useSimulationSetup({
+  controllerConfig,
   refs,
   updateState,
   historyLimit,
   maxGlobalPlannerDisplayBatches,
+  restartToken,
 }: UseSimulationSetupParams): void {
   useEffect(() => {
     setHybridAStarProgressListener((progress) => {
@@ -162,6 +168,7 @@ export function useSimulationSetup({
   useEffect(() => {
     let active = true;
 
+    setControllerConfig(controllerConfig);
     setLocalPlannerUpdateListener((result) => {
       if (!active) {
         return;
@@ -191,5 +198,5 @@ export function useSimulationSetup({
       });
       resetComputeWorker('App unmounted');
     };
-  }, [historyLimit, refs, updateState]);
+  }, [controllerConfig, historyLimit, refs, restartToken, updateState]);
 }

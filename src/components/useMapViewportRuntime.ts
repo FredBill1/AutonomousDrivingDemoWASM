@@ -93,7 +93,7 @@ function fitViewportToBounds(viewport: Viewport, bounds: MapViewportScene['bound
   viewport.position.set((viewport.screenWidth - width * scale) / 2, (viewport.screenHeight - height * scale) / 2);
 }
 
-export function useMapViewportRuntime({ scene, interaction }: MapViewportProps) {
+export function useMapViewportRuntime({ scene, interaction, viewportConfig }: MapViewportProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,10 +108,15 @@ export function useMapViewportRuntime({ scene, interaction }: MapViewportProps) 
   const fittedBoundsKeyRef = useRef<string | null>(null);
   const fitScaleRef = useRef(1);
   const drawRef = useRef<() => void>(() => {});
+  const viewportConfigRef = useRef(viewportConfig);
 
   useEffect(() => {
     boundsRef.current = scene.bounds;
   }, [scene.bounds]);
+
+  useEffect(() => {
+    viewportConfigRef.current = viewportConfig;
+  }, [viewportConfig]);
 
   useEffect(() => {
     let disposed = false;
@@ -136,6 +141,7 @@ export function useMapViewportRuntime({ scene, interaction }: MapViewportProps) 
         touchStateRef,
         fitScaleRef,
         canvasRef,
+        viewportConfigRef,
         onPrimaryDragStartRef,
         onPrimaryDragMoveRef,
         onPrimaryDragEndRef,

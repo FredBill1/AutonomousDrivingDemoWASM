@@ -1,3 +1,4 @@
+import type { ViewportConfig } from '../lib/appConfig';
 import type { CarState, Mode, Obstacle } from '../lib/appModel';
 import type { CarShape, GoalUnreachableState, MotionLimits } from '../lib/appTypes';
 import type { MapBoundingBox } from '../lib/mapServerNode';
@@ -31,4 +32,5 @@ export type MapViewportInteractionHandlers = {
 export type MapViewportProps = {
   scene: MapViewportScene;
   interaction: MapViewportInteractionHandlers;
+  viewportConfig: ViewportConfig;
 };
