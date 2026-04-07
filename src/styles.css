@@ -378,6 +378,19 @@ button {
   font: inherit;
 }
 
+.settings-field__control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-field__unit {
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 .settings-link {
   color: var(--cyan);
   text-decoration: none;

@@ -1,0 +1,117 @@
+import type { SettingsSectionDefinition } from './settingsSchemaBase';
+import { field } from './settingsSchemaBase';
+import {
+  BATCHES,
+  KILOMETERS_PER_HOUR_IDENTITY,
+  MILLISECONDS,
+  RATIO,
+  SCALE,
+  SECONDS,
+  SEGMENTS,
+  STEPS,
+} from './settingsUnits';
+
+export const RUNTIME_AND_UI_SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
+  {
+    title: 'Runtime and workers',
+    description: 'Worker update rates and timing values shared with the simulation runtime.',
+    fields: [
+      field(
+        ['controller', 'runtime', 'simulationDeltaTime'],
+        'Simulation delta time',
+        'Physics integration time step.',
+        0.001,
+        SECONDS,
+        0.001,
+      ),
+      field(
+        ['controller', 'runtime', 'simulationIntervalMs'],
+        'Simulation interval',
+        'Worker loop interval for simulation updates.',
+        1,
+        MILLISECONDS,
+        1,
+      ),
+      field(
+        ['controller', 'runtime', 'simulationPublishIntervalMs'],
+        'Simulation publish interval',
+        'How often simulation state is published to the UI.',
+        1,
+        MILLISECONDS,
+        1,
+      ),
+      field(
+        ['controller', 'runtime', 'localPlannerUpdateIntervalMs'],
+        'Local planner interval',
+        'How often the local planner worker recomputes controls.',
+        1,
+        MILLISECONDS,
+        1,
+      ),
+      field(
+        ['controller', 'runtime', 'hybridAStarStepBudget'],
+        'Hybrid A* step budget',
+        'Number of search steps processed between yielding back to the worker loop.',
+        1,
+        STEPS,
+        1,
+      ),
+      field(
+        ['controller', 'runtime', 'hybridAStarSegmentBatchSize'],
+        'Hybrid A* segment batch size',
+        'Global planner progress segments sent per UI batch.',
+        1,
+        SEGMENTS,
+        1,
+      ),
+      field(
+        ['controller', 'runtime', 'mpcTimeStep'],
+        'MPC time step',
+        'Time step used by the MPC controller.',
+        0.001,
+        SECONDS,
+        0.001,
+      ),
+    ],
+  },
+  {
+    title: 'UI and viewport',
+    description: 'Planning display limits and map interaction behavior stored in the browser.',
+    fields: [
+      field(
+        ['ui', 'replanMaxSpeedKmh'],
+        'Replan max speed',
+        'Maximum speed that still replans from the current vehicle state.',
+        0.5,
+        KILOMETERS_PER_HOUR_IDENTITY,
+        0,
+      ),
+      field(
+        ['ui', 'maxGlobalPlannerDisplayBatches'],
+        'Planner display batches',
+        'Maximum number of global planner progress batches kept in the UI.',
+        1,
+        BATCHES,
+        1,
+      ),
+      field(['ui', 'minZoom'], 'Minimum zoom', 'Lower zoom clamp for viewport interactions.', 0.01, SCALE, 0.001),
+      field(['ui', 'maxZoom'], 'Maximum zoom', 'Upper zoom clamp for viewport interactions.', 0.1, SCALE, 0.001),
+      field(
+        ['ui', 'minZoomRelativeToFit'],
+        'Min zoom relative to fit',
+        'Lower zoom clamp relative to the fitted map scale.',
+        0.01,
+        RATIO,
+        0,
+      ),
+      field(
+        ['ui', 'wheelZoomSensitivity'],
+        'Wheel zoom sensitivity',
+        'Mouse wheel zoom response multiplier.',
+        0.0001,
+        SCALE,
+        0.001,
+      ),
+    ],
+  },
+];
